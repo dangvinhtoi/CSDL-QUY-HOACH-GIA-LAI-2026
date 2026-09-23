@@ -440,21 +440,196 @@
 
 function App() {
 
+      // =========================================================================
+      // 🟢 ALL REACT STATES INITIALIZATION (GROUPED AT TOP FOR ZERO TDZ ERRORS)
+      // =========================================================================
       const [showFbConfigModal, setShowFbConfigModal] = useState(false);
+
       const [fbConfigInput, setFbConfigInput] = useState(() => {
-        const gas = window.getValidCloudUrl();
-        if (gas) return gas;
-        const localGas = localStorage.getItem('gialai_cloud_url');
-        if (localGas) return localGas;
-        const localFb = localStorage.getItem('gialai_firebase_config');
-        if (localFb) return localFb;
-        const globalFb = window.getValidFirebaseConfig();
-        if (globalFb) return JSON.stringify(globalFb, null, 2);
-        return '';
-      });
+              const gas = window.getValidCloudUrl();
+              if (gas) return gas;
+              const localGas = localStorage.getItem('gialai_cloud_url');
+              if (localGas) return localGas;
+              const localFb = localStorage.getItem('gialai_firebase_config');
+              if (localFb) return localFb;
+              const globalFb = window.getValidFirebaseConfig();
+              if (globalFb) return JSON.stringify(globalFb, null, 2);
+              return '';
+            });
+
       const [cloudStatus, setCloudStatus] = useState(isCloudConnected ? 'connected' : 'local');
 
-      // CLOUD SYNC HELPERS
+      const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+      const [showLoginModal, setShowLoginModal] = useState(false);
+
+      const [showDbModal, setShowDbModal] = useState(false);
+
+      const [showChangePassModal, setShowChangePassModal] = useState(false);
+
+      const [loginForm, setLoginForm] = useState({ username: '', password: '' });
+
+      const [loginError, setLoginError] = useState('');
+
+      const [changePassForm, setChangePassForm] = useState({ current: '', newPass: '', confirm: '' });
+
+      const [changePassError, setChangePassError] = useState('');
+
+      const [adminPassword, setAdminPassword] = useState(() => localStorage.getItem('gialai_admin_pass') || '123456');
+
+      const [userRole, setUserRole] = useState('GUEST');
+
+      const [currentUser, setCurrentUser] = useState(null);
+
+      const [membersList, setMembersList] = useState(() => {
+              const local = localStorage.getItem('gialai_members_list');
+              return local ? JSON.parse(local) : [];
+            });
+
+      const [pendingDataChanges, setPendingDataChanges] = useState(() => {
+              const local = localStorage.getItem('gialai_pending_changes');
+              return local ? JSON.parse(local) : [];
+            });
+
+      const [showRegisterModal, setShowRegisterModal] = useState(false);
+
+      const [registerForm, setRegisterForm] = useState({ fullName: '', unit: '', position: '', email: '', username: '', password: '' });
+
+      const [registerError, setRegisterError] = useState('');
+
+      const [showMemberMgmtModal, setShowMemberMgmtModal] = useState(false);
+
+      const [showContentApprovalModal, setShowContentApprovalModal] = useState(false);
+
+      const [showForgotPassModal, setShowForgotPassModal] = useState(false);
+
+      const [forgotPassStep, setForgotPassStep] = useState(1);
+
+      const [recoveryPhone, setRecoveryPhone] = useState('');
+
+      const [recoveryOTP, setRecoveryOTP] = useState('');
+
+      const [realGeneratedOTP, setRealGeneratedOTP] = useState('');
+
+      const [newRecoveryPass, setNewRecoveryPass] = useState('');
+
+      const [recoveryError, setRecoveryError] = useState('');
+
+      const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
+
+      const [notification, setNotification] = useState('');
+
+      const [activeTab, setActiveTab] = useState('STATS_CHUNG');
+
+      const [data, setData] = useState(() => {
+              const local = localStorage.getItem('gialai_qh_chung');
+              return local ? JSON.parse(local) : generate135Records();
+            });
+
+      const [detailData, setDetailData] = useState(() => {
+              const local = localStorage.getItem('gialai_qh_chitiet');
+              return local ? JSON.parse(local) : generateDetailRecords();
+            });
+
+      const [mergedData, setMergedData] = useState(() => {
+              const local = localStorage.getItem('gialai_qh_sapnhap');
+              return local ? JSON.parse(local) : INITIAL_MERGED_DATA;
+            });
+
+      const [contactData, setContactData] = useState(() => {
+              const local = localStorage.getItem('gialai_qh_lienhe');
+              return local ? JSON.parse(local) : INITIAL_CONTACTS_DEFAULT;
+            });
+
+      const [reviewData, setReviewData] = useState(() => {
+              const local = localStorage.getItem('gialai_qh_rasoat');
+              return local ? JSON.parse(local) : INITIAL_REVIEWS_DEFAULT;
+            });
+
+      const [searchTerm, setSearchTerm] = useState('');
+
+      const [filterHuyen, setFilterHuyen] = useState('');
+
+      const [filterTinhTrang, setFilterTinhTrang] = useState('');
+
+      const [filterThamQuyen, setFilterThamQuyen] = useState('');
+
+      const [filterCongBo, setFilterCongBo] = useState('');
+
+      const [filterCamMoc, setFilterCamMoc] = useState('');
+
+      const [filterKeHoach, setFilterKeHoach] = useState('');
+
+      const [filterGuiSXD, setFilterGuiSXD] = useState('');
+
+      const [detailSearchTerm, setDetailSearchTerm] = useState('');
+
+      const [detailFilterHuyen, setDetailFilterHuyen] = useState('');
+
+      const [detailFilterXa, setDetailFilterXa] = useState('');
+
+      const [detailFilterTinhTrang, setDetailFilterTinhTrang] = useState('');
+
+      const [detailFilterCongBo, setDetailFilterCongBo] = useState('');
+
+      const [detailFilterCamMoc, setDetailFilterCamMoc] = useState('');
+
+      const [detailFilterGuiSXD, setDetailFilterGuiSXD] = useState('');
+
+      const [mergeFilterHuyen, setMergeFilterHuyen] = useState('');
+
+      const [mergeFilterXa, setMergeFilterXa] = useState('');
+
+      const [contactSearchTerm, setContactSearchTerm] = useState('');
+
+      const [contactFilterHuyen, setContactFilterHuyen] = useState('');
+
+      const [reviewSearchTerm, setReviewSearchTerm] = useState('');
+
+      const [reviewFilterHuyen, setReviewFilterHuyen] = useState('');
+
+      const [reviewFilterStatus, setReviewFilterStatus] = useState('');
+
+      const [isModalOpen, setIsModalOpen] = useState(false);
+
+      const [editingRecord, setEditingRecord] = useState(null);
+
+      const [formData, setFormData] = useState({});
+
+      const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
+
+      const [editingMergeRecord, setEditingMergeRecord] = useState(null);
+
+      const [mergeFormData, setMergeFormData] = useState({});
+
+      const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+
+      const [editingContactRecord, setEditingContactRecord] = useState(null);
+
+      const [contactFormData, setContactFormData] = useState({});
+
+      const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+
+      const [editingReviewRecord, setEditingReviewRecord] = useState(null);
+
+      const [reviewFormData, setReviewFormData] = useState({});
+
+      const [reportModal, setReportModal] = useState({ isOpen: false, type: 'CHUNG' });
+
+      const [reportFile, setReportFile] = useState(null);
+
+      const [reportProgress, setReportProgress] = useState(0);
+
+      const [reportStatus, setReportStatus] = useState('');
+
+      const [showGeneratedReport, setShowGeneratedReport] = useState(false);
+
+
+
+      
+
+
+// CLOUD SYNC HELPERS
       const saveToCloud = (collName, docId, record) => {
         if (db) {
           try {
@@ -630,77 +805,45 @@ function App() {
         });
       };
 
-      const [isLoggedIn, setIsLoggedIn] = useState(false);
-      const [showLoginModal, setShowLoginModal] = useState(false);
-      const [showDbModal, setShowDbModal] = useState(false);
-      const [showChangePassModal, setShowChangePassModal] = useState(false);
-
-      const [loginForm, setLoginForm] = useState({ username: '', password: '' });
-      const [loginError, setLoginError] = useState('');
-      const [changePassForm, setChangePassForm] = useState({ current: '', newPass: '', confirm: '' });
-      const [changePassError, setChangePassError] = useState('');
-      const [adminPassword, setAdminPassword] = useState(() => localStorage.getItem('gialai_admin_pass') || '123456');
-
-      const [userRole, setUserRole] = useState('GUEST'); // 'ADMIN', 'MEMBER', 'GUEST'
-      const [currentUser, setCurrentUser] = useState(null);
-
-      const [membersList, setMembersList] = useState(() => {
-        const local = localStorage.getItem('gialai_members_list');
-        return local ? JSON.parse(local) : [];
-      });
-
-      const [pendingDataChanges, setPendingDataChanges] = useState(() => {
-        const local = localStorage.getItem('gialai_pending_changes');
-        return local ? JSON.parse(local) : [];
-      });
-
-      const [showRegisterModal, setShowRegisterModal] = useState(false);
-      const [registerForm, setRegisterForm] = useState({ fullName: '', unit: '', position: '', email: '', username: '', password: '' });
-      const [registerError, setRegisterError] = useState('');
-
-      const [showMemberMgmtModal, setShowMemberMgmtModal] = useState(false);
-      const [showContentApprovalModal, setShowContentApprovalModal] = useState(false);
+      
 
 
-      const [showForgotPassModal, setShowForgotPassModal] = useState(false);
-      const [forgotPassStep, setForgotPassStep] = useState(1);
-      const [recoveryPhone, setRecoveryPhone] = useState('');
-      const [recoveryOTP, setRecoveryOTP] = useState('');
-      const [realGeneratedOTP, setRealGeneratedOTP] = useState('');
-      const [newRecoveryPass, setNewRecoveryPass] = useState('');
-      const [recoveryError, setRecoveryError] = useState('');
 
-      const ADMIN_PHONE = '0385118757';
+
+
+
+
+
+
+// 'ADMIN', 'MEMBER', 'GUEST'
+      
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+const ADMIN_PHONE = '0385118757';
       const ADMIN_EMAIL = 'dangvinhtoi@gmail.com';
 
-      const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, title: '', message: '', onConfirm: null });
-      const [notification, setNotification] = useState('');
-      const [activeTab, setActiveTab] = useState('STATS_CHUNG');
-
-      // STATE CHO CÁC BẢNG DỮ LIỆU
-      const [data, setData] = useState(() => {
-        const local = localStorage.getItem('gialai_qh_chung');
-        return local ? JSON.parse(local) : generate135Records();
-      });
-      const [detailData, setDetailData] = useState(() => {
-        const local = localStorage.getItem('gialai_qh_chitiet');
-        return local ? JSON.parse(local) : generateDetailRecords();
-      });
-      const [mergedData, setMergedData] = useState(() => {
-        const local = localStorage.getItem('gialai_qh_sapnhap');
-        return local ? JSON.parse(local) : INITIAL_MERGED_DATA;
-      });
-      const [contactData, setContactData] = useState(() => {
-        const local = localStorage.getItem('gialai_qh_lienhe');
-        return local ? JSON.parse(local) : INITIAL_CONTACTS_DEFAULT;
-      });
-      const [reviewData, setReviewData] = useState(() => {
-        const local = localStorage.getItem('gialai_qh_rasoat');
-        return local ? JSON.parse(local) : INITIAL_REVIEWS_DEFAULT;
-      });
-
       
-      // =========================================================================
+
+
+// STATE CHO CÁC BẢNG DỮ LIỆU
+      
+
+
+
+
+// =========================================================================
       // 🟢 CLOUD SYNC ENGINE (HỖ TRỢ GOOGLE APPS SCRIPT / DRIVE & FIREBASE)
       // =========================================================================
       const getCloudUrl = () => {
@@ -817,62 +960,52 @@ function App() {
       useEffect(() => { localStorage.setItem('gialai_qh_rasoat', JSON.stringify(reviewData)); }, [reviewData]);
 
       // BỘ LỌC QH CHUNG
-      const [searchTerm, setSearchTerm] = useState('');
-      const [filterHuyen, setFilterHuyen] = useState('');
-      const [filterTinhTrang, setFilterTinhTrang] = useState('');
-      const [filterThamQuyen, setFilterThamQuyen] = useState('');
-      const [filterCongBo, setFilterCongBo] = useState('');
-      const [filterCamMoc, setFilterCamMoc] = useState('');
-      const [filterKeHoach, setFilterKeHoach] = useState('');
-      const [filterGuiSXD, setFilterGuiSXD] = useState('');
+      
 
-      // BỘ LỌC QH CHI TIẾT
-      const [detailSearchTerm, setDetailSearchTerm] = useState('');
-      const [detailFilterHuyen, setDetailFilterHuyen] = useState('');
-      const [detailFilterXa, setDetailFilterXa] = useState('');
-      const [detailFilterTinhTrang, setDetailFilterTinhTrang] = useState('');
-      const [detailFilterCongBo, setDetailFilterCongBo] = useState('');
-      const [detailFilterCamMoc, setDetailFilterCamMoc] = useState('');
-      const [detailFilterGuiSXD, setDetailFilterGuiSXD] = useState('');
 
-      // BỘ LỌC SÁP NHẬP
-      const [mergeFilterHuyen, setMergeFilterHuyen] = useState('');
-      const [mergeFilterXa, setMergeFilterXa] = useState('');
 
-      // BỘ LỌC LIÊN HỆ
-      const [contactSearchTerm, setContactSearchTerm] = useState('');
-      const [contactFilterHuyen, setContactFilterHuyen] = useState('');
 
-      // BỘ LỌC RÀ SOÁT
-      const [reviewSearchTerm, setReviewSearchTerm] = useState('');
-      const [reviewFilterHuyen, setReviewFilterHuyen] = useState('');
-      const [reviewFilterStatus, setReviewFilterStatus] = useState('');
 
-      // MODALS FORM STATE
-      const [isModalOpen, setIsModalOpen] = useState(false);
-      const [editingRecord, setEditingRecord] = useState(null);
-      const [formData, setFormData] = useState({});
 
-      const [isMergeModalOpen, setIsMergeModalOpen] = useState(false);
-      const [editingMergeRecord, setEditingMergeRecord] = useState(null);
-      const [mergeFormData, setMergeFormData] = useState({});
 
-      const [isContactModalOpen, setIsContactModalOpen] = useState(false);
-      const [editingContactRecord, setEditingContactRecord] = useState(null);
-      const [contactFormData, setContactFormData] = useState({});
+// BỘ LỌC QH CHI TIẾT
+      
 
-      const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
-      const [editingReviewRecord, setEditingReviewRecord] = useState(null);
-      const [reviewFormData, setReviewFormData] = useState({});
 
-      // STATE BÁO CÁO THÔNG MINH A4
-      const [reportModal, setReportModal] = useState({ isOpen: false, type: 'CHUNG' });
-      const [reportFile, setReportFile] = useState(null);
-      const [reportProgress, setReportProgress] = useState(0);
-      const [reportStatus, setReportStatus] = useState('');
-      const [showGeneratedReport, setShowGeneratedReport] = useState(false);
 
-      const showNotification = (msg) => { setNotification(msg); setTimeout(() => setNotification(''), 4000); };
+
+
+
+// BỘ LỌC SÁP NHẬP
+      
+
+// BỘ LỌC LIÊN HỆ
+      
+
+// BỘ LỌC RÀ SOÁT
+      
+
+
+// MODALS FORM STATE
+      
+
+
+
+
+
+
+
+
+
+
+
+// STATE BÁO CÁO THÔNG MINH A4
+      
+
+
+
+
+const showNotification = (msg) => { setNotification(msg); setTimeout(() => setNotification(''), 4000); };
       const openConfirm = (title, message, onConfirm) => setConfirmDialog({ isOpen: true, title, message, onConfirm });
       const closeConfirm = () => setConfirmDialog({ isOpen: false, title: '', message: '', onConfirm: null });
 
