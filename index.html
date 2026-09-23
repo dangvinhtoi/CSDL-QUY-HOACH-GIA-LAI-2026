@@ -656,23 +656,27 @@ function App() {
 
       const fetchFromCloud = (isManual = false) => {
         const cloudUrl = getCloudUrl();
-        if (!cloudUrl || cloudUrl.includes('DÁN_LINK_GOOGLE')) {
+        if (!cloudUrl || cloudUrl.includes('DÁN_LINK_GOOGLE') || cloudUrl.trim() === '') {
           if (isManual) showNotification('Chưa cấu hình URL Đám mây! Nhập link trong mục Quản lý CSDL.');
           return;
         }
         if (isManual) showNotification('Đang tải dữ liệu mới nhất từ Đám mây...');
 
         const fetchUrl = cloudUrl + (cloudUrl.includes("?") ? "&" : "?") + "_t=" + Date.now();
-        fetch(fetchUrl, { cache: "no-store" })
+        fetch(fetchUrl)
           .then(res => res.json())
-          .then(cloudData => {
+          .then(raw => {
+            let cloudData = raw;
+            if (typeof cloudData === 'string') {
+              try { cloudData = JSON.parse(cloudData); } catch(e){}
+            }
             if (cloudData && typeof cloudData === 'object') {
               let updated = false;
-              if (Array.isArray(cloudData.qhChung) && cloudData.qhChung.length > 0) { setData(cloudData.qhChung); updated = true; }
-              if (Array.isArray(cloudData.qhChiTiet) && cloudData.qhChiTiet.length > 0) { setDetailData(cloudData.qhChiTiet); updated = true; }
-              if (Array.isArray(cloudData.qhSapNhap) && cloudData.qhSapNhap.length > 0) { setMergedData(cloudData.qhSapNhap); updated = true; }
-              if (Array.isArray(cloudData.qhLienHe) && cloudData.qhLienHe.length > 0) { setContactData(cloudData.qhLienHe); updated = true; }
-              if (Array.isArray(cloudData.qhRaSoat) && cloudData.qhRaSoat.length > 0) { setReviewData(cloudData.qhRaSoat); updated = true; }
+              if (Array.isArray(cloudData.qhChung)) { setData(cloudData.qhChung); updated = true; }
+              if (Array.isArray(cloudData.qhChiTiet)) { setDetailData(cloudData.qhChiTiet); updated = true; }
+              if (Array.isArray(cloudData.qhSapNhap)) { setMergedData(cloudData.qhSapNhap); updated = true; }
+              if (Array.isArray(cloudData.qhLienHe)) { setContactData(cloudData.qhLienHe); updated = true; }
+              if (Array.isArray(cloudData.qhRaSoat)) { setReviewData(cloudData.qhRaSoat); updated = true; }
               if (cloudData.adminPassword) {
                 setAdminPassword(cloudData.adminPassword);
                 localStorage.setItem('gialai_admin_pass', cloudData.adminPassword);
