@@ -7,7 +7,7 @@
   
   <!-- 🟢 CẤU HÌNH ĐỒNG BỘ FIREBASE FIRESTORE REALTIME TỰ ĐỘNG ĐA THIẾT BỊ -->
   <script>
-    var firebaseConfig = {
+    window.firebaseConfig = {
       apiKey: "AIzaSyAWgr2Evc2ruAUs4DPZVXNCwpxSBsTkxsU",
       authDomain: "csdl-qh-gia-lai-2026.firebaseapp.com",
       projectId: "csdl-qh-gia-lai-2026",
@@ -16,33 +16,27 @@
       appId: "1:852075108857:web:022885b3bd96c8fc704528",
       measurementId: "G-STDH467R45"
     };
-    window.DEFAULT_FIREBASE_CONFIG = firebaseConfig;
+    window.DEFAULT_FIREBASE_CONFIG = window.firebaseConfig;
     window.DEFAULT_CLOUD_URL = window.DEFAULT_CLOUD_URL || "";
 
-    const getValidCloudUrl = () => {
-      const url = window.DEFAULT_CLOUD_URL || localStorage.getItem('gialai_cloud_url') || '';
-      if (!url || url.includes('DÁN_LINK_GOOGLE') || url.includes('DÁN_LINK_') || url.trim() === '') return '';
-      return url.trim();
+    window.getValidCloudUrl = function() {
+      var cloudUrlVal = window.DEFAULT_CLOUD_URL || localStorage.getItem('gialai_cloud_url') || '';
+      if (!cloudUrlVal || cloudUrlVal.includes('DÁN_LINK_GOOGLE') || cloudUrlVal.includes('DÁN_LINK_') || cloudUrlVal.trim() === '') return '';
+      return cloudUrlVal.trim();
     };
 
-    const getValidFirebaseConfig = () => {
-      let cfg = null;
-      if (typeof window !== 'undefined') {
-        cfg = window.DEFAULT_FIREBASE_CONFIG || window.firebaseConfig;
+    window.getValidFirebaseConfig = function() {
+      var activeConfigObj = window.DEFAULT_FIREBASE_CONFIG || window.firebaseConfig;
+      if (activeConfigObj && typeof activeConfigObj === 'string') {
+        try { activeConfigObj = JSON.parse(activeConfigObj); } catch(e){}
       }
-      if (!cfg && typeof firebaseConfig !== 'undefined') {
-        cfg = firebaseConfig;
-      }
-      if (cfg && typeof cfg === 'string') {
-        try { cfg = JSON.parse(cfg); } catch(e){}
-      }
-      if (cfg && cfg.apiKey && cfg.projectId) return cfg;
+      if (activeConfigObj && activeConfigObj.apiKey && activeConfigObj.projectId) return activeConfigObj;
 
-      const saved = localStorage.getItem('gialai_firebase_config');
-      if (saved) {
+      var savedConfigStr = localStorage.getItem('gialai_firebase_config');
+      if (savedConfigStr) {
         try {
-          const parsed = JSON.parse(saved);
-          if (parsed && parsed.apiKey && parsed.projectId) return parsed;
+          var parsedConfigObj = JSON.parse(savedConfigStr);
+          if (parsedConfigObj && parsedConfigObj.apiKey && parsedConfigObj.projectId) return parsedConfigObj;
         } catch(e){}
       }
       return null;
@@ -420,21 +414,15 @@
     // Dán link Google Apps Script Web App của bạn vào giữa 2 dấu nháy bên dưới để BẤT KỲ MÁY TÍNH NÀO mở link web cũng tự kết nối CSDL:
     window.DEFAULT_CLOUD_URL = window.DEFAULT_CLOUD_URL || "";
 
-    const getValidCloudUrl = () => {
-      const url = window.DEFAULT_CLOUD_URL || localStorage.getItem('gialai_cloud_url') || '';
-      if (!url || url.includes('DÁN_LINK_GOOGLE') || url.includes('DÁN_LINK_') || url.trim() === '') return '';
-      return url.trim();
-    };
-
     let firebaseApp = null;
     let db = null;
     let auth = null;
     let isCloudConnected = false;
-    const savedGasUrl = getValidCloudUrl();
+    const savedGasUrl = window.getValidCloudUrl();
     const isGasConnected = Boolean(savedGasUrl);
 
     try {
-      const activeFbConfig = getValidFirebaseConfig();
+      const activeFbConfig = window.getValidFirebaseConfig();
       if (activeFbConfig && activeFbConfig.apiKey && activeFbConfig.projectId) {
         if (!firebase.apps.length) {
           firebaseApp = firebase.initializeApp(activeFbConfig);
@@ -453,7 +441,7 @@
 function App() {
 
       const [showFbConfigModal, setShowFbConfigModal] = useState(false);
-      const [fbConfigInput, setFbConfigInput] = useState(() => getValidCloudUrl() || localStorage.getItem('gialai_cloud_url') || localStorage.getItem('gialai_firebase_config') || '');
+      const [fbConfigInput, setFbConfigInput] = useState(() => window.getValidCloudUrl() || localStorage.getItem('gialai_cloud_url') || localStorage.getItem('gialai_firebase_config') || '');
       const [cloudStatus, setCloudStatus] = useState(isCloudConnected ? 'connected' : 'local');
 
       // CLOUD SYNC HELPERS
@@ -666,7 +654,7 @@ function App() {
       // 🟢 CLOUD SYNC ENGINE (HỖ TRỢ GOOGLE APPS SCRIPT / DRIVE & FIREBASE)
       // =========================================================================
       const getCloudUrl = () => {
-        return getValidCloudUrl();
+        return window.getValidCloudUrl();
       };
 
       const syncToCloud = (overrides = {}) => {
