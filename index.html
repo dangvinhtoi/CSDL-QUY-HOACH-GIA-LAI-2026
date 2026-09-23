@@ -51,18 +51,54 @@
 
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- React 18 & ReactDOM CDN -->
-  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-  
-  <!-- Babel Standalone CDN -->
-  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
 
-  <!-- Firebase JS SDK (Compat mode cho trình duyệt) -->
+  <!-- React 18 & ReactDOM CDN với Fallback Tự Động Multi-CDN (cdnjs -> unpkg -> jsdelivr) -->
+  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script>
+    if (!window.React) {
+      document.write('<' + 'script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"><' + '/script>');
+    }
+  </script>
+  <script>
+    if (!window.React) {
+      document.write('<' + 'script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"><' + '/script>');
+    }
+  </script>
+
+  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script>
+    if (!window.ReactDOM) {
+      document.write('<' + 'script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"><' + '/script>');
+    }
+  </script>
+  <script>
+    if (!window.ReactDOM) {
+      document.write('<' + 'script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"><' + '/script>');
+    }
+  </script>
+
+  <!-- Babel Standalone CDN với Fallback -->
+  <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+  <script>
+    if (!window.Babel) {
+      document.write('<' + 'script crossorigin src="https://unpkg.com/@babel/standalone@7.23.5/babel.min.js"><' + '/script>');
+    }
+  </script>
+
+  <!-- Firebase JS SDK với Fallback -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script>
+    if (!window.firebase) {
+      document.write('<' + 'script src="https://www.jsdelivr.net/npm/firebase@9.23.0/firebase-app-compat.js"><' + '/script>');
+    }
+  </script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script>
+    if (!window.firebase || !firebase.firestore) {
+      document.write('<' + 'script src="https://www.jsdelivr.net/npm/firebase@9.23.0/firebase-firestore-compat.js"><' + '/script>');
+    }
+  </script>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
@@ -1869,14 +1905,18 @@ function App() {
   
   </script>
 
-  <!-- BỘ CHẨN ĐOÁN & TỰ ĐỘNG CỨU HỘ GIAO DIỆN -->
+  <!-- BỘ CHẨN ĐOÁN & KIỂM TRA MẠNG CDN TỰ ĐỘNG -->
   <script>
-    setTimeout(function() {
-      var rootEl = document.getElementById('root');
-      if (rootEl && rootEl.innerHTML.indexOf('Đang khởi chạy CSDL') !== -1) {
-        rootEl.innerHTML = '<div style="padding:30px;max-width:650px;margin:50px auto;background:#fff;border-radius:16px;box-shadow:0 20px 25px -5px rgba(0,0,0,0.1);font-family:sans-serif;color:#1e293b;border-top:6px solid #f59e0b;"><h3 style="color:#d97706;margin-top:0;font-size:20px;display:flex;align-items:center;gap:8px;">⚠️ Sự Cố Nạp Thư Viện CDN</h3><p style="font-size:14px;color:#475569;line-height:1.5;">Trình duyệt của bạn không thể tải thư viện React/Tailwind từ máy chủ CDN. Vui lòng kiểm tra kết nối Internet hoặc tải lại trang.</p><div style="text-align:center;margin-top:20px;"><button onclick="window.location.reload()" style="background:#2563eb;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-weight:bold;cursor:pointer;">🔄 Tải lại trang web</button></div></div>';
-      }
-    }, 4000);
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        var rootEl = document.getElementById('root');
+        if (rootEl && rootEl.innerHTML.indexOf('Đang khởi chạy CSDL') !== -1) {
+          if (!window.React || !window.ReactDOM) {
+            rootEl.innerHTML = '<div style="padding:30px;max-width:650px;margin:50px auto;background:#fff;border-radius:16px;box-shadow:0 20px 25px -5px rgba(0,0,0,0.1);font-family:sans-serif;color:#1e293b;border-top:6px solid #ef4444;"><h3 style="color:#dc2626;margin-top:0;font-size:20px;">⚠️ Sự Cố Mạng Internet / CDN</h3><p style="font-size:14px;color:#475569;line-height:1.6;">Trình duyệt không thể kết nối đến máy chủ thư viện CDN (React / Firebase). Vui lòng kiểm tra lại kết nối mạng Internet hoặc tường lửa và nhấn nút bên dưới để tải lại.</p><div style="text-align:center;margin-top:20px;"><button onclick="window.location.reload()" style="background:#2563eb;color:#fff;border:none;padding:10px 22px;border-radius:8px;font-weight:bold;cursor:pointer;font-size:14px;">🔄 Tải lại trang web</button></div></div>';
+          }
+        }
+      }, 10000);
+    });
   </script>
 </body>
 </html>
