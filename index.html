@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="vi">
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1301,16 +1302,43 @@ function App() {
       };
 
       const handleSendOTP = (e) => {
-        e.preventDefault();
-        if (recoveryPhone !== ADMIN_PHONE && recoveryPhone !== ADMIN_EMAIL) {
-          return setRecoveryError('Số điện thoại hoặc Email không khớp với thông tin đã đăng ký!');
-        }
-        setRecoveryError('');
-        const randomOtp = Math.floor(100000 + Math.random() * 900000).toString();
-        setRealGeneratedOTP(randomOtp);
-        showNotification(`Đã xuất lệnh gửi mã OTP đến ${recoveryPhone}. (Mã thực tế: ${randomOtp})`);
-        setForgotPassStep(2);
-      };
+  e.preventDefault();
+  
+  // 1. Kiểm tra tính hợp lệ của Email
+  if (recoveryPhone !== ADMIN_PHONE && recoveryPhone !== ADMIN_EMAIL) {
+    return setRecoveryError('Số điện thoại hoặc Email không khớp với thông tin đã đăng ký!');
+  }
+  setRecoveryError('');
+  
+  // 2. Tạo mã OTP ngẫu nhiên 6 số
+  const randomOtp = Math.floor(100000 + Math.random() * 900000).toString();
+  setRealGeneratedOTP(randomOtp);
+  showNotification('⏳ Đang phát lệnh gửi email, vui lòng đợi giây lát...');
+
+  // 3. Cấu hình thông số EmailJS
+  const serviceID = 'service_tpiblam';   // Thay bằng ID Dịch vụ của bạn
+  const templateID = 'template_ys25lpg'; // Thay bằng ID Mẫu email của bạn
+  const publicKey = '8copM0eovedMSMGHD';   // Thay bằng Khóa công khai của bạn
+
+  // 4. Các biến dữ liệu truyền vào mẫu Email
+  const templateParams = {
+    to_email: recoveryPhone,
+    otp_code: randomOtp,
+    message: `Mã xác thực OTP để khôi phục mật khẩu CSDL Quy hoạch Gia Lai của bạn là: ${randomOtp}`
+  };
+
+  // 5. Thực thi gửi Email
+  window.emailjs.send(serviceID, templateID, templateParams, publicKey)
+    .then((response) => {
+      console.log('Đã gửi email thành công!', response.status, response.text);
+      showNotification(`✅ Đã gửi mã xác thực OTP đến: ${recoveryPhone}`);
+      setForgotPassStep(2); // Chuyển sang giao diện nhập mã
+    })
+    .catch((error) => {
+      console.error('Lỗi khi gửi email:', error);
+      setRecoveryError('Hệ thống gửi thư đang bận hoặc quá tải. Vui lòng thử lại sau!');
+    });
+};
 
       const handleVerifyOTP = (e) => {
         e.preventDefault();
