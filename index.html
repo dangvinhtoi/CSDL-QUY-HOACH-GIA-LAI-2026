@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CSDL QUY HOẠCH GIA LAI - Hệ thống Quản lý & Tra cứu Sáp nhập ĐVHC</title>
+  
   <!-- 🟢 CẤU HÌNH ĐỒNG BỘ FIREBASE FIRESTORE REALTIME TỰ ĐỘNG ĐA THIẾT BỊ -->
   <script>
-    // 🟢 CẤU HÌNH FIREBASE FIRESTORE REALTIME TỰ ĐỘNG ĐA THIẾT BỊ
     var firebaseConfig = {
       apiKey: "AIzaSyAWgr2Evc2ruAUs4DPZVXNCwpxSBsTkxsU",
       authDomain: "csdl-qh-gia-lai-2026.firebaseapp.com",
@@ -19,6 +19,36 @@
     window.DEFAULT_FIREBASE_CONFIG = firebaseConfig;
     window.DEFAULT_CLOUD_URL = window.DEFAULT_CLOUD_URL || "";
 
+    const getValidCloudUrl = () => {
+      const url = window.DEFAULT_CLOUD_URL || localStorage.getItem('gialai_cloud_url') || '';
+      if (!url || url.includes('DÁN_LINK_GOOGLE') || url.includes('DÁN_LINK_') || url.trim() === '') return '';
+      return url.trim();
+    };
+
+    const getValidFirebaseConfig = () => {
+      let cfg = null;
+      if (typeof window !== 'undefined') {
+        cfg = window.DEFAULT_FIREBASE_CONFIG || window.firebaseConfig;
+      }
+      if (!cfg && typeof firebaseConfig !== 'undefined') {
+        cfg = firebaseConfig;
+      }
+      if (cfg && typeof cfg === 'string') {
+        try { cfg = JSON.parse(cfg); } catch(e){}
+      }
+      if (cfg && cfg.apiKey && cfg.projectId) return cfg;
+
+      const saved = localStorage.getItem('gialai_firebase_config');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed && parsed.apiKey && parsed.projectId) return parsed;
+        } catch(e){}
+      }
+      return null;
+    };
+  </script>
+
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   
@@ -28,6 +58,11 @@
   
   <!-- Babel Standalone CDN -->
   <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+
+  <!-- Firebase JS SDK (Compat mode cho trình duyệt) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
@@ -66,11 +101,6 @@
       }
     }
   </style>
-
-  <!-- Firebase JS SDK (Compat mode cho trình duyệt) -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
   <div id="root">
@@ -81,6 +111,7 @@
   </div>
 
   <script type="text/babel">
+
     const { useState, useEffect, useMemo, useRef } = React;
 
     // =========================================================================
@@ -1835,16 +1866,17 @@ function App() {
       console.error("Lỗi khởi chạy App:", err);
       document.getElementById('root').innerHTML = '<div style="padding:30px;max-width:600px;margin:50px auto;background:#fff;border-radius:12px;box-shadow:0 10px 25px rgba(0,0,0,0.1);font-family:sans-serif;color:#1e293b;border-top:6px solid #ef4444;"><h3 style="color:#dc2626;margin-top:0;font-size:20px;">⚠️ Lỗi Khởi Chạy Trang Web</h3><p style="font-size:14px;color:#475569;">Hệ thống gặp sự cố khi tải mã giao diện hoặc có lỗi cú pháp khi dán cấu hình Firebase.</p><div style="background:#f8fafc;padding:12px;border-radius:8px;font-family:monospace;font-size:12px;color:#991b1b;margin:15px 0;word-break:break-all;">' + err.message + '</div><h4 style="font-size:14px;margin-bottom:8px;">🛠️ Hướng dẫn xử lý:</h4><ol style="font-size:13px;line-height:1.6;color:#334155;padding-left:20px;"><li>Kiểm tra lại <b>dòng 10 - 20 trong file index.html trên GitHub</b> xem có bị dán thừa/thiếu dấu ngoặc ngoặc nhọn <code>{ }</code> hoặc thừa chữ <code>const</code> không.</li><li>Hoặc dán đè lại nguyên văn bản mã mới nhất từ file <b>app-quan-ly-csdl-v20.txt</b>.</li></ol></div>';
     }
+  
   </script>
 
-  <!-- BỘ CHẨN ĐOÁN & TỰ ĐỘNG CỨU HỘ GIAO DIỆN NẾU BỊ ĐỌC LỖI CÚ PHÁP -->
+  <!-- BỘ CHẨN ĐOÁN & TỰ ĐỘNG CỨU HỘ GIAO DIỆN -->
   <script>
     setTimeout(function() {
       var rootEl = document.getElementById('root');
       if (rootEl && rootEl.innerHTML.indexOf('Đang khởi chạy CSDL') !== -1) {
-        rootEl.innerHTML = '<div style="padding:30px;max-width:650px;margin:50px auto;background:#fff;border-radius:16px;box-shadow:0 20px 25px -5px rgba(0,0,0,0.1);font-family:sans-serif;color:#1e293b;border-top:6px solid #f59e0b;"><h3 style="color:#d97706;margin-top:0;font-size:20px;display:flex;align-items:center;gap:8px;">⚠️ Phát Hiện Lỗi Cú Pháp Khi Dán Mã</h3><p style="font-size:14px;color:#475569;line-height:1.5;">Trang web chưa hiển thị được do có <b>lỗi cú pháp JavaScript</b> tại đoạn dán mã <code>firebaseConfig</code> trên GitHub (thường do dán đè trùng lặp cú pháp hoặc thiếu dấu ngoặc).</p><div style="background:#fffbeb;border:1px solid #fde68a;padding:15px;border-radius:10px;margin:16px 0;"><h4 style="margin:0 0 8px 0;font-size:14px;color:#92400e;">💡 CÁCH SỬA LỖI NĂM CHẮC 100% THÀNH CÔNG:</h4><ol style="font-size:13px;line-height:1.8;color:#78350f;margin:0;padding-left:20px;"><li>Mở file <b>index.html</b> trên GitHub ➔ bấm biểu tượng <b>Cây bút (Edit)</b>.</li><li>Tìm đoạn từ dòng 10 đến 20. Đảm bảo dán đúng dạng:<br/><code style="background:#fff;padding:2px 6px;border-radius:4px;border:1px solid #fcd34d;">const firebaseConfig = { apiKey: "...", projectId: "..." };</code></li><li>Hoặc đơn giản nhất: <b>Copy toàn bộ mã mới từ tệp app-quan-ly-csdl-v20.txt dán đè 100% vào file index.html</b>.</li></ol></div><div style="text-align:center;margin-top:20px;"><button onclick="window.location.reload()" style="background:#2563eb;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-weight:bold;cursor:pointer;">🔄 Tải lại trang web</button></div></div>';
+        rootEl.innerHTML = '<div style="padding:30px;max-width:650px;margin:50px auto;background:#fff;border-radius:16px;box-shadow:0 20px 25px -5px rgba(0,0,0,0.1);font-family:sans-serif;color:#1e293b;border-top:6px solid #f59e0b;"><h3 style="color:#d97706;margin-top:0;font-size:20px;display:flex;align-items:center;gap:8px;">⚠️ Sự Cố Nạp Thư Viện CDN</h3><p style="font-size:14px;color:#475569;line-height:1.5;">Trình duyệt của bạn không thể tải thư viện React/Tailwind từ máy chủ CDN. Vui lòng kiểm tra kết nối Internet hoặc tải lại trang.</p><div style="text-align:center;margin-top:20px;"><button onclick="window.location.reload()" style="background:#2563eb;color:#fff;border:none;padding:10px 20px;border-radius:8px;font-weight:bold;cursor:pointer;">🔄 Tải lại trang web</button></div></div>';
       }
-    }, 2500);
+    }, 4000);
   </script>
 </body>
 </html>
