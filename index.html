@@ -441,7 +441,17 @@
 function App() {
 
       const [showFbConfigModal, setShowFbConfigModal] = useState(false);
-      const [fbConfigInput, setFbConfigInput] = useState(() => window.getValidCloudUrl() || localStorage.getItem('gialai_cloud_url') || localStorage.getItem('gialai_firebase_config') || '');
+      const [fbConfigInput, setFbConfigInput] = useState(() => {
+        const gas = window.getValidCloudUrl();
+        if (gas) return gas;
+        const localGas = localStorage.getItem('gialai_cloud_url');
+        if (localGas) return localGas;
+        const localFb = localStorage.getItem('gialai_firebase_config');
+        if (localFb) return localFb;
+        const globalFb = window.getValidFirebaseConfig();
+        if (globalFb) return JSON.stringify(globalFb, null, 2);
+        return '';
+      });
       const [cloudStatus, setCloudStatus] = useState(isCloudConnected ? 'connected' : 'local');
 
       // CLOUD SYNC HELPERS
@@ -498,6 +508,9 @@ function App() {
                 }
                 console.log('⚡ Firebase Firestore: Đã tự động cập nhật dữ liệu Realtime từ Cloud!');
               }
+            } else {
+              console.log('⚡ Firestore Document data chưa tồn tại. Tự động khởi tạo dữ liệu ban đầu lên Cloud...');
+              syncToCloud();
             }
           }, err => console.warn('Lỗi Firestore listener config/data:', err));
 
