@@ -1972,10 +1972,8 @@ function App() {
           
           {/* QUÊN MẬT KHẨU MODAL */}
           {showForgotPassModal && (
-          {/* QUÊN MẬT KHẨU MODAL */}
-          {showForgotPassModal && (
-            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-[99999]">
-              <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in">
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-[99999]">
+             <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in">
                 <div className="bg-blue-600 p-3 sm:p-4 flex justify-between items-center text-white shrink-0">
                   <h3 className="font-bold flex items-center gap-2 text-sm sm:text-base"><ShieldCheck className="w-5 h-5"/> Khôi phục tài khoản</h3>
                   <button onClick={() => { setShowForgotPassModal(false); setShowLoginModal(true); }} className="hover:bg-blue-700 p-1 rounded-full"><X className="w-5 h-5"/></button>
