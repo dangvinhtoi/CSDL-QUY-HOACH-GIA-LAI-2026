@@ -6,13 +6,7 @@
   <title>CSDL QUY HOẠCH GIA LAI - Hệ thống Quản lý & Tra cứu Sáp nhập ĐVHC</title>
   <!-- 🟢 CẤU HÌNH ĐỒNG BỘ FIREBASE FIRESTORE REALTIME TỰ ĐỘNG ĐA THIẾT BỊ -->
   <script>
-    // 🟢 CẤU HÌNH FIREBASE FIRESTORE REALTIME (DÁN TRỰC TIẾP TỪ CONSOLE FIREBASE VÀO ĐÂY)
-    // Bạn có thể dán nguyên vẹn đoạn code "const firebaseConfig = { ... };" từ Firebase vào bên dưới:
-    
-    var firebaseConfig = null;
-    var DEFAULT_FIREBASE_CONFIG = null;
-
-        /* === BẮT ĐẦU DÁN ĐOẠN CODE FIREBASE CONFIG TẠI ĐÂY === */
+    // 🟢 CẤU HÌNH FIREBASE FIRESTORE REALTIME TỰ ĐỘNG ĐA THIẾT BỊ
     var firebaseConfig = {
       apiKey: "AIzaSyAWgr2Evc2ruAUs4DPZVXNCwpxSBsTkxsU",
       authDomain: "csdl-qh-gia-lai-2026.firebaseapp.com",
@@ -23,42 +17,8 @@
       measurementId: "G-STDH467R45"
     };
     window.DEFAULT_FIREBASE_CONFIG = firebaseConfig;
-    /* === KẾT THÚC DÁN ĐOẠN CODE FIREBASE CONFIG === */
-
-    // 🟢 CẤU HÌNH DỰ PHÒNG GOOGLE APPS SCRIPT (NẾU DÙNG GOOGLE DRIVE)
     window.DEFAULT_CLOUD_URL = window.DEFAULT_CLOUD_URL || "";
 
-    const getValidCloudUrl = () => {
-      const url = window.DEFAULT_CLOUD_URL || localStorage.getItem('gialai_cloud_url') || '';
-      if (!url || url.includes('DÁN_LINK_GOOGLE') || url.includes('DÁN_LINK_') || url.trim() === '') return '';
-      return url.trim();
-    };
-
-    const getValidFirebaseConfig = () => {
-      let cfg = null;
-      if (typeof window !== 'undefined') {
-        cfg = window.DEFAULT_FIREBASE_CONFIG || window.firebaseConfig;
-      }
-      if (!cfg && typeof firebaseConfig !== 'undefined') {
-        cfg = firebaseConfig;
-      }
-      if (cfg && typeof cfg === 'string') {
-        try { cfg = JSON.parse(cfg); } catch(e){}
-      }
-      if (cfg && cfg.apiKey && cfg.projectId) return cfg;
-
-      const saved = localStorage.getItem('gialai_firebase_config');
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (parsed && parsed.apiKey && parsed.projectId) return parsed;
-        } catch(e){}
-      }
-      return null;
-    };
-  </script>
-
-  
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   
