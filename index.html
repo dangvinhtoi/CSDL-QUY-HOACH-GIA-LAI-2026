@@ -506,6 +506,14 @@ function App() {
                   setAdminPassword(cloudData.adminPassword);
                   localStorage.setItem('gialai_admin_pass', cloudData.adminPassword);
                 }
+                if (Array.isArray(cloudData.membersList)) {
+                  setMembersList(cloudData.membersList);
+                  localStorage.setItem('gialai_members_list', JSON.stringify(cloudData.membersList));
+                }
+                if (Array.isArray(cloudData.pendingDataChanges)) {
+                  setPendingDataChanges(cloudData.pendingDataChanges);
+                  localStorage.setItem('gialai_pending_changes', JSON.stringify(cloudData.pendingDataChanges));
+                }
                 console.log('⚡ Firebase Firestore: Đã tự động cập nhật dữ liệu Realtime từ Cloud!');
               }
             } else {
@@ -534,6 +542,14 @@ function App() {
                 if (cloudData.adminPassword) {
                   setAdminPassword(cloudData.adminPassword);
                   localStorage.setItem('gialai_admin_pass', cloudData.adminPassword);
+                }
+                if (Array.isArray(cloudData.membersList)) {
+                  setMembersList(cloudData.membersList);
+                  localStorage.setItem('gialai_members_list', JSON.stringify(cloudData.membersList));
+                }
+                if (Array.isArray(cloudData.pendingDataChanges)) {
+                  setPendingDataChanges(cloudData.pendingDataChanges);
+                  localStorage.setItem('gialai_pending_changes', JSON.stringify(cloudData.pendingDataChanges));
                 }
                 console.log('✅ Đã đồng bộ dữ liệu mới nhất từ Google Sheets / Drive Cloud');
               }
@@ -625,6 +641,27 @@ function App() {
       const [changePassError, setChangePassError] = useState('');
       const [adminPassword, setAdminPassword] = useState(() => localStorage.getItem('gialai_admin_pass') || '123456');
 
+      const [userRole, setUserRole] = useState('GUEST'); // 'ADMIN', 'MEMBER', 'GUEST'
+      const [currentUser, setCurrentUser] = useState(null);
+
+      const [membersList, setMembersList] = useState(() => {
+        const local = localStorage.getItem('gialai_members_list');
+        return local ? JSON.parse(local) : [];
+      });
+
+      const [pendingDataChanges, setPendingDataChanges] = useState(() => {
+        const local = localStorage.getItem('gialai_pending_changes');
+        return local ? JSON.parse(local) : [];
+      });
+
+      const [showRegisterModal, setShowRegisterModal] = useState(false);
+      const [registerForm, setRegisterForm] = useState({ fullName: '', unit: '', position: '', email: '', username: '', password: '' });
+      const [registerError, setRegisterError] = useState('');
+
+      const [showMemberMgmtModal, setShowMemberMgmtModal] = useState(false);
+      const [showContentApprovalModal, setShowContentApprovalModal] = useState(false);
+
+
       const [showForgotPassModal, setShowForgotPassModal] = useState(false);
       const [forgotPassStep, setForgotPassStep] = useState(1);
       const [recoveryPhone, setRecoveryPhone] = useState('');
@@ -678,7 +715,9 @@ function App() {
           qhSapNhap: overrides.mergedData || mergedData,
           qhLienHe: overrides.contactData || contactData,
           qhRaSoat: overrides.reviewData || reviewData,
-          adminPassword: overrides.adminPassword || adminPassword
+          adminPassword: overrides.adminPassword || adminPassword,
+          membersList: overrides.membersList || membersList,
+          pendingDataChanges: overrides.pendingDataChanges || pendingDataChanges
         };
 
         if (cloudUrl && !cloudUrl.includes('DÁN_LINK_GOOGLE')) {
@@ -1063,13 +1102,187 @@ function App() {
       // HANDLERS MODAL
       const handleLogin = (e) => {
         e.preventDefault();
-        if (loginForm.username === 'admin' && loginForm.password === adminPassword) {
+        setLoginError('');
+        const u = (loginForm.username || '').trim();
+        const p = (loginForm.password || '').trim();
+
+        if (u === 'admin' && p === adminPassword) {
           setIsLoggedIn(true);
+          setUserRole('ADMIN');
+          setCurrentUser({ username: 'admin', fullName: 'Quản trị viên Hệ thống', unit: 'Sở Xây dựng Gia Lai', role: 'ADMIN' });
           setShowLoginModal(false);
           setLoginForm({ username: '', password: '' });
-          setLoginError('');
-          showNotification('Đăng nhập thành công!');
-        } else setLoginError('Tài khoản hoặc mật khẩu không chính xác!');
+          showNotification('🔑 Đăng nhập Quản trị viên (Admin) thành công!');
+          return;
+        }
+
+        const found = (membersList || []).find(m => m.username === u && m.password === p);
+        if (found) {
+          if (found.status === 'PENDING') {
+            return setLoginError('⏳ Tài khoản của bạn đang chờ Admin kiểm duyệt và cấp quyền. Vui lòng thử lại sau!');
+          }
+          if (found.status === 'REJECTED') {
+            return setLoginError('❌ Tài khoản của bạn đã bị từ chối hoặc vô hiệu hóa.');
+          }
+          if (found.status === 'APPROVED') {
+            setIsLoggedIn(true);
+            setUserRole('MEMBER');
+            setCurrentUser(found);
+            setShowLoginModal(false);
+            setLoginForm({ username: '', password: '' });
+            showNotification(`👤 Chào mừng ${found.fullName} (${found.unit}) đăng nhập thành công!`);
+            return;
+          }
+        }
+
+        setLoginError('❌ Tài khoản hoặc mật khẩu không chính xác!');
+      };
+
+      const handleRegister = (e) => {
+        e.preventDefault();
+        setRegisterError('');
+        const fn = (registerForm.fullName || '').trim();
+        const un = (registerForm.unit || '').trim();
+        const pos = (registerForm.position || '').trim();
+        const em = (registerForm.email || '').trim();
+        const u = (registerForm.username || '').trim();
+        const p = (registerForm.password || '').trim();
+
+        if (!fn || !un || !pos || !em || !u || !p) {
+          return setRegisterError('Vui lòng điền đầy đủ tất cả các trường thông tin!');
+        }
+        if (u.toLowerCase() === 'admin') {
+          return setRegisterError('Tên đăng nhập "admin" là tài khoản hệ thống, vui lòng chọn tên khác!');
+        }
+        if ((membersList || []).some(m => m.username === u)) {
+          return setRegisterError('Tên đăng nhập này đã được sử dụng. Vui lòng chọn tên khác!');
+        }
+
+        const newMember = {
+          id: Date.now(),
+          fullName: fn,
+          unit: un,
+          position: pos,
+          email: em,
+          username: u,
+          password: p,
+          status: 'PENDING',
+          createdAt: new Date().toLocaleString('vi-VN')
+        };
+
+        const nextMembers = [newMember, ...(membersList || [])];
+        setMembersList(nextMembers);
+        localStorage.setItem('gialai_members_list', JSON.stringify(nextMembers));
+        syncToCloud({ membersList: nextMembers });
+
+        setShowRegisterModal(false);
+        setRegisterForm({ fullName: '', unit: '', position: '', email: '', username: '', password: '' });
+        showNotification('✅ Đăng ký thành công! Thông tin đã được gửi về Admin để kiểm tra và cấp quyền.');
+      };
+
+      const handleApproveMember = (memberId) => {
+        const nextMembers = (membersList || []).map(m => m.id === memberId ? { ...m, status: 'APPROVED' } : m);
+        setMembersList(nextMembers);
+        localStorage.setItem('gialai_members_list', JSON.stringify(nextMembers));
+        syncToCloud({ membersList: nextMembers });
+        showNotification('✅ Đã duyệt cấp quyền tài khoản thành viên thành công!');
+      };
+
+      const handleRejectMember = (memberId) => {
+        const nextMembers = (membersList || []).filter(m => m.id !== memberId);
+        setMembersList(nextMembers);
+        localStorage.setItem('gialai_members_list', JSON.stringify(nextMembers));
+        syncToCloud({ membersList: nextMembers });
+        showNotification('Đã từ chối / xóa yêu cầu đăng ký tài khoản.');
+      };
+
+      const submitPendingChange = (category, type, targetId, recordData) => {
+        const pendingItem = {
+          id: Date.now(),
+          category,
+          type,
+          targetId,
+          recordData,
+          submittedBy: {
+            fullName: currentUser?.fullName || 'Thành viên',
+            unit: currentUser?.unit || '',
+            position: currentUser?.position || '',
+            email: currentUser?.email || '',
+            username: currentUser?.username || ''
+          },
+          submittedAt: new Date().toLocaleString('vi-VN'),
+          status: 'PENDING'
+        };
+        const nextPending = [pendingItem, ...(pendingDataChanges || [])];
+        setPendingDataChanges(nextPending);
+        localStorage.setItem('gialai_pending_changes', JSON.stringify(nextPending));
+        syncToCloud({ pendingDataChanges: nextPending });
+        showNotification('📑 Đã gửi nội dung ' + (type === 'ADD' ? 'thêm mới' : 'chỉnh sửa') + ' về Admin kiểm duyệt. Dữ liệu sẽ xuất hiện sau khi Admin đồng ý!');
+      };
+
+      const handleApproveContent = (item) => {
+        const { category, type, targetId, recordData } = item;
+        let nextData = data, nextDetail = detailData, nextMerged = mergedData, nextContact = contactData, nextReview = reviewData;
+
+        if (category === 'QH_CHUNG') {
+          if (type === 'EDIT' && targetId) {
+            nextData = data.map(r => r.id === targetId ? recordData : r);
+          } else {
+            nextData = [recordData, ...data];
+          }
+          setData(nextData);
+        } else if (category === 'QH_CHITIET') {
+          if (type === 'EDIT' && targetId) {
+            nextDetail = detailData.map(r => r.id === targetId ? recordData : r);
+          } else {
+            nextDetail = [recordData, ...detailData];
+          }
+          setDetailData(nextDetail);
+        } else if (category === 'MERGE') {
+          if (type === 'EDIT' && targetId) {
+            nextMerged = mergedData.map(r => r.id === targetId ? recordData : r);
+          } else {
+            nextMerged = [recordData, ...mergedData];
+          }
+          setMergedData(nextMerged);
+        } else if (category === 'CONTACT') {
+          if (type === 'EDIT' && targetId) {
+            nextContact = contactData.map(r => r.id === targetId ? recordData : r);
+          } else {
+            nextContact = [recordData, ...contactData];
+          }
+          setContactData(nextContact);
+        } else if (category === 'REVIEW') {
+          if (type === 'EDIT' && targetId) {
+            nextReview = reviewData.map(r => r.id === targetId ? recordData : r);
+          } else {
+            nextReview = [recordData, ...reviewData];
+          }
+          setReviewData(nextReview);
+        }
+
+        const nextPending = (pendingDataChanges || []).filter(p => p.id !== item.id);
+        setPendingDataChanges(nextPending);
+        localStorage.setItem('gialai_pending_changes', JSON.stringify(nextPending));
+
+        syncToCloud({
+          data: nextData,
+          detailData: nextDetail,
+          mergedData: nextMerged,
+          contactData: nextContact,
+          reviewData: nextReview,
+          pendingDataChanges: nextPending
+        });
+
+        showNotification('🎉 Đã phê duyệt và cập nhật chính thức dữ liệu lên hệ thống web!');
+      };
+
+      const handleRejectContent = (itemId) => {
+        const nextPending = (pendingDataChanges || []).filter(p => p.id !== itemId);
+        setPendingDataChanges(nextPending);
+        localStorage.setItem('gialai_pending_changes', JSON.stringify(nextPending));
+        syncToCloud({ pendingDataChanges: nextPending });
+        showNotification('Đã từ chối đề xuất chỉnh sửa.');
       };
 
       const handleChangePassword = (e) => {
@@ -1140,6 +1353,12 @@ function App() {
         const recordId = editingRecord?.id ? editingRecord.id : Date.now();
         newRecord.id = recordId;
 
+        if (userRole === 'MEMBER') {
+          submitPendingChange(isDetail ? 'QH_CHITIET' : 'QH_CHUNG', editingRecord?.id ? 'EDIT' : 'ADD', editingRecord?.id || null, newRecord);
+          setIsModalOpen(false);
+          return;
+        }
+
         if (isDetail) {
           const nextDetail = (detailData || []).some(r => r.id === recordId)
             ? detailData.map(r => r.id === recordId ? newRecord : r)
@@ -1193,6 +1412,12 @@ function App() {
         const recordId = editingMergeRecord?.id ? editingMergeRecord.id : Date.now();
         newRecord.id = recordId;
 
+        if (userRole === 'MEMBER') {
+          submitPendingChange('MERGE', editingMergeRecord?.id ? 'EDIT' : 'ADD', editingMergeRecord?.id || null, newRecord);
+          setIsMergeModalOpen(false);
+          return;
+        }
+
         const nextMerged = (mergedData || []).some(r => r.id === recordId)
           ? mergedData.map(r => r.id === recordId ? newRecord : r)
           : [newRecord, ...(mergedData || [])];
@@ -1231,6 +1456,12 @@ function App() {
         const recordId = editingContactRecord?.id ? editingContactRecord.id : Date.now().toString();
         newRecord.id = recordId;
 
+        if (userRole === 'MEMBER') {
+          submitPendingChange('CONTACT', editingContactRecord?.id ? 'EDIT' : 'ADD', editingContactRecord?.id || null, newRecord);
+          setIsContactModalOpen(false);
+          return;
+        }
+
         const nextContact = (contactData || []).some(r => r.id === recordId)
           ? contactData.map(r => r.id === recordId ? newRecord : r)
           : [newRecord, ...(contactData || [])];
@@ -1268,6 +1499,12 @@ function App() {
         const newRecord = { ...reviewFormData };
         const recordId = editingReviewRecord?.id ? editingReviewRecord.id : Date.now().toString();
         newRecord.id = recordId;
+
+        if (userRole === 'MEMBER') {
+          submitPendingChange('REVIEW', editingReviewRecord?.id ? 'EDIT' : 'ADD', editingReviewRecord?.id || null, newRecord);
+          setIsReviewModalOpen(false);
+          return;
+        }
 
         const nextReview = (reviewData || []).some(r => r.id === recordId)
           ? reviewData.map(r => r.id === recordId ? newRecord : r)
@@ -1349,15 +1586,40 @@ function App() {
                   <button onClick={() => fetchFromCloud(true)} className="text-xs bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm shrink-0" title="Bấm để làm mới & nạp dữ liệu mới nhất từ Google Drive"><RefreshCcw className="w-3.5 h-3.5"/> Làm mới Đám mây</button>
                   {isLoggedIn ? (
                     <div className="flex flex-col items-center gap-1.5">
-                      <span className="text-sm font-bold text-white flex items-center gap-1.5"><User className="w-4 h-4 text-emerald-400"/> Admin</span>
-                      <div className="flex gap-2">
-                        <button onClick={() => setShowDbModal(true)} className="text-xs bg-indigo-500/20 hover:bg-indigo-500 text-indigo-100 hover:text-white border border-indigo-500/50 px-2 py-1 rounded transition-colors flex items-center gap-1 font-medium"><Database className="w-3 h-3"/> Quản lý CSDL</button>
-                        <button onClick={() => setShowChangePassModal(true)} className="text-xs bg-amber-500/20 hover:bg-amber-500 text-amber-100 hover:text-white border border-amber-500/50 px-2 py-1 rounded transition-colors flex items-center gap-1 font-medium"><Key className="w-3 h-3"/> Đổi MK</button>
-                        <button onClick={() => setIsLoggedIn(false)} className="text-xs bg-red-500/20 hover:bg-red-500 text-red-100 hover:text-white border border-red-500/50 px-2 py-1 rounded transition-colors flex items-center gap-1 font-medium"><LogOut className="w-3 h-3"/> Đăng xuất</button>
+                      <span className="text-sm font-bold text-white flex items-center gap-1.5">
+                        <User className="w-4 h-4 text-emerald-400"/> {userRole === 'ADMIN' ? 'Quản trị viên (Admin)' : `${currentUser?.fullName || 'Thành viên'} (${currentUser?.unit || ''})`}
+                      </span>
+                      <div className="flex flex-wrap gap-1.5 justify-center">
+                        {userRole === 'ADMIN' && (
+                          <>
+                            <button onClick={() => setShowMemberMgmtModal(true)} className="relative text-xs bg-purple-500/40 hover:bg-purple-500 text-purple-100 hover:text-white border border-purple-400/60 px-2 py-1 rounded transition-colors flex items-center gap-1 font-medium">
+                              <User className="w-3 h-3"/> Thành viên
+                              {(membersList || []).filter(m => m.status === 'PENDING').length > 0 && (
+                                <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-extrabold px-1.5 py-0.5 rounded-full animate-bounce">
+                                  {(membersList || []).filter(m => m.status === 'PENDING').length}
+                                </span>
+                              )}
+                            </button>
+                            <button onClick={() => setShowContentApprovalModal(true)} className="relative text-xs bg-amber-500/40 hover:bg-amber-500 text-amber-100 hover:text-white border border-amber-400/60 px-2 py-1 rounded transition-colors flex items-center gap-1 font-medium">
+                              <ClipboardCheck className="w-3 h-3"/> Duyệt Dữ liệu
+                              {(pendingDataChanges || []).length > 0 && (
+                                <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-extrabold px-1.5 py-0.5 rounded-full animate-bounce">
+                                  {(pendingDataChanges || []).length}
+                                </span>
+                              )}
+                            </button>
+                            <button onClick={() => setShowDbModal(true)} className="text-xs bg-indigo-500/20 hover:bg-indigo-500 text-indigo-100 hover:text-white border border-indigo-500/50 px-2 py-1 rounded transition-colors flex items-center gap-1 font-medium"><Database className="w-3 h-3"/> Quản lý CSDL</button>
+                            <button onClick={() => setShowChangePassModal(true)} className="text-xs bg-amber-500/20 hover:bg-amber-500 text-amber-100 hover:text-white border border-amber-500/50 px-2 py-1 rounded transition-colors flex items-center gap-1 font-medium"><Key className="w-3 h-3"/> Đổi MK</button>
+                          </>
+                        )}
+                        <button onClick={() => { setIsLoggedIn(false); setUserRole('GUEST'); setCurrentUser(null); showNotification('Đã đăng xuất.'); }} className="text-xs bg-red-500/20 hover:bg-red-500 text-red-100 hover:text-white border border-red-500/50 px-2 py-1 rounded transition-colors flex items-center gap-1 font-medium"><LogOut className="w-3 h-3"/> Đăng xuất</button>
                       </div>
                     </div>
                   ) : (
-                    <button onClick={() => setShowLoginModal(true)} className="text-sm bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold shadow-sm flex items-center gap-1.5"><LogIn className="w-4 h-4"/> Đăng nhập</button>
+                    <div className="flex gap-2">
+                      <button onClick={() => setShowLoginModal(true)} className="text-sm bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1.5 rounded-lg font-bold shadow-sm flex items-center gap-1.5"><LogIn className="w-4 h-4"/> Đăng nhập</button>
+                      <button onClick={() => setShowRegisterModal(true)} className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-bold shadow-sm flex items-center gap-1.5"><User className="w-4 h-4"/> Đăng ký Thành viên</button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -1666,7 +1928,10 @@ function App() {
 
           {/* ALL MODALS (LOGIN, FORGOT PASS, DB MNG) */}
           {showLoginModal && !showForgotPassModal && (
-            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-[99999]"><div className="bg-white rounded-xl shadow-2xl w-full max-w-sm max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in"><div className="bg-blue-800 p-3 sm:p-4 flex justify-between items-center text-white shrink-0"><h3 className="font-bold flex items-center gap-2 text-sm sm:text-base"><Lock className="w-5 h-5"/> Đăng nhập</h3><button onClick={() => setShowLoginModal(false)} className="hover:bg-blue-700 p-1 rounded-full"><X className="w-5 h-5"/></button></div><form onSubmit={handleLogin} className="p-4 sm:p-6 flex flex-col gap-4 overflow-y-auto flex-1 custom-scrollbar">{loginError && <div className="bg-red-50 text-red-600 p-3 rounded text-sm font-medium">{loginError}</div>}<div><label className="block text-sm font-semibold mb-1">Tài khoản</label><input type="text" value={loginForm.username} onChange={e=>setLoginForm(p=>({...p, username: e.target.value}))} className="w-full border px-3 py-2 rounded" placeholder="admin" /></div><div><label className="block text-sm font-semibold mb-1">Mật khẩu</label><input type="password" value={loginForm.password} onChange={e=>setLoginForm(p=>({...p, password: e.target.value}))} className="w-full border px-3 py-2 rounded" placeholder="123456" /></div><button type="submit" className="w-full bg-blue-600 text-white font-bold py-2.5 rounded">Đăng nhập</button><button type="button" onClick={() => {setShowLoginModal(false); setShowForgotPassModal(true); setForgotPassStep(1); setRecoveryPhone(''); setRecoveryOTP(''); setNewRecoveryPass(''); setRecoveryError('');}} className="text-sm text-blue-600 hover:underline mt-2 text-right">Quên mật khẩu?</button></form></div></div>
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-[99999]"><div className="bg-white rounded-xl shadow-2xl w-full max-w-sm max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in"><div className="bg-blue-800 p-3 sm:p-4 flex justify-between items-center text-white shrink-0"><h3 className="font-bold flex items-center gap-2 text-sm sm:text-base"><Lock className="w-5 h-5"/> Đăng nhập</h3><button onClick={() => setShowLoginModal(false)} className="hover:bg-blue-700 p-1 rounded-full"><X className="w-5 h-5"/></button></div><form onSubmit={handleLogin} className="p-4 sm:p-6 flex flex-col gap-4 overflow-y-auto flex-1 custom-scrollbar">{loginError && <div className="bg-red-50 text-red-600 p-3 rounded text-sm font-medium">{loginError}</div>}<div><label className="block text-sm font-semibold mb-1">Tài khoản</label><input type="text" value={loginForm.username} onChange={e=>setLoginForm(p=>({...p, username: e.target.value}))} className="w-full border px-3 py-2 rounded" placeholder="admin" /></div><div><label className="block text-sm font-semibold mb-1">Mật khẩu</label><input type="password" value={loginForm.password} onChange={e=>setLoginForm(p=>({...p, password: e.target.value}))} className="w-full border px-3 py-2 rounded" placeholder="123456" /></div><button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded shadow-sm transition-colors">Đăng nhập</button>
+            <div className="text-center text-xs text-slate-600 pt-2 border-t mt-1">
+              Chưa có tài khoản? <button type="button" onClick={() => { setShowLoginModal(false); setShowRegisterModal(true); }} className="text-blue-600 font-bold hover:underline">Đăng ký Thành viên ngay</button>
+            </div><button type="button" onClick={() => {setShowLoginModal(false); setShowForgotPassModal(true); setForgotPassStep(1); setRecoveryPhone(''); setRecoveryOTP(''); setNewRecoveryPass(''); setRecoveryError('');}} className="text-sm text-blue-600 hover:underline mt-2 text-right">Quên mật khẩu?</button></form></div></div>
           )}
 
           {/* QUÊN MẬT KHẨU MODAL */}
