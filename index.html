@@ -1933,7 +1933,36 @@ function App() {
               Chưa có tài khoản? <button type="button" onClick={() => { setShowLoginModal(false); setShowRegisterModal(true); }} className="text-blue-600 font-bold hover:underline">Đăng ký Thành viên ngay</button>
             </div><button type="button" onClick={() => {setShowLoginModal(false); setShowForgotPassModal(true); setForgotPassStep(1); setRecoveryPhone(''); setRecoveryOTP(''); setNewRecoveryPass(''); setRecoveryError('');}} className="text-sm text-blue-600 hover:underline mt-2 text-right">Quên mật khẩu?</button></form></div></div>
           )}
+<div className="text-center text-xs text-slate-600 pt-2 border-t mt-1">
+              Chưa có tài khoản? <button type="button" onClick={() => { setShowLoginModal(false); setShowRegisterModal(true); }} className="text-blue-600 font-bold hover:underline">Đăng ký Thành viên ngay</button>
+            </div><button type="button" onClick={() => {setShowLoginModal(false); setShowForgotPassModal(true); setForgotPassStep(1); setRecoveryPhone(''); setRecoveryOTP(''); setNewRecoveryPass(''); setRecoveryError('');}} className="text-sm text-blue-600 hover:underline mt-2 text-right">Quên mật khẩu?</button></form></div></div>
+          )}
 
+          {/* MODAL ĐĂNG KÝ THÀNH VIÊN (Đoạn mã bạn vừa dán vào đây) */}
+          {showRegisterModal && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-[99999]">
+              <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in">
+                <div className="bg-blue-600 p-3 sm:p-4 flex justify-between items-center text-white shrink-0">
+                  <h3 className="font-bold flex items-center gap-2 text-sm sm:text-base"><User className="w-5 h-5"/> Đăng ký Thành viên</h3>
+                  <button onClick={() => setShowRegisterModal(false)} className="hover:bg-blue-700 p-1 rounded-full"><X className="w-5 h-5"/></button>
+                </div>
+                <form onSubmit={handleRegister} className="p-4 sm:p-6 flex flex-col gap-4 overflow-y-auto flex-1 custom-scrollbar">
+                  {registerError && <div className="bg-red-50 text-red-600 p-3 rounded text-sm font-medium">{registerError}</div>}
+                  <div><label className="block text-sm font-semibold mb-1">Họ và Tên <span className="text-red-500">*</span></label><input type="text" value={registerForm.fullName} onChange={e=>setRegisterForm(p=>({...p, fullName: e.target.value}))} className="w-full border px-3 py-2 rounded" required /></div>
+                  <div><label className="block text-sm font-semibold mb-1">Đơn vị công tác <span className="text-red-500">*</span></label><input type="text" value={registerForm.unit} onChange={e=>setRegisterForm(p=>({...p, unit: e.target.value}))} className="w-full border px-3 py-2 rounded" required /></div>
+                  <div><label className="block text-sm font-semibold mb-1">Chức vụ <span className="text-red-500">*</span></label><input type="text" value={registerForm.position} onChange={e=>setRegisterForm(p=>({...p, position: e.target.value}))} className="w-full border px-3 py-2 rounded" required /></div>
+                  <div><label className="block text-sm font-semibold mb-1">Email / Zalo liên hệ <span className="text-red-500">*</span></label><input type="text" value={registerForm.email} onChange={e=>setRegisterForm(p=>({...p, email: e.target.value}))} className="w-full border px-3 py-2 rounded" required /></div>
+                  <div><label className="block text-sm font-semibold mb-1">Tên đăng nhập <span className="text-red-500">*</span></label><input type="text" value={registerForm.username} onChange={e=>setRegisterForm(p=>({...p, username: e.target.value}))} className="w-full border px-3 py-2 rounded" required /></div>
+                  <div><label className="block text-sm font-semibold mb-1">Mật khẩu <span className="text-red-500">*</span></label><input type="password" value={registerForm.password} onChange={e=>setRegisterForm(p=>({...p, password: e.target.value}))} className="w-full border px-3 py-2 rounded" minLength={6} required /></div>
+                  <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded shadow-sm transition-colors mt-2">Gửi yêu cầu đăng ký</button>
+                  <div className="text-center text-xs text-slate-600 pt-2 border-t mt-1">Đã có tài khoản? <button type="button" onClick={() => { setShowRegisterModal(false); setShowLoginModal(true); }} className="text-blue-600 font-bold hover:underline">Đăng nhập ngay</button></div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* QUÊN MẬT KHẨU MODAL */}
+          {showForgotPassModal && (
           {/* QUÊN MẬT KHẨU MODAL */}
           {showForgotPassModal && (
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-[99999]">
