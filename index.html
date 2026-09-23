@@ -513,12 +513,37 @@ function App() {
       const handlePushLocalToCloud = () => {
         const cloudUrl = getCloudUrl();
         if (!cloudUrl || cloudUrl.includes('DÁN_LINK_GOOGLE')) {
-          return showNotification('Chưa cấu hình URL Đám mây! Vui lòng nhập URL Google Apps Script bên dưới.');
+          return showNotification('❌ Chưa cấu hình URL Google Apps Script! Vui lòng dán link vào dòng 12 trên GitHub.');
         }
-        openConfirm('Xác nhận Đẩy Dữ liệu lên Đám mây', 'Hệ thống sẽ lấy TOÀN BỘ dữ liệu mới nhất & MẬT KHẨU hiện tại của máy này để ghi đè lên Google Drive. Tiếp tục?', () => {
-          closeConfirm();
+        if (cloudUrl.includes('/dev')) {
+          return showNotification('⚠️ CẢNH BÁO: URL có đuôi /dev! Bạn phải đổi sang link kết thúc bằng /exec.');
+        }
+        showNotification('Đang gửi dữ liệu & Mật khẩu mới lên Google Drive...');
+        const payload = {
+          qhChung: data,
+          qhChiTiet: detailData,
+          qhSapNhap: mergedData,
+          qhLienHe: contactData,
+          qhRaSoat: reviewData,
+          adminPassword: adminPassword
+        };
+
+        fetch(cloudUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: JSON.stringify(payload)
+        })
+        .then(res => res.text())
+        .then(resText => {
+          if (resText.includes('<!DOCTYPE') || resText.includes('<html')) {
+            showNotification('❌ LỖI PHÂN QUYỀN GOOGLE: Vui lòng vào Apps Script -> Deploy -> Đổi "Who has access" thành "Anyone"!');
+          } else {
+            showNotification('✅ ĐÃ ĐẨY DỮ LIỆU & MẬT KHẨU MỚI LÊN GOOGLE DRIVE THÀNH CÔNG!');
+          }
+        })
+        .catch(err => {
           syncToCloud({ data, detailData, mergedData, contactData, reviewData, adminPassword });
-          showNotification('✅ ĐÃ ĐẨY DỮ LIỆU & MẬT KHẨU TỪ MÁY NÀY LÊN GOOGLE DRIVE THÀNH CÔNG!');
+          showNotification('✅ Đã phát lệnh lưu dữ liệu & mật khẩu lên Google Drive!');
         });
       };
 
@@ -640,8 +665,6 @@ function App() {
 
       const syncToCloud = (overrides = {}) => {
         const cloudUrl = getCloudUrl();
-        
-        // Payload chứa toàn bộ trạng thái dữ liệu hiện tại (có thể ghi đè biến vừa thay đổi)
         const payload = {
           qhChung: overrides.data || data,
           qhChiTiet: overrides.detailData || detailData,
@@ -651,17 +674,30 @@ function App() {
           adminPassword: overrides.adminPassword || adminPassword
         };
 
-        // 1. Đồng bộ Google Sheets / Drive Cloud
         if (cloudUrl && !cloudUrl.includes('DÁN_LINK_GOOGLE')) {
           fetch(cloudUrl, {
             method: 'POST',
-            mode: 'no-cors',
             headers: { 'Content-Type': 'text/plain' },
             body: JSON.stringify(payload)
-          }).catch(err => console.warn('Lỗi đồng bộ Google Sheets Cloud:', err));
+          })
+          .then(res => res.text())
+          .then(resText => {
+            if (resText.includes('<!DOCTYPE') || resText.includes('<html')) {
+              console.warn('Google Apps Script returned Login HTML on POST.');
+            } else {
+              console.log('Synced successfully to Google Drive');
+            }
+          })
+          .catch(err => {
+            fetch(cloudUrl, {
+              method: 'POST',
+              mode: 'no-cors',
+              headers: { 'Content-Type': 'text/plain' },
+              body: JSON.stringify(payload)
+            }).catch(e => console.warn('Sync fallback error:', e));
+          });
         }
 
-        // 2. Đồng bộ Firebase Cloud (nếu có cấu hình)
         if (db) {
           try {
             const appIdKey = typeof __app_id !== 'undefined' ? __app_id : 'gialai-qh-default';
@@ -673,42 +709,52 @@ function App() {
 
       const fetchFromCloud = (isManual = false) => {
         const cloudUrl = getCloudUrl();
-        if (!cloudUrl || cloudUrl.includes('DÁN_LINK_GOOGLE') || cloudUrl.trim() === '') {
-          if (isManual) showNotification('Chưa cấu hình URL Đám mây! Nhập link trong mục Quản lý CSDL.');
+        if (!cloudUrl || cloudUrl.trim() === '') {
+          if (isManual) showNotification('❌ Chưa cấu hình URL Đám mây! Hãy dán link Google Apps Script vào dòng 12.');
           return;
         }
-        if (isManual) showNotification('Đang tải dữ liệu mới nhất từ Đám mây...');
+        if (cloudUrl.includes('/dev')) {
+          showNotification('⚠️ CẢNH BÁO: URL của bạn có đuôi /dev (dùng thử)! Vui lòng lấy link chính thức kết thúc bằng /exec.');
+        }
+        if (isManual) showNotification('Đang kết nối & tải dữ liệu mới nhất từ Google Drive...');
 
         const fetchUrl = cloudUrl + (cloudUrl.includes("?") ? "&" : "?") + "_t=" + Date.now();
         fetch(fetchUrl)
-          .then(res => res.json())
-          .then(raw => {
-            let cloudData = raw;
-            if (typeof cloudData === 'string') {
-              try { cloudData = JSON.parse(cloudData); } catch(e){}
+          .then(res => res.text())
+          .then(textData => {
+            let textTrimmed = (textData || '').trim();
+            if (textTrimmed.startsWith('<!DOCTYPE') || textTrimmed.startsWith('<html') || textTrimmed.includes('ServiceLogin')) {
+              showNotification('❌ LỖI PHÂN QUYỀN GOOGLE: Bạn cần mở Apps Script -> Deploy -> Đổi "Who has access" thành "Anyone" (Bất kỳ ai).');
+              console.error('Google Apps Script returned HTML Login page instead of JSON.');
+              return;
             }
+            let cloudData = null;
+            try { cloudData = JSON.parse(textTrimmed); } catch(e) {}
+
             if (cloudData && typeof cloudData === 'object') {
               let updated = false;
-              if (Array.isArray(cloudData.qhChung)) { setData(cloudData.qhChung); updated = true; }
-              if (Array.isArray(cloudData.qhChiTiet)) { setDetailData(cloudData.qhChiTiet); updated = true; }
-              if (Array.isArray(cloudData.qhSapNhap)) { setMergedData(cloudData.qhSapNhap); updated = true; }
-              if (Array.isArray(cloudData.qhLienHe)) { setContactData(cloudData.qhLienHe); updated = true; }
-              if (Array.isArray(cloudData.qhRaSoat)) { setReviewData(cloudData.qhRaSoat); updated = true; }
+              if (Array.isArray(cloudData.qhChung) && cloudData.qhChung.length > 0) { setData(cloudData.qhChung); updated = true; }
+              if (Array.isArray(cloudData.qhChiTiet) && cloudData.qhChiTiet.length > 0) { setDetailData(cloudData.qhChiTiet); updated = true; }
+              if (Array.isArray(cloudData.qhSapNhap) && cloudData.qhSapNhap.length > 0) { setMergedData(cloudData.qhSapNhap); updated = true; }
+              if (Array.isArray(cloudData.qhLienHe) && cloudData.qhLienHe.length > 0) { setContactData(cloudData.qhLienHe); updated = true; }
+              if (Array.isArray(cloudData.qhRaSoat) && cloudData.qhRaSoat.length > 0) { setReviewData(cloudData.qhRaSoat); updated = true; }
               if (cloudData.adminPassword) {
                 setAdminPassword(cloudData.adminPassword);
                 localStorage.setItem('gialai_admin_pass', cloudData.adminPassword);
                 updated = true;
               }
-              if (isManual || updated) showNotification('✅ Đã đồng bộ dữ liệu mới nhất từ Đám mây!');
+              if (isManual || updated) showNotification(`✅ ĐỒNG BỘ THÀNH CÔNG TỪ GOOGLE DRIVE! (${(cloudData.qhChung||[]).length} hồ sơ, Mật khẩu đã cập nhật)`);
+            } else {
+              if (isManual) showNotification('⚠️ Tệp trên Google Drive chưa có dữ liệu mới. Hãy bấm "Đẩy dữ liệu" từ máy gốc.');
             }
           })
           .catch(err => {
             console.warn('Lỗi kết nối Đám mây Google:', err);
-            if (isManual) showNotification('Không thể kết nối đến Đám mây Google!');
+            if (isManual) showNotification('❌ Lỗi kết nối Google Drive! Kiểm tra lại đường truyền hoặc URL Web App.');
           });
       };
 
-      // Tự động tải dữ liệu từ Đám mây khi mở trang & tự động làm mới mỗi 30 giây
+      // TỰ ĐỘNG TẢI DỮ LIỆU KHI MỞ TRANG & MỖI 30 GIÂY
       useEffect(() => {
         fetchFromCloud(false);
         const timer = setInterval(() => {
@@ -716,7 +762,6 @@ function App() {
         }, 30000);
         return () => clearInterval(timer);
       }, []);
-
 
       // TỰ ĐỘNG LƯU LOCALSTORAGE KHI CÓ THAY ĐỔI
       useEffect(() => { localStorage.setItem('gialai_qh_chung', JSON.stringify(data)); }, [data]);
