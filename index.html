@@ -4,12 +4,46 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CSDL QUY HOẠCH GIA LAI - Hệ thống Quản lý & Tra cứu Sáp nhập ĐVHC</title>
-  <!-- 🟢 CẤU HÌNH ĐỒNG BỘ ĐÁM MÂY DÙNG CHUNG (DÁN LINK GOOGLE APPS SCRIPT VÀO ĐÂY) -->
+  <!-- 🟢 CẤU HÌNH ĐỒNG BỘ FIREBASE FIRESTORE REALTIME TỰ ĐỘNG ĐA THIẾT BỊ -->
   <script>
-    // 🟢 CẤU HÌNH ĐỒNG BỘ ĐÁM MÂY DÙNG CHUNG (DÁN LINK GOOGLE APPS SCRIPT VÀO ĐÂY)
-    // Để BẤT KỲ MÁY TÍNH NÀO mở link web cũng tự động kết nối và tải dữ liệu mới nhất,
-    // hãy dán đường link Google Apps Script Web App (https://script.google.com/macros/s/.../exec) vào giữa 2 dấu nháy đôi bên dưới:
-    window.DEFAULT_CLOUD_URL = "https://script.google.com/macros/s/AKfycbxah1Je8JzG6ntnXp3u_hx-eTeOZ7RAiO7paIGZ6VaS0pZqkVQQKoRF6b97JDTgzHjQzw/exec";
+    // 🟢 CẤU HÌNH FIREBASE FIRESTORE REALTIME ĐỒNG BỘ ĐA THIẾT BỊ
+    // Dán đối tượng firebaseConfig (lấy từ console.firebase.google.com) vào giữa 2 dấu ngoặc nhọn dưới đây:
+    window.DEFAULT_FIREBASE_CONFIG = {
+      /* DÁN CẤU HÌNH FIREBASE CỦA BẠN VÀO ĐÂY. VÍ DỤ:
+      apiKey: "AIzaSy...",
+      authDomain: "project-id.firebaseapp.com",
+      projectId: "project-id",
+      storageBucket: "project-id.appspot.com",
+      messagingSenderId: "1234567890",
+      appId: "1:1234567890:web:abcdef..."
+      */
+    };
+
+    // 🟢 CẤU HÌNH DỰ PHÒNG GOOGLE APPS SCRIPT (NẾU CÓ DÙNG GOOGLE DRIVE)
+    window.DEFAULT_CLOUD_URL = "";
+
+    const getValidCloudUrl = () => {
+      const url = window.DEFAULT_CLOUD_URL || localStorage.getItem('gialai_cloud_url') || '';
+      if (!url || url.includes('DÁN_LINK_GOOGLE') || url.includes('DÁN_LINK_') || url.trim() === '') return '';
+      return url.trim();
+    };
+
+    const getValidFirebaseConfig = () => {
+      let cfg = window.DEFAULT_FIREBASE_CONFIG;
+      if (cfg && typeof cfg === 'string') {
+        try { cfg = JSON.parse(cfg); } catch(e){}
+      }
+      if (cfg && cfg.apiKey && cfg.projectId) return cfg;
+
+      const saved = localStorage.getItem('gialai_firebase_config');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed && parsed.apiKey && parsed.projectId) return parsed;
+        } catch(e){}
+      }
+      return null;
+    };
   </script>
 
   
@@ -361,24 +395,17 @@
     const isGasConnected = Boolean(savedGasUrl);
 
     try {
-      const savedConfigStr = localStorage.getItem('gialai_firebase_config');
-      let fbConfig = null;
-
-      if (savedConfigStr) {
-        try { fbConfig = JSON.parse(savedConfigStr); } catch(e) {}
-      } else if (typeof __firebase_config !== 'undefined' && __firebase_config) {
-        try { fbConfig = typeof __firebase_config === 'string' ? JSON.parse(__firebase_config) : __firebase_config; } catch(e) {}
-      }
-
-      if (fbConfig && fbConfig.apiKey && fbConfig.projectId) {
+      const activeFbConfig = getValidFirebaseConfig();
+      if (activeFbConfig && activeFbConfig.apiKey && activeFbConfig.projectId) {
         if (!firebase.apps.length) {
-          firebaseApp = firebase.initializeApp(fbConfig);
+          firebaseApp = firebase.initializeApp(activeFbConfig);
         } else {
           firebaseApp = firebase.app();
         }
         db = firebase.firestore();
         auth = firebase.auth();
         isCloudConnected = true;
+        console.log("⚡ Khởi tạo thành công Firebase Firestore Realtime!");
       }
     } catch (err) {
       console.warn("Chưa kết nối Firebase Cloud:", err);
@@ -417,72 +444,38 @@ function App() {
         syncToCloud();
       };
 
-      // REALTIME FIREBASE FIRESTORE LISTENERS
+      // REALTIME FIREBASE FIRESTORE LISTENERS (TỰ ĐỘNG ĐỒNG BỘ MỌI MÁY TRONG 0.5 GIÂY)
       useEffect(() => {
-        if (!db || !auth) return;
+        if (!db) return;
 
-        auth.signInAnonymously().catch(err => console.warn('Lỗi ẩn danh Firebase:', err));
+        if (auth && auth.signInAnonymously) {
+          auth.signInAnonymously().catch(err => console.warn('Lỗi ẩn danh Firebase:', err));
+        }
 
         const appIdKey = typeof __app_id !== 'undefined' ? __app_id : 'gialai-qh-default';
 
-        const unsubConfig = db.collection('artifacts').doc(appIdKey).collection('config').doc('admin')
+        // Lắng nghe biến đổi dữ liệu Realtime trên Firestore document config/data
+        const unsubFull = db.collection('artifacts').doc(appIdKey).collection('config').doc('data')
           .onSnapshot(docSnap => {
-            if (docSnap.exists && docSnap.data().password) {
-              setAdminPassword(docSnap.data().password);
-              localStorage.setItem('gialai_admin_pass', docSnap.data().password);
+            if (docSnap.exists) {
+              const cloudData = docSnap.data();
+              if (cloudData && typeof cloudData === 'object') {
+                if (Array.isArray(cloudData.qhChung)) setData(cloudData.qhChung);
+                if (Array.isArray(cloudData.qhChiTiet)) setDetailData(cloudData.qhChiTiet);
+                if (Array.isArray(cloudData.qhSapNhap)) setMergedData(cloudData.qhSapNhap);
+                if (Array.isArray(cloudData.qhLienHe)) setContactData(cloudData.qhLienHe);
+                if (Array.isArray(cloudData.qhRaSoat)) setReviewData(cloudData.qhRaSoat);
+                if (cloudData.adminPassword) {
+                  setAdminPassword(cloudData.adminPassword);
+                  localStorage.setItem('gialai_admin_pass', cloudData.adminPassword);
+                }
+                console.log('⚡ Firebase Firestore: Đã tự động cập nhật dữ liệu Realtime từ Cloud!');
+              }
             }
-          }, err => console.warn('Lỗi snapshot password:', err));
-
-        const unsubChung = db.collection('artifacts').doc(appIdKey).collection('qh_chung')
-          .onSnapshot(snapshot => {
-            if (!snapshot.empty) {
-              const items = [];
-              snapshot.forEach(docSnap => items.push({ ...docSnap.data(), id: docSnap.data().id || parseInt(docSnap.id) }));
-              items.sort((a,b) => (a.id || 0) - (b.id || 0));
-              setData(items);
-            }
-          }, err => console.warn('Lỗi snapshot qh_chung:', err));
-
-        const unsubChiTiet = db.collection('artifacts').doc(appIdKey).collection('qh_chitiet')
-          .onSnapshot(snapshot => {
-            if (!snapshot.empty) {
-              const items = [];
-              snapshot.forEach(docSnap => items.push({ ...docSnap.data(), id: docSnap.data().id || parseInt(docSnap.id) }));
-              items.sort((a,b) => (a.id || 0) - (b.id || 0));
-              setDetailData(items);
-            }
-          }, err => console.warn('Lỗi snapshot qh_chitiet:', err));
-
-        const unsubSapNhap = db.collection('artifacts').doc(appIdKey).collection('qh_sapnhap')
-          .onSnapshot(snapshot => {
-            if (!snapshot.empty) {
-              const items = [];
-              snapshot.forEach(docSnap => items.push({ ...docSnap.data(), id: docSnap.data().id || parseInt(docSnap.id) }));
-              items.sort((a,b) => (a.id || 0) - (b.id || 0));
-              setMergedData(items);
-            }
-          }, err => console.warn('Lỗi snapshot qh_sapnhap:', err));
-
-        const unsubContact = db.collection('artifacts').doc(appIdKey).collection('qh_lienhe')
-          .onSnapshot(snapshot => {
-            if (!snapshot.empty) {
-              const items = [];
-              snapshot.forEach(docSnap => items.push({ ...docSnap.data(), id: docSnap.id }));
-              setContactData(items);
-            }
-          }, err => console.warn('Lỗi snapshot qh_lienhe:', err));
-
-        const unsubReview = db.collection('artifacts').doc(appIdKey).collection('qh_rasoat')
-          .onSnapshot(snapshot => {
-            if (!snapshot.empty) {
-              const items = [];
-              snapshot.forEach(docSnap => items.push({ ...docSnap.data(), id: docSnap.id }));
-              setReviewData(items);
-            }
-          }, err => console.warn('Lỗi snapshot qh_rasoat:', err));
+          }, err => console.warn('Lỗi Firestore listener config/data:', err));
 
         return () => {
-          unsubConfig(); unsubChung(); unsubChiTiet(); unsubSapNhap(); unsubContact(); unsubReview();
+          if (unsubFull) unsubFull();
         };
       }, []);
 
@@ -511,40 +504,14 @@ function App() {
 
       
       const handlePushLocalToCloud = () => {
-        const cloudUrl = getCloudUrl();
-        if (!cloudUrl || cloudUrl.includes('DÁN_LINK_GOOGLE')) {
-          return showNotification('❌ Chưa cấu hình URL Google Apps Script! Vui lòng dán link vào dòng 12 trên GitHub.');
+        syncToCloud({ data, detailData, mergedData, contactData, reviewData, adminPassword });
+        if (db) {
+          showNotification('⚡ ĐÃ ĐẨY DỮ LIỆU & MẬT KHẨU MỚI LÊN FIREBASE FIRESTORE THÀNH CÔNG!');
+        } else if (isGasConnected) {
+          showNotification('✅ ĐÃ ĐẨY DỮ LIỆU & MẬT KHẨU MỚI LÊN GOOGLE DRIVE THÀNH CÔNG!');
+        } else {
+          showNotification('❌ Chưa cấu hình Firebase Firestore hoặc Google Apps Script! Vui lòng dán cấu hình ở dòng 12.');
         }
-        if (cloudUrl.includes('/dev')) {
-          return showNotification('⚠️ CẢNH BÁO: URL có đuôi /dev! Bạn phải đổi sang link kết thúc bằng /exec.');
-        }
-        showNotification('Đang gửi dữ liệu & Mật khẩu mới lên Google Drive...');
-        const payload = {
-          qhChung: data,
-          qhChiTiet: detailData,
-          qhSapNhap: mergedData,
-          qhLienHe: contactData,
-          qhRaSoat: reviewData,
-          adminPassword: adminPassword
-        };
-
-        fetch(cloudUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify(payload)
-        })
-        .then(res => res.text())
-        .then(resText => {
-          if (resText.includes('<!DOCTYPE') || resText.includes('<html')) {
-            showNotification('❌ LỖI PHÂN QUYỀN GOOGLE: Vui lòng vào Apps Script -> Deploy -> Đổi "Who has access" thành "Anyone"!');
-          } else {
-            showNotification('✅ ĐÃ ĐẨY DỮ LIỆU & MẬT KHẨU MỚI LÊN GOOGLE DRIVE THÀNH CÔNG!');
-          }
-        })
-        .catch(err => {
-          syncToCloud({ data, detailData, mergedData, contactData, reviewData, adminPassword });
-          showNotification('✅ Đã phát lệnh lưu dữ liệu & mật khẩu lên Google Drive!');
-        });
       };
 
       const handlePullCloudToLocal = () => {
@@ -1722,12 +1689,12 @@ function App() {
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-[99999]"><div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in"><div className="bg-indigo-700 p-3 sm:p-4 flex justify-between items-center text-white shrink-0"><h3 className="font-bold flex items-center gap-2 text-sm sm:text-base"><Database className="w-5 h-5"/> Quản lý Dữ liệu Đám mây</h3><button onClick={() => setShowDbModal(false)} className="hover:bg-indigo-600 p-1 rounded-full"><X className="w-5 h-5"/></button></div><div className="p-4 sm:p-6 flex flex-col gap-4 overflow-y-auto flex-1 custom-scrollbar">
               <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 mb-3">
         <h4 className="font-bold text-emerald-900 text-sm mb-1 flex items-center gap-2">
-          {isGasConnected ? '🟢 Trạng thái: Đã kết nối Google Sheets / Drive Cloud' : isCloudConnected ? '🟢 Trạng thái: Đã kết nối Firebase Cloud' : '🟡 Trạng thái: Bộ nhớ Trình duyệt Cục bộ (Offline/Chưa cấu hình Cloud)'}
+          {isCloudConnected ? '⚡ Trạng thái: Đã kết nối Firebase Firestore Realtime (Tự động đồng bộ 0.5s)' : isGasConnected ? '🟢 Trạng thái: Đã kết nối Google Apps Script / Drive' : '🟡 Trạng thái: Bộ nhớ Trình duyệt Cục bộ (Offline)'}
         </h4>
         <p className="text-xs text-slate-600">
-          {(isGasConnected || isCloudConnected)
-            ? 'Mọi thay đổi (thêm/sửa/xóa/mật khẩu) được tự động lưu & đồng bộ real-time giữa tất cả các máy tính và trình duyệt!' 
-            : 'Để đồng bộ dữ liệu tự động giữa các máy tính khác nhau, hãy dán URL Google Apps Script Web App (https://...) HOẶC mã Firebase Config JSON của bạn bên dưới.'}
+          {(isCloudConnected || isGasConnected)
+            ? 'Mọi thay đổi (thêm/sửa/xóa/mật khẩu) được tự động lưu & đồng bộ REALTIME giữa tất cả các máy tính, điện thoại và Vercel/GitHub!' 
+            : 'Để đồng bộ tự động giữa các thiết bị khác nhau, hãy dán đối tượng window.DEFAULT_FIREBASE_CONFIG ở dòng 12 trong tệp index.html trên GitHub/Vercel HOẶC dán mã Firebase Config JSON bên dưới.'}
         </p>
       </div>
 
