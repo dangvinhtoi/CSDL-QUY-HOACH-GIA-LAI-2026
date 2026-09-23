@@ -509,6 +509,23 @@ function App() {
         }
       }, []);
 
+      
+      const handlePushLocalToCloud = () => {
+        const cloudUrl = getCloudUrl();
+        if (!cloudUrl || cloudUrl.includes('DÁN_LINK_GOOGLE')) {
+          return showNotification('Chưa cấu hình URL Đám mây! Vui lòng nhập URL Google Apps Script bên dưới.');
+        }
+        openConfirm('Xác nhận Đẩy Dữ liệu lên Đám mây', 'Hệ thống sẽ lấy TOÀN BỘ dữ liệu mới nhất & MẬT KHẨU hiện tại của máy này để ghi đè lên Google Drive. Tiếp tục?', () => {
+          closeConfirm();
+          syncToCloud({ data, detailData, mergedData, contactData, reviewData, adminPassword });
+          showNotification('✅ ĐÃ ĐẨY DỮ LIỆU & MẬT KHẨU TỪ MÁY NÀY LÊN GOOGLE DRIVE THÀNH CÔNG!');
+        });
+      };
+
+      const handlePullCloudToLocal = () => {
+        fetchFromCloud(true);
+      };
+
       const handleSaveFirebaseConfig = (e) => {
         e.preventDefault();
         const input = (fbConfigInput || '').trim();
@@ -1685,6 +1702,18 @@ function App() {
                 <code className="text-xs font-mono bg-white px-2 py-1 rounded border border-indigo-200 text-slate-600 break-all select-all block">{appId}</code>
                 <p className="text-xs text-slate-500 mt-2 italic">Mỗi đường link chia sẻ sẽ có một mã Server khác nhau để bảo mật. Hãy dùng chức năng Backup/Restore để chuyển dữ liệu qua lại giữa các đường link.</p>
               </div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-2">
+                <h4 className="font-bold text-blue-900 text-sm mb-2 flex items-center gap-2">🔄 Thao tác Đồng bộ Đám mây Trực tiếp:</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <button type="button" onClick={handlePushLocalToCloud} className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg shadow-sm transition-colors text-xs">
+                    <Upload className="w-4 h-4"/> ⬆️ Đẩy Dữ liệu & MK Máy này lên Drive
+                  </button>
+                  <button type="button" onClick={handlePullCloudToLocal} className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-lg shadow-sm transition-colors text-xs">
+                    <Download className="w-4 h-4"/> ⬇️ Tải Dữ liệu mới từ Drive về Máy này
+                  </button>
+                </div>
+              </div>
+
               <div className="flex flex-col gap-3">
                 <button type="button" onClick={handleResetToDefaultDB} className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg shadow-sm transition-colors"><RefreshCcw className="w-5 h-5"/> Khôi phục CSDL Gốc</button>
                 <div className="border-t border-slate-200 my-1"></div>
