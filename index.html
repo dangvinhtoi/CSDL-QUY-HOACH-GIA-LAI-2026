@@ -860,7 +860,15 @@ function App() {
       const [detailFilterCongBo, setDetailFilterCongBo] = useState('');
       const [detailFilterCamMoc, setDetailFilterCamMoc] = useState('');
       const [detailFilterGuiSXD, setDetailFilterGuiSXD] = useState('');
-
+      // BỘ LỌC QH PHÂN KHU
+      const [phankhuSearchTerm, setPhankhuSearchTerm] = useState('');
+      const [phankhuFilterHuyen, setPhankhuFilterHuyen] = useState('');
+      const [phankhuFilterXa, setPhankhuFilterXa] = useState('');
+      const [phankhuFilterTinhTrang, setPhankhuFilterTinhTrang] = useState('');
+      const [phankhuFilterThamQuyen, setPhankhuFilterThamQuyen] = useState('');
+      const [phankhuFilterCongBo, setPhankhuFilterCongBo] = useState('');
+      const [phankhuFilterCamMoc, setPhankhuFilterCamMoc] = useState('');
+      const [phankhuFilterGuiSXD, setPhankhuFilterGuiSXD] = useState('');
       // BỘ LỌC SÁP NHẬP
       const [mergeFilterHuyen, setMergeFilterHuyen] = useState('');
       const [mergeFilterXa, setMergeFilterXa] = useState('');
@@ -1050,13 +1058,30 @@ function App() {
         });
       }, [data, searchTerm, filterHuyen, filterTinhTrang, filterThamQuyen, filterCongBo, filterCamMoc, filterKeHoach, filterGuiSXD]);
 // Lọc dữ liệu Quy hoạch Phân khu
-const filteredPhanKhuData = phankhuData.filter(item => {
-  const search = searchTerm || '';
-  const matchSearch = (item.tenQh||'').toLowerCase().includes(search.toLowerCase()) || 
-                      (item.diaDiem||'').toLowerCase().includes(search.toLowerCase());
-  const matchDistrict = filterHuyen === '' || (item.diaDiem||'').includes(filterHuyen);
-  return matchSearch && matchDistrict;
-});
+// Lọc dữ liệu Quy hoạch Phân khu
+      const filteredPhanKhuData = useMemo(() => {
+        return (phankhuData || []).filter(item => {
+          const matchSearch = (item.xa||'').toLowerCase().includes(phankhuSearchTerm.toLowerCase()) || (item.tenQh||'').toLowerCase().includes(phankhuSearchTerm.toLowerCase());
+          const matchHuyen = phankhuFilterHuyen === '' ? true : item.huyen === phankhuFilterHuyen;
+          const matchXa = phankhuFilterXa === '' ? true : item.xa === phankhuFilterXa;
+          
+          const isPheDuyet = item.qdPheDuyet && item.qdPheDuyet !== 'Đang cập nhật' && item.qdPheDuyet.trim() !== '';
+          const matchTinhTrang = phankhuFilterTinhTrang === '' ? true : phankhuFilterTinhTrang === 'Đã phê duyệt' ? isPheDuyet : !isPheDuyet;
+          
+          const matchThamQuyen = phankhuFilterThamQuyen === '' ? true : phankhuFilterThamQuyen === 'UBND tỉnh' ? (item.cqPheDuyet||'').toLowerCase().includes('tỉnh') : ((item.cqPheDuyet||'').toLowerCase().includes('xã') || (item.cqPheDuyet||'').toLowerCase().includes('phường'));
+          
+          const isCongBo = (item.congBo||'').toLowerCase().includes('đã');
+          const matchCongBo = phankhuFilterCongBo === '' ? true : phankhuFilterCongBo === 'Đã công bố' ? isCongBo : !isCongBo;
+          
+          const isCamMoc = (item.camMoc||'').toLowerCase().includes('đã');
+          const matchCamMoc = phankhuFilterCamMoc === '' ? true : phankhuFilterCamMoc === 'Đã cắm mốc' ? isCamMoc : !isCamMoc;
+
+          const isGuiSXD = (item.tinhHinhGuiHoSo||'').toLowerCase().includes('đã');
+          const matchGuiSXD = phankhuFilterGuiSXD === '' ? true : phankhuFilterGuiSXD === 'Đã gửi' ? isGuiSXD : !isGuiSXD;
+
+          return matchSearch && matchHuyen && matchXa && matchTinhTrang && matchThamQuyen && matchCongBo && matchCamMoc && matchGuiSXD;
+        });
+      }, [phankhuData, phankhuSearchTerm, phankhuFilterHuyen, phankhuFilterXa, phankhuFilterTinhTrang, phankhuFilterThamQuyen, phankhuFilterCongBo, phankhuFilterCamMoc, phankhuFilterGuiSXD]);
       const filteredDetailData = useMemo(() => {
         return (detailData || []).filter(item => {
           const matchSearch = (item.xa||'').toLowerCase().includes(detailSearchTerm.toLowerCase()) || (item.tenQh||'').toLowerCase().includes(detailSearchTerm.toLowerCase());
@@ -1900,9 +1925,14 @@ const filteredPhanKhuData = phankhuData.filter(item => {
                 <div className="bg-white rounded-xl shadow-sm p-4 shrink-0 border border-slate-200">
                   <div className="flex flex-col xl:flex-row justify-between gap-4">
                     <div className="flex flex-wrap flex-1 gap-3">
-                      <div className="relative w-full md:w-48"><div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><Search className="h-4 w-4 text-slate-400" /></div><input type="text" className="block w-full pl-9 pr-3 py-2 border rounded-lg text-sm" placeholder="Tìm xã, tên QHPK..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div>
-                      <select className="w-full md:w-40 py-2 px-3 border rounded-lg text-sm font-medium" value={filterHuyen} onChange={(e) => setFilterHuyen(e.target.value)}><option value="">- Tất cả Huyện -</option>{OLD_REGIONS.flatMap(p => p.districts).map(d => <option key={d.name} value={d.name}>{d.name}</option>)}</select>
-                      {/* Có thể thêm các select lọc khác tương tự QHC ở đây nếu cần */}
+                      <div className="relative w-full md:w-48"><div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><Search className="h-4 w-4 text-slate-400" /></div><input type="text" className="block w-full pl-9 pr-3 py-2 border rounded-lg text-sm" placeholder="Tìm xã, tên QHPK..." value={phankhuSearchTerm} onChange={(e) => setPhankhuSearchTerm(e.target.value)} /></div>
+                      <select className="w-full md:w-40 py-2 px-3 border rounded-lg text-sm font-medium" value={phankhuFilterHuyen} onChange={(e) => { setPhankhuFilterHuyen(e.target.value); setPhankhuFilterXa(''); }}><option value="">- Tất cả Huyện -</option>{OLD_REGIONS.flatMap(p => p.districts).map(d => <option key={d.name} value={d.name}>{d.name}</option>)}</select>
+                      <select className="w-full md:w-40 py-2 px-3 border rounded-lg text-sm font-medium" value={phankhuFilterXa} onChange={(e) => setPhankhuFilterXa(e.target.value)}><option value="">- Tất cả Xã/Phường -</option>{(!phankhuFilterHuyen ? [...new Set(OLD_REGIONS.flatMap(p=>p.districts).flatMap(d=>d.communes))] : OLD_REGIONS.flatMap(p=>p.districts).find(d=>d.name===phankhuFilterHuyen)?.communes || []).map(x => <option key={x} value={x}>{x}</option>)}</select>
+                      <select className="w-full md:w-36 py-2 px-3 border rounded-lg text-sm font-medium" value={phankhuFilterTinhTrang} onChange={(e) => setPhankhuFilterTinhTrang(e.target.value)}><option value="">- Tình trạng phê duyệt -</option><option value="Đã phê duyệt">Đã phê duyệt</option><option value="Chưa phê duyệt">Chưa phê duyệt</option></select>
+                      <select className="w-full md:w-36 py-2 px-3 border rounded-lg text-sm font-medium" value={phankhuFilterThamQuyen} onChange={(e) => setPhankhuFilterThamQuyen(e.target.value)}><option value="">- Thẩm quyền phê duyệt -</option><option value="UBND tỉnh">UBND tỉnh</option><option value="UBND cấp xã">UBND xã/phường</option></select>
+                      <select className="w-full md:w-36 py-2 px-3 border rounded-lg text-sm font-medium" value={phankhuFilterCongBo} onChange={(e) => setPhankhuFilterCongBo(e.target.value)}><option value="">- Tình trạng công bố -</option><option value="Đã công bố">Đã công bố</option><option value="Chưa công bố">Chưa công bố</option></select>
+                      <select className="w-full md:w-36 py-2 px-3 border rounded-lg text-sm font-medium" value={phankhuFilterCamMoc} onChange={(e) => setPhankhuFilterCamMoc(e.target.value)}><option value="">- Tình trạng cắm mốc -</option><option value="Đã cắm mốc">Đã cắm mốc</option><option value="Chưa cắm mốc">Chưa cắm mốc</option></select>
+                      <select className="w-full md:w-36 py-2 px-3 border rounded-lg text-sm font-medium" value={phankhuFilterGuiSXD} onChange={(e) => setPhankhuFilterGuiSXD(e.target.value)}><option value="">- Gửi hồ sơ về SXD -</option><option value="Đã gửi">Đã gửi Sở XD</option><option value="Chưa gửi">Chưa gửi Sở XD</option></select>
                     </div>
                     {isLoggedIn && (
                       <div className="flex gap-2 shrink-0">
