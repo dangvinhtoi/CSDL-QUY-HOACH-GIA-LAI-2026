@@ -721,8 +721,11 @@ function App() {
         const local = localStorage.getItem('gialai_qh_rasoat');
         return local ? JSON.parse(local) : INITIAL_REVIEWS_DEFAULT;
       });
-
-      
+      const [phankhuData, setPhankhuData] = useState(() => {
+  const local = localStorage.getItem('gialai_qh_phankhu');
+  return local ? JSON.parse(local) : [];
+});
+  
       // =========================================================================
       // 🟢 CLOUD SYNC ENGINE (HỖ TRỢ GOOGLE APPS SCRIPT / DRIVE & FIREBASE)
       // =========================================================================
@@ -1046,7 +1049,13 @@ function App() {
           return matchSearch && matchHuyen && matchTinhTrang && matchThamQuyen && matchCongBo && matchCamMoc && matchKeHoach && matchGuiSXD;
         });
       }, [data, searchTerm, filterHuyen, filterTinhTrang, filterThamQuyen, filterCongBo, filterCamMoc, filterKeHoach, filterGuiSXD]);
-
+// Lọc dữ liệu Quy hoạch Phân khu
+const filteredPhanKhuData = phankhuData.filter(item => {
+  const matchSearch = item.tenQh?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                      item.diaDiem?.toLowerCase().includes(searchTerm.toLowerCase());
+  const matchDistrict = selectedDistrict === 'Tất cả' || item.diaDiem?.includes(selectedDistrict);
+  return matchSearch && matchDistrict;
+});
       const filteredDetailData = useMemo(() => {
         return (detailData || []).filter(item => {
           const matchSearch = (item.xa||'').toLowerCase().includes(detailSearchTerm.toLowerCase()) || (item.tenQh||'').toLowerCase().includes(detailSearchTerm.toLowerCase());
@@ -1684,6 +1693,7 @@ function App() {
             <button onClick={() => setActiveTab('STATS_CHUNG')} className={`pb-3 px-2 font-bold text-sm md:text-base border-b-4 transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'STATS_CHUNG' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-slate-500 hover:text-emerald-600'}`}><PieChart className="h-5 w-5" /> THỐNG KÊ QUY HOẠCH CHUNG</button>
             <button onClick={() => setActiveTab('STATS_CHITIET')} className={`pb-3 px-2 font-bold text-sm md:text-base border-b-4 transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'STATS_CHITIET' ? 'border-purple-500 text-purple-600' : 'border-transparent text-slate-500 hover:text-purple-600'}`}><BarChart className="h-5 w-5" /> THỐNG KÊ QUY HOẠCH CHI TIẾT</button>
             <button onClick={() => setActiveTab('MAIN')} className={`pb-3 px-2 font-bold text-sm md:text-base border-b-4 transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'MAIN' ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-blue-600'}`}><ListFilter className="h-5 w-5" /> BẢNG THEO DÕI QUY HOẠCH CHUNG</button>
+            <button onClick={() => setActiveTab('PHANKHU')} className={`pb-3 px-2 font-bold text-sm md:text-base border-b-4 transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'PHANKHU' ? 'border-orange-500 text-orange-600' : 'border-transparent text-slate-500 hover:text-orange-600'}`}><Map className="h-5 w-5" /> QUY HOẠCH PHÂN KHU</button>
             <button onClick={() => setActiveTab('REVIEW')} className={`pb-3 px-2 font-bold text-sm md:text-base border-b-4 transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'REVIEW' ? 'border-rose-500 text-rose-600' : 'border-transparent text-slate-500 hover:text-rose-600'}`}><ClipboardCheck className="h-5 w-5" /> RÀ SOÁT ĐỊNH HƯỚNG PHÁT TRIỂN CỤM HUYỆN CŨ</button>
             <button onClick={() => setActiveTab('MAIN_CHITIET')} className={`pb-3 px-2 font-bold text-sm md:text-base border-b-4 transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'MAIN_CHITIET' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-slate-500 hover:text-indigo-600'}`}><Layout className="h-5 w-5" /> BẢNG THEO DÕI QUY HOẠCH CHI TIẾT</button>
             <button onClick={() => setActiveTab('MERGE')} className={`pb-3 px-2 font-bold text-sm md:text-base border-b-4 transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'MERGE' ? 'border-amber-500 text-amber-600' : 'border-transparent text-slate-500 hover:text-amber-600'}`}><Layers className="h-5 w-5" /> TRA CỨU SÁP NHẬP ĐVHC</button>
@@ -1876,8 +1886,71 @@ function App() {
                 </div>
               </div>
             )}
-
-            {/* TAB: BẢNG QH CHI TIẾT */}
+{/* TAB: BẢNG QUY HOẠCH PHÂN KHU */}
+            {activeTab === 'PHANKHU' && (
+              <div className="flex flex-col flex-1 min-h-0 gap-4 animate-in fade-in duration-300">
+                <div className="bg-white rounded-xl shadow-sm border p-4 flex flex-col flex-1 min-h-0">
+                  <div className="flex justify-between items-end mb-4">
+                    <div>
+                      <h2 className="text-lg font-bold text-slate-800 uppercase">Danh Sách Tiến Độ Lập Quy Hoạch Phân Khu</h2>
+                      <div className="text-sm text-slate-500 mt-1">Tổng số: <span className="font-bold text-orange-600">{filteredPhanKhuData.length}</span> hồ sơ</div>
+                    </div>
+                    {isLoggedIn && (
+                      <div className="flex gap-2 shrink-0">
+                        <button onClick={() => handleExportExcel(filteredPhanKhuData, 'DS_QuyHoachPhanKhu', false)} className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-2 rounded-lg border font-medium text-sm hover:bg-emerald-100"><Download className="h-4 w-4" /> Xuất Excel</button>
+                        <button onClick={() => openModal(null, false)} className="flex items-center gap-2 bg-orange-600 text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-orange-700"><Plus className="h-4 w-4" /> Thêm hồ sơ</button>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex-1 overflow-auto rounded-lg border custom-scrollbar relative">
+                    <table className="freeze-cols table-qhchung w-max min-w-full divide-y border-collapse">
+                      <thead className="bg-slate-50 sticky top-0 z-20">
+                        <tr>
+                          <th className="px-3 py-3 text-center text-xs font-semibold text-slate-600 border-x">STT</th>
+                          <th className="px-3 py-3 text-left text-xs font-semibold text-slate-600 border-x">Tên quy hoạch phân khu</th>
+                          <th className="px-3 py-3 text-left text-xs font-semibold text-slate-600 border-x">Địa điểm (Huyện/Thị)</th>
+                          <th className="px-3 py-3 text-center text-xs font-semibold text-slate-600 border-x">Quyết định PD</th>
+                          <th className="px-3 py-3 text-center text-xs font-semibold text-slate-600 border-x">Bản đồ (Map)</th>
+                          <th className="px-3 py-3 text-center text-xs font-semibold text-slate-600 border-x">Đính kèm</th>
+                          <th className="px-3 py-3 text-center text-xs font-semibold text-slate-600 border-x">Thao tác</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y bg-white">
+                        {filteredPhanKhuData.map((row, index) => (
+                          <tr key={row.id || index} className="hover:bg-orange-50 transition-colors">
+                            <td className="px-3 py-2 text-sm border-x text-center font-medium">{index + 1}</td>
+                            <td className="px-3 py-2 text-sm border-x font-semibold text-orange-900 whitespace-normal min-w-[250px]">{row.tenQh}</td>
+                            <td className="px-3 py-2 text-sm border-x text-slate-700">{row.diaDiem}</td>
+                            <td className="px-3 py-2 text-sm border-x text-center">{row.qdPheDuyet ? <span className="font-bold text-emerald-600">{row.qdPheDuyet}</span> : <span className="text-slate-400 italic">Đang cập nhật</span>}</td>
+                            <td className="px-3 py-2 text-sm border-x text-center">
+                              {row.mapLink ? ( isLoggedIn ? <a href={row.mapLink.startsWith('http') ? row.mapLink : `https://${row.mapLink}`} target="_blank" rel="noopener noreferrer" className="inline-flex text-emerald-600 bg-emerald-50 px-2 py-1 rounded border hover:bg-emerald-100 font-medium transition-colors"><MapPin className="h-3 w-3 mr-1 mt-0.5" /> Map</a> : <span className="inline-flex items-center text-slate-400 bg-slate-50 px-2 py-1 rounded border text-xs font-medium cursor-not-allowed" title="Vui lòng đăng nhập để xem"><Lock className="h-3 w-3 mr-1" /> Khóa</span> ) : ''}
+                            </td>
+                            <td className="px-3 py-2 text-sm border-x text-center">
+                              {row.file ? ( isLoggedIn ? <a href={row.file.startsWith('http') ? row.file : `https://${row.file}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-blue-600 bg-blue-50 px-2 py-1 rounded border hover:bg-blue-100 transition-colors font-medium"><Download className="h-3 w-3 mr-1" /> Tải về</a> : <span className="inline-flex items-center text-slate-400 bg-slate-50 px-2 py-1 rounded border text-xs font-medium cursor-not-allowed" title="Vui lòng đăng nhập để tải"><Lock className="h-3 w-3 mr-1" /> Khóa</span> ) : ''}
+                            </td>
+                            <td className="px-3 py-2 text-sm border-x text-center align-middle">
+                              <div className="flex justify-center gap-1">
+                                {isLoggedIn && (
+                                  <button onClick={() => openModal(row, false)} className="p-1.5 text-blue-600 hover:bg-blue-200 rounded"><Edit2 className="h-4 w-4" /></button>
+                                )}
+                                {userRole === 'ADMIN' && (
+                                  <button onClick={() => handleDelete(row.id, false)} className="p-1.5 text-red-600 hover:bg-red-200 rounded"><Trash2 className="h-4 w-4" /></button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                        {filteredPhanKhuData.length === 0 && (
+                          <tr><td colSpan="7" className="text-center py-8 text-slate-500">Chưa có dữ liệu Quy hoạch phân khu.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+            {/* TAB: BẢNG QUY HOẠCH CHI TIẾT */}
             {activeTab === 'MAIN_CHITIET' && (
               <div className="flex flex-col flex-1 min-h-0 gap-4 animate-in fade-in duration-300">
                 <div className="bg-white rounded-xl shadow-sm p-4 shrink-0 border border-slate-200">
