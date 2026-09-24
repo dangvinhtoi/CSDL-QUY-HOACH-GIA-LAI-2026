@@ -1672,9 +1672,7 @@ function App() {
               <div className="flex flex-col flex-1 min-h-0 gap-6 animate-in fade-in duration-300 overflow-y-auto custom-scrollbar pr-2 pb-6">
                 <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex justify-between items-center shrink-0">
                   <div><h2 className="text-xl font-bold text-slate-800 uppercase">Thống kê tiến độ quy hoạch chung ĐT & NT</h2><p className="text-slate-500 text-sm mt-1">Cập nhật theo Kế hoạch 159/KH-UBND</p></div>
-                  {isLoggedIn && (
-  <button onClick={() => openReportModal('CHUNG')} className="flex items-center gap-2 bg-emerald-50..."><FileText className="h-4 w-4" /> Xuất Báo Cáo Thông Minh</button>
-)}
+                  <button onClick={() => openReportModal('CHUNG')} className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-2 rounded-lg border border-emerald-200 font-medium text-sm hover:bg-emerald-100 shadow-sm"><FileText className="h-4 w-4" /> Xuất Báo Cáo Thông Minh</button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 shrink-0">
                   <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4 border-b-4 border-b-blue-500"><div className="p-4 bg-blue-50 rounded-full text-blue-600"><Layers className="h-8 w-8" /></div><div><p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Tổng số ĐVHC</p><p className="text-3xl font-bold text-slate-800">{statsOverview.total}</p></div></div>
@@ -1723,7 +1721,7 @@ function App() {
               <div className="flex flex-col flex-1 min-h-0 gap-6 animate-in fade-in duration-300 overflow-y-auto custom-scrollbar pr-2 pb-6">
                 <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex justify-between items-center shrink-0">
                   <div><h2 className="text-xl font-bold text-slate-800 uppercase flex items-center gap-2"><BarChart className="h-6 w-6 text-purple-600" /> Thống kê quy hoạch chi tiết theo Huyện/Thị xã</h2></div>
-                  {isLoggedIn && (<button onClick={() => openReportModal('CHITIET')} className="flex items-center gap-2 bg-purple-50 text-purple-700 px-4 py-2 rounded-lg border border-purple-200 font-medium text-sm hover:bg-purple-100 shadow-sm"><FileText className="h-4 w-4" /> Xuất Báo Cáo Thông Minh</button>)}
+                  <button onClick={() => openReportModal('CHITIET')} className="flex items-center gap-2 bg-purple-50 text-purple-700 px-4 py-2 rounded-lg border border-purple-200 font-medium text-sm hover:bg-purple-100 shadow-sm"><FileText className="h-4 w-4" /> Xuất Báo Cáo Thông Minh</button>
                 </div>
                 {['Bình Định', 'Gia Lai'].map(khuVuc => (
                   <div key={khuVuc} className="mb-4 shrink-0">
@@ -1756,12 +1754,10 @@ function App() {
                       <select className="w-full md:w-36 py-2 px-3 border rounded-lg text-sm font-medium" value={filterKeHoach} onChange={(e) => setFilterKeHoach(e.target.value)}><option value="">- Kế hoạch thực hiện -</option><option value="Đã ban hành">Đã ban hành KH</option><option value="Chưa ban hành">Chưa ban hành</option></select>
                       <select className="w-full md:w-36 py-2 px-3 border rounded-lg text-sm font-medium" value={filterGuiSXD} onChange={(e) => setFilterGuiSXD(e.target.value)}><option value="">- Gửi hồ sơ về SXD -</option><option value="Đã gửi">Đã gửi Sở XD</option><option value="Chưa gửi">Chưa gửi Sở XD</option></select>
                     </div>
-                    {isLoggedIn && (
                     <div className="flex gap-2 shrink-0">
                       <button onClick={() => handleExportExcel(filteredData, 'DS_QuyHoachChung', false)} className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-2 rounded-lg border font-medium text-sm hover:bg-emerald-100"><Download className="h-4 w-4" /> Xuất Excel</button>
                       <button onClick={() => openModal(null, false)} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-blue-700"><Plus className="h-4 w-4" /> Thêm hồ sơ</button>
                     </div>
-                )}
                   </div>
                 </div>
                 <div className="bg-white rounded-xl shadow-sm border flex-1 min-h-0 flex flex-col relative">
@@ -1804,12 +1800,10 @@ function App() {
                     <div className="relative flex-1"><div className="absolute inset-y-0 left-0 pl-3 flex items-center"><Search className="h-4 w-4 text-slate-400" /></div><input type="text" className="block w-full pl-9 pr-3 py-2 border rounded-lg text-sm" placeholder="Tìm nội dung..." value={reviewSearchTerm} onChange={(e) => setReviewSearchTerm(e.target.value)} /></div>
                     <select className="w-full md:w-56 py-2 px-3 border rounded-lg text-sm font-medium" value={reviewFilterHuyen} onChange={(e) => setReviewFilterHuyen(e.target.value)}><option value="">- Huyện/Thị xã cũ -</option>{[...new Set(OLD_REGIONS.flatMap(p => p.districts.map(d => d.name)))].map(h => <option key={h} value={h}>{h}</option>)}</select>
                     <select className="w-full md:w-48 py-2 px-3 border rounded-lg text-sm font-medium" value={reviewFilterStatus} onChange={(e) => setReviewFilterStatus(e.target.value)}><option value="">- Trạng thái rà soát -</option><option value="Đã hoàn thành">Đã hoàn thành</option><option value="Đang rà soát">Đang rà soát</option><option value="Chưa rà soát">Chưa rà soát</option></select>
-                    {isLoggedIn && (
                     <div className="flex gap-2 shrink-0">
                       <button onClick={handleExportReviewExcel} className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-2 rounded-lg border font-medium text-sm hover:bg-emerald-100"><Download className="h-4 w-4" /> Xuất Excel</button>
                       <button onClick={() => openReviewModal()} className="flex items-center gap-2 bg-rose-600 text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-rose-700"><Plus className="h-4 w-4" /> Thêm dữ liệu</button>
                     </div>
-                    )}
                   </div>
                 </div>
                 <div className="bg-white rounded-xl shadow-sm border flex-1 min-h-0 flex flex-col">
@@ -1853,12 +1847,10 @@ function App() {
                       <select className="w-full md:w-36 py-2 px-3 border rounded-lg text-sm font-medium" value={detailFilterCamMoc} onChange={(e) => setDetailFilterCamMoc(e.target.value)}><option value="">- Tình trạng cắm mốc -</option><option value="Đã cắm mốc">Đã cắm mốc</option><option value="Chưa cắm mốc">Chưa cắm mốc</option></select>
                       <select className="w-full md:w-36 py-2 px-3 border rounded-lg text-sm font-medium" value={detailFilterGuiSXD} onChange={(e) => setDetailFilterGuiSXD(e.target.value)}><option value="">- Gửi hồ sơ về SXD -</option><option value="Đã gửi">Đã gửi Sở XD</option><option value="Chưa gửi">Chưa gửi Sở XD</option></select>
                     </div>
-                    {isLoggedIn && (
                     <div className="flex gap-2 shrink-0">
                       <button onClick={() => handleExportExcel(filteredDetailData, 'DS_QuyHoachChiTiet', true)} className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-2 rounded-lg border font-medium text-sm hover:bg-emerald-100"><Download className="h-4 w-4" /> Xuất Excel</button>
                       <button onClick={() => openModal(null, true)} className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-indigo-700"><Plus className="h-4 w-4" /> Thêm QH Chi tiết</button>
                     </div>
-                )}
                   </div>
                 </div>
                 <div className="bg-white rounded-xl shadow-sm border flex-1 min-h-0 flex flex-col relative">
@@ -1940,12 +1932,10 @@ function App() {
                   <div className="flex flex-col md:flex-row gap-4">
                     <div className="relative flex-1"><div className="absolute inset-y-0 left-0 pl-3 flex items-center"><Search className="h-4 w-4 text-slate-400" /></div><input type="text" className="block w-full pl-9 pr-3 py-2 border rounded-lg text-sm" placeholder="Tìm tên, SĐT, chức danh..." value={contactSearchTerm} onChange={(e) => setContactSearchTerm(e.target.value)} /></div>
                     <select className="w-full md:w-64 py-2 px-3 border rounded-lg text-sm font-medium" value={contactFilterHuyen} onChange={(e) => setContactFilterHuyen(e.target.value)}><option value="">- Tất cả Đơn vị/Địa phương -</option>{[...new Set(contactData.map(i => i.donVi))].map(h => <option key={h} value={h}>{h}</option>)}</select>
-                    {isLoggedIn && (
                     <div className="flex gap-2 shrink-0">
                       <button onClick={handleExportContactExcel} className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-2 rounded-lg border font-medium text-sm hover:bg-emerald-100"><Download className="h-4 w-4" /> Xuất Excel</button>
                       <button onClick={() => openContactModal()} className="flex items-center gap-2 bg-cyan-600 text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-cyan-700"><Plus className="h-4 w-4" /> Thêm Liên hệ</button>
                     </div>
-                    )}
                   </div>
                 </div>
                 <div className="bg-white rounded-xl shadow-sm border flex-1 min-h-0 flex flex-col">
@@ -2176,12 +2166,10 @@ function App() {
                     <div><label className="block text-xs font-semibold mb-1">Căn cứ pháp lý</label><input type="text" value={mergeFormData.canCu || ''} onChange={(e) => setMergeFormData(prev => ({...prev, canCu: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm" required /></div>
                   </form>
                 </div>
-                {isLoggedIn && (
                 <div className="p-4 border-t bg-slate-100 flex justify-end gap-3 rounded-b-xl shrink-0">
                   <button type="button" onClick={() => setIsMergeModalOpen(false)} className="px-5 py-2 text-sm bg-white border rounded font-semibold">Hủy bỏ</button>
                   <button type="submit" form="merge-form" className="px-6 py-2 text-sm bg-amber-500 hover:bg-amber-600 text-white rounded font-semibold flex items-center gap-2"><Plus className="h-4 w-4" /> {editingMergeRecord ? 'Lưu' : 'Thêm'}</button>
                 </div>
-                )}
               </div>
             </div>
           )}
@@ -2194,7 +2182,7 @@ function App() {
               <div><label className="block text-xs font-semibold mb-1">Điện thoại</label><input type="text" value={contactFormData.dienThoai || ''} onChange={e => setContactFormData(prev => ({...prev, dienThoai: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm" /></div>
               <div><label className="block text-xs font-semibold mb-1">Chức danh</label><input type="text" value={contactFormData.chucDanh || ''} onChange={e => setContactFormData(prev => ({...prev, chucDanh: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm" /></div>
               <div><label className="block text-xs font-semibold mb-1">Email</label><input type="email" value={contactFormData.email || ''} onChange={e => setContactFormData(prev => ({...prev, email: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm" /></div>
-            </form></div>{isLoggedIn && (<div className="p-4 border-t bg-slate-100 flex justify-end gap-3 rounded-b-xl"><button onClick={() => setIsContactModalOpen(false)} className="px-5 py-2 text-sm bg-white border rounded font-semibold">Hủy bỏ</button><button type="submit" form="contact-form" className="px-6 py-2 text-sm bg-cyan-600 text-white rounded font-semibold"><Plus className="h-4 w-4 inline mr-1" /> {editingContactRecord ? 'Lưu' : 'Thêm'}</button></div>)}</div></div>
+            </form></div><div className="p-4 border-t bg-slate-100 flex justify-end gap-3 rounded-b-xl"><button onClick={() => setIsContactModalOpen(false)} className="px-5 py-2 text-sm bg-white border rounded font-semibold">Hủy bỏ</button><button type="submit" form="contact-form" className="px-6 py-2 text-sm bg-cyan-600 text-white rounded font-semibold"><Plus className="h-4 w-4 inline mr-1" /> {editingContactRecord ? 'Lưu' : 'Thêm'}</button></div></div></div>
           )}
 
           {/* MODAL RÀ SOÁT */}
@@ -2207,7 +2195,7 @@ function App() {
               <div><label className="block text-xs font-semibold mb-1">Trạng thái rà soát</label><select value={reviewFormData.trangThai || 'Chưa rà soát'} onChange={e => setReviewFormData(prev => ({...prev, trangThai: e.target.value}))} className="w-full px-3 py-2 border rounded focus:ring-rose-500 font-medium text-sm"><option value="Chưa rà soát">Chưa rà soát</option><option value="Đang rà soát">Đang rà soát</option><option value="Đã hoàn thành">Đã hoàn thành</option></select></div>
               <div><label className="block text-xs font-semibold mb-1">Link tài liệu (Đính kèm)</label><input type="text" value={reviewFormData.file || ''} onChange={e => setReviewFormData(prev => ({...prev, file: e.target.value}))} className="w-full px-3 py-2 border rounded focus:ring-rose-500 text-sm" placeholder="Dán link Drive, OneDrive..." /></div>
               <div className="col-span-full"><label className="block text-xs font-semibold mb-1">Ghi chú</label><textarea rows="2" value={reviewFormData.ghiChu || ''} onChange={e => setReviewFormData(prev => ({...prev, ghiChu: e.target.value}))} className="w-full px-3 py-2 border rounded focus:ring-rose-500 text-sm"></textarea></div>
-            </form>{isLoggedIn && (</div><div className="p-4 border-t bg-slate-100 flex justify-end gap-3 rounded-b-xl shrink-0"><button type="button" onClick={() => setIsReviewModalOpen(false)} className="px-5 py-2 text-sm bg-white border rounded font-semibold">Hủy bỏ</button><button type="submit" form="review-form" className="px-6 py-2 text-sm bg-rose-600 text-white rounded font-semibold flex items-center gap-2"><Plus className="h-4 w-4" /> {editingReviewRecord ? 'Lưu' : 'Thêm'}</button></div>)}</div></div>
+            </form></div><div className="p-4 border-t bg-slate-100 flex justify-end gap-3 rounded-b-xl shrink-0"><button type="button" onClick={() => setIsReviewModalOpen(false)} className="px-5 py-2 text-sm bg-white border rounded font-semibold">Hủy bỏ</button><button type="submit" form="review-form" className="px-6 py-2 text-sm bg-rose-600 text-white rounded font-semibold flex items-center gap-2"><Plus className="h-4 w-4" /> {editingReviewRecord ? 'Lưu' : 'Thêm'}</button></div></div></div>
           )}
 
           {/* BÁO CÁO THÔNG MINH MODAL & PREVIEW */}
