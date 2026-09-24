@@ -131,35 +131,28 @@
         padding: 0;
       }
     }
-  /* ----- ĐÓNG BĂNG 6 CỘT ĐẦU TIÊN (STT đến Tên QH) ----- */
-    /* 1. Thiết lập vị trí bám dính (Dựa trên kích thước chuẩn của Tailwind) */
-    .freeze-cols th:nth-child(1), .freeze-cols td:nth-child(1) { position: sticky; left: 0px; }
-    .freeze-cols th:nth-child(2), .freeze-cols td:nth-child(2) { position: sticky; left: 48px; }
-    .freeze-cols th:nth-child(3), .freeze-cols td:nth-child(3) { position: sticky; left: 144px; }
-    .freeze-cols th:nth-child(4), .freeze-cols td:nth-child(4) { position: sticky; left: 240px; }
-    .freeze-cols th:nth-child(5), .freeze-cols td:nth-child(5) { position: sticky; left: 384px; }
-    
-    /* Cột thứ 6 được đổ bóng và có viền đậm để tạo ranh giới với các cột bị cuộn */
+  /* ----- ĐÓNG BĂNG DUY NHẤT CỘT TÊN QUY HOẠCH (CỘT SỐ 6) ----- */
+    /* 1. Thiết lập vị trí bám dính sát mép trái màn hình */
     .freeze-cols th:nth-child(6), .freeze-cols td:nth-child(6) { 
       position: sticky; 
-      left: 528px; 
+      left: 0px; 
       box-shadow: 4px 0 10px rgba(0,0,0,0.08); 
       border-right: 2px solid #94a3b8 !important; 
     }
 
-    /* 2. Ưu tiên lớp phủ Z-index để không bị các nội dung khác đè lên */
-    .freeze-cols td:nth-child(-n+6) { z-index: 10; }
-    .freeze-cols th:nth-child(-n+6) { z-index: 20; }
+    /* 2. Ưu tiên lớp phủ Z-index để không bị các cột khác trượt đè lên */
+    .freeze-cols td:nth-child(6) { z-index: 10; }
+    .freeze-cols th:nth-child(6) { z-index: 20; }
 
     /* 3. Xử lý màu nền chống nhìn xuyên thấu cho Tab Quy hoạch Chung */
-    .table-qhchung thead th:nth-child(-n+6) { background-color: #e2e8f0 !important; }
-    .table-qhchung tbody td:nth-child(-n+6) { background-color: #ffffff; }
-    .table-qhchung tbody tr:hover td:nth-child(-n+6) { background-color: #eff6ff !important; }
+    .table-qhchung thead th:nth-child(6) { background-color: #e2e8f0 !important; }
+    .table-qhchung tbody td:nth-child(6) { background-color: #ffffff; }
+    .table-qhchung tbody tr:hover td:nth-child(6) { background-color: #eff6ff !important; }
 
     /* 4. Xử lý màu nền chống nhìn xuyên thấu cho Tab Quy hoạch Chi tiết */
-    .table-qhchitiet thead th:nth-child(-n+6) { background-color: #e0e7ff !important; }
-    .table-qhchitiet tbody td:nth-child(-n+6) { background-color: #ffffff; }
-    .table-qhchitiet tbody tr:hover td:nth-child(-n+6) { background-color: #eef2ff !important; }
+    .table-qhchitiet thead th:nth-child(6) { background-color: #e0e7ff !important; }
+    .table-qhchitiet tbody td:nth-child(6) { background-color: #ffffff; }
+    .table-qhchitiet tbody tr:hover td:nth-child(6) { background-color: #eef2ff !important; }
   </style>
 </head>
 <body>
