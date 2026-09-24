@@ -2096,17 +2096,16 @@ function App() {
             {activeTab === 'CONTACTS' && (
               <div className="flex flex-col flex-1 min-h-0 gap-4 animate-in fade-in duration-300">
                 <div className="bg-white rounded-xl shadow-sm p-4 border shrink-0">
-                  <div className="flex flex-col md:flex-row gap-4">
-                    <div className="relative flex-1"><div className="absolute inset-y-0 left-0 pl-3 flex items-center"><Search className="h-4 w-4 text-slate-400" /></div><input type="text" className="block w-full pl-9 pr-3 py-2 border rounded-lg text-sm" placeholder="Tìm tên, SĐT, chức danh..." value={contactSearchTerm} onChange={(e) => setContactSearchTerm(e.target.value)} /></div>
-                    <select className="w-full md:w-64 py-2 px-3 border rounded-lg text-sm font-medium" value={contactFilterHuyen} onChange={(e) => setContactFilterHuyen(e.target.value)}><option value="">- Tất cả Đơn vị/Địa phương -</option>{[...new Set(contactData.map(i => i.donVi))].map(h => <option key={h} value={h}>{h}</option>)}</select>
+                  <div className="flex flex-col md:flex-row items-center gap-4">
+                    <div className="relative w-full md:w-[350px] shrink-0"><div className="absolute inset-y-0 left-0 pl-3 flex items-center"><Search className="h-4 w-4 text-slate-400" /></div><input type="text" className="block w-full pl-9 pr-3 py-2 border rounded-lg text-sm" placeholder="Tìm tên, SĐT, chức danh..." value={contactSearchTerm} onChange={(e) => setContactSearchTerm(e.target.value)} /></div>
+                    <select className="w-full md:w-64 py-2 px-3 border rounded-lg text-sm font-medium shrink-0" value={contactFilterHuyen} onChange={(e) => setContactFilterHuyen(e.target.value)}><option value="">- Tất cả Đơn vị/Địa phương -</option>{[...new Set(contactData.map(i => i.donVi))].map(h => <option key={h} value={h}>{h}</option>)}</select>
                     {isLoggedIn && (
-  <div className="flex gap-2 shrink-0">
-    <button onClick={handleExportContactExcel} className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-2 rounded-lg border font-medium text-sm hover:bg-emerald-100"><Download className="h-4 w-4" /> Xuất Excel</button>
-    <button onClick={() => openContactModal()} className="flex items-center gap-2 bg-cyan-600 text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-cyan-700"><Plus className="h-4 w-4" /> Thêm Liên hệ</button>
-  </div>
-)}
+                      <div className="flex gap-2 shrink-0 md:ml-auto">
+                        <button onClick={handleExportContactExcel} className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-2 rounded-lg border font-medium text-sm hover:bg-emerald-100"><Download className="h-4 w-4" /> Xuất Excel</button>
+                        <button onClick={() => openContactModal()} className="flex items-center gap-2 bg-cyan-600 text-white px-4 py-2 rounded-lg font-medium text-sm hover:bg-cyan-700"><Plus className="h-4 w-4" /> Thêm Liên hệ</button>
+                      </div>
+                    )}
                   </div>
-                </div>
                 <div className="bg-white rounded-xl shadow-sm border flex-1 min-h-0 flex flex-col">
                   <div className="p-3 border-b bg-cyan-50 flex justify-between items-center"><h2 className="font-bold text-cyan-900 uppercase">DANH BẠ CÁN BỘ ĐẦU MỐI ĐỊA PHƯƠNG</h2><span className="bg-cyan-100 text-cyan-800 text-xs font-bold px-3 py-1 rounded-full">Hiển thị: {filteredContactData.length} liên hệ</span></div>
                   <div className="overflow-x-auto flex-1 custom-scrollbar pb-2 w-full min-w-0 max-w-full">
