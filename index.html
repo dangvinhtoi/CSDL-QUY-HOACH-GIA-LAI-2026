@@ -1362,17 +1362,37 @@ function App() {
 
       const handleChangePassword = (e) => {
         e.preventDefault();
-        if (changePassForm.current !== adminPassword) return setChangePassError('Mật khẩu hiện tại không đúng!');
+        
         if (changePassForm.newPass.length < 6) return setChangePassError('Mật khẩu mới phải từ 6 ký tự!');
         if (changePassForm.newPass !== changePassForm.confirm) return setChangePassError('Xác nhận mật khẩu mới không khớp!');
 
-        setAdminPassword(changePassForm.newPass);
-        localStorage.setItem('gialai_admin_pass', changePassForm.newPass);
-        syncToCloud({ adminPassword: changePassForm.newPass });
+        // Xử lý đổi mật khẩu cho ADMIN
+        if (userRole === 'ADMIN') {
+          if (changePassForm.current !== adminPassword) return setChangePassError('Mật khẩu hiện tại không đúng!');
+          
+          setAdminPassword(changePassForm.newPass);
+          localStorage.setItem('gialai_admin_pass', changePassForm.newPass);
+          syncToCloud({ adminPassword: changePassForm.newPass });
+          showNotification('Đã đổi mật khẩu Admin thành công & đồng bộ Đám mây!');
+        } 
+        // Xử lý đổi mật khẩu cho THÀNH VIÊN
+        else if (userRole === 'MEMBER' && currentUser) {
+          if (changePassForm.current !== currentUser.password) return setChangePassError('Mật khẩu hiện tại không đúng!');
+          
+          const updatedMembers = (membersList || []).map(m => 
+            m.id === currentUser.id ? { ...m, password: changePassForm.newPass } : m
+          );
+          setMembersList(updatedMembers);
+          setCurrentUser({ ...currentUser, password: changePassForm.newPass });
+          localStorage.setItem('gialai_members_list', JSON.stringify(updatedMembers));
+          syncToCloud({ membersList: updatedMembers });
+          showNotification('Đã đổi mật khẩu tài khoản thành công!');
+        }
+
+        // Đóng form và làm sạch dữ liệu
         setShowChangePassModal(false);
         setChangePassForm({ current: '', newPass: '', confirm: '' });
         setChangePassError('');
-        showNotification('Đã đổi mật khẩu thành công & đồng bộ Đám mây!');
       };
 
       const handleSendOTP = (e) => {
@@ -1720,9 +1740,9 @@ function App() {
                               )}
                             </button>
                             <button onClick={() => setShowDbModal(true)} className="text-xs bg-indigo-500/20 hover:bg-indigo-500 text-indigo-100 hover:text-white border border-indigo-500/50 px-2 py-1 rounded transition-colors flex items-center gap-1 font-medium"><Database className="w-3 h-3"/> Quản lý CSDL</button>
-                            <button onClick={() => setShowChangePassModal(true)} className="text-xs bg-amber-500/20 hover:bg-amber-500 text-amber-100 hover:text-white border border-amber-500/50 px-2 py-1 rounded transition-colors flex items-center gap-1 font-medium"><Key className="w-3 h-3"/> Đổi MK</button>
                           </>
                         )}
+                        <button onClick={() => setShowChangePassModal(true)} className="text-xs bg-amber-500/20 hover:bg-amber-500 text-amber-100 hover:text-white border border-amber-500/50 px-2 py-1 rounded transition-colors flex items-center gap-1 font-medium"><Key className="w-3 h-3"/> Đổi MK</button>
                         <button onClick={() => { setIsLoggedIn(false); setUserRole('GUEST'); setCurrentUser(null); showNotification('Đã đăng xuất.'); }} className="text-xs bg-red-500/20 hover:bg-red-500 text-red-100 hover:text-white border border-red-500/50 px-2 py-1 rounded transition-colors flex items-center gap-1 font-medium"><LogOut className="w-3 h-3"/> Đăng xuất</button>
                       </div>
                     </div>
