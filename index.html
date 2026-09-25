@@ -140,16 +140,30 @@
       border-right: 2px solid #94a3b8 !important; 
     }
 
-    /* 2. Ưu tiên lớp phủ Z-index để không bị các cột khác trượt đè lên */
+    /* 2. SỬA LỖI MẤT TIÊU ĐỀ: Bổ sung top:0 và Z-index cao để bám dính trần */
     .freeze-cols td:nth-child(6) { z-index: 10; }
-    .freeze-cols th:nth-child(6) { z-index: 20; }
+    .freeze-cols th:nth-child(6) { 
+      z-index: 30 !important; 
+      top: 0px; 
+    }
 
-    /* 3. Xử lý màu nền chống nhìn xuyên thấu cho Tab Quy hoạch Chung */
+    /* 3. SỬA LỖI LỆCH HÀNG: Ép toàn bộ nội dung ô căn lên trên cùng (Top) */
+    .freeze-cols td, .freeze-cols th {
+      vertical-align: top !important;
+      padding-top: 12px !important;
+    }
+
+    /* 4. Màu nền cho Tab Quy hoạch Chung (Xanh) */
     .table-qhchung thead th:nth-child(6) { background-color: #e2e8f0 !important; }
     .table-qhchung tbody td:nth-child(6) { background-color: #ffffff; }
     .table-qhchung tbody tr:hover td:nth-child(6) { background-color: #eff6ff !important; }
 
-    /* 4. Xử lý màu nền chống nhìn xuyên thấu cho Tab Quy hoạch Chi tiết */
+    /* 5. Màu nền cho Tab Quy hoạch Phân khu (Cam) */
+    .table-qhphankhu thead th:nth-child(6) { background-color: #ffedd5 !important; }
+    .table-qhphankhu tbody td:nth-child(6) { background-color: #ffffff; }
+    .table-qhphankhu tbody tr:hover td:nth-child(6) { background-color: #fff7ed !important; }
+
+    /* 6. Màu nền cho Tab Quy hoạch Chi tiết (Tím) */
     .table-qhchitiet thead th:nth-child(6) { background-color: #e0e7ff !important; }
     .table-qhchitiet tbody td:nth-child(6) { background-color: #ffffff; }
     .table-qhchitiet tbody tr:hover td:nth-child(6) { background-color: #eef2ff !important; }
