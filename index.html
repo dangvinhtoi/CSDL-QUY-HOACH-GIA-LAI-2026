@@ -677,7 +677,7 @@ function App() {
 
       const [loginForm, setLoginForm] = useState({ username: '', password: '' });
       const [loginError, setLoginError] = useState('');
-      const [changePassForm, setChangePassForm] = useState({ current: '', newPass: '', confirm: '' });
+      const [changePassForm, setChangePassForm] = useState({ email: '', current: '', newPass: '', confirm: '' });
       const [changePassError, setChangePassError] = useState('');
       const [adminPassword, setAdminPassword] = useState(() => localStorage.getItem('gialai_admin_pass') || '123456');
 
@@ -1361,39 +1361,41 @@ function App() {
       };
 
       const handleChangePassword = (e) => {
-        e.preventDefault();
-        
-        if (changePassForm.newPass.length < 6) return setChangePassError('Mật khẩu mới phải từ 6 ký tự!');
-        if (changePassForm.newPass !== changePassForm.confirm) return setChangePassError('Xác nhận mật khẩu mới không khớp!');
+    e.preventDefault();
 
-        // Xử lý đổi mật khẩu cho ADMIN
-        if (userRole === 'ADMIN') {
-          if (changePassForm.current !== adminPassword) return setChangePassError('Mật khẩu hiện tại không đúng!');
-          
-          setAdminPassword(changePassForm.newPass);
-          localStorage.setItem('gialai_admin_pass', changePassForm.newPass);
-          syncToCloud({ adminPassword: changePassForm.newPass });
-          showNotification('Đã đổi mật khẩu Admin thành công & đồng bộ Đám mây!');
-        } 
-        // Xử lý đổi mật khẩu cho THÀNH VIÊN
-        else if (userRole === 'MEMBER' && currentUser) {
-          if (changePassForm.current !== currentUser.password) return setChangePassError('Mật khẩu hiện tại không đúng!');
-          
-          const updatedMembers = (membersList || []).map(m => 
-            m.id === currentUser.id ? { ...m, password: changePassForm.newPass } : m
-          );
-          setMembersList(updatedMembers);
-          setCurrentUser({ ...currentUser, password: changePassForm.newPass });
-          localStorage.setItem('gialai_members_list', JSON.stringify(updatedMembers));
-          syncToCloud({ membersList: updatedMembers });
-          showNotification('Đã đổi mật khẩu tài khoản thành công!');
-        }
+    if (changePassForm.newPass.length < 6) return setChangePassError('Mật khẩu mới phải từ 6 ký tự!');
+    if (changePassForm.newPass !== changePassForm.confirm) return setChangePassError('Xác nhận mật khẩu mới không khớp!');
 
-        // Đóng form và làm sạch dữ liệu
-        setShowChangePassModal(false);
-        setChangePassForm({ current: '', newPass: '', confirm: '' });
-        setChangePassError('');
-      };
+    // Xử lý đổi mật khẩu cho ADMIN
+    if (userRole === 'ADMIN') {
+      if (changePassForm.email !== ADMIN_EMAIL) return setChangePassError('Email không khớp với email Admin đã đăng ký!');
+      if (changePassForm.current !== adminPassword) return setChangePassError('Mật khẩu hiện tại không đúng!');
+
+      setAdminPassword(changePassForm.newPass);
+      localStorage.setItem('gialai_admin_pass', changePassForm.newPass);
+      syncToCloud({ adminPassword: changePassForm.newPass });
+      showNotification('Đã đổi mật khẩu Admin thành công & đồng bộ Đám mây!');
+    } 
+    // Xử lý đổi mật khẩu cho THÀNH VIÊN
+    else if (userRole === 'MEMBER' && currentUser) {
+      if (changePassForm.email !== currentUser.email) return setChangePassError('Email không khớp với thông tin tài khoản của bạn!');
+      if (changePassForm.current !== currentUser.password) return setChangePassError('Mật khẩu hiện tại không đúng!');
+
+      const updatedMembers = (membersList || []).map(m => 
+        m.id === currentUser.id ? { ...m, password: changePassForm.newPass } : m
+      );
+      setMembersList(updatedMembers);
+      setCurrentUser({ ...currentUser, password: changePassForm.newPass });
+      localStorage.setItem('gialai_members_list', JSON.stringify(updatedMembers));
+      syncToCloud({ membersList: updatedMembers });
+      showNotification('Đã đổi mật khẩu tài khoản thành công!');
+    }
+
+    // Đóng form và làm sạch dữ liệu
+    setShowChangePassModal(false);
+    setChangePassForm({ email: '', current: '', newPass: '', confirm: '' });
+    setChangePassError('');
+  };
 
       const handleSendOTP = (e) => {
   e.preventDefault();
@@ -2366,7 +2368,26 @@ function App() {
           )}
 
           {showChangePassModal && (
-            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-[99999]"><div className="bg-white rounded-xl shadow-2xl w-full max-w-sm max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in"><div className="bg-amber-600 p-3 sm:p-4 flex justify-between items-center text-white shrink-0"><h3 className="font-bold flex items-center gap-2 text-sm sm:text-base"><Key className="w-5 h-5"/> Đổi mật khẩu quản trị</h3><button onClick={() => setShowChangePassModal(false)} className="hover:bg-amber-700 p-1 rounded-full"><X className="w-5 h-5"/></button></div><form onSubmit={handleChangePassword} className="p-4 sm:p-6 flex flex-col gap-4 overflow-y-auto flex-1 custom-scrollbar">{changePassError && <div className="bg-red-50 text-red-600 p-3 rounded text-sm font-medium">{changePassError}</div>}<div><label className="block text-sm font-semibold mb-1">Mật khẩu hiện tại</label><input type="password" value={changePassForm.current} onChange={e=>setChangePassForm(p=>({...p, current: e.target.value}))} className="w-full border px-3 py-2 rounded" placeholder="Nhập mật khẩu cũ..." required /></div><div><label className="block text-sm font-semibold mb-1">Mật khẩu mới</label><input type="password" value={changePassForm.newPass} onChange={e=>setChangePassForm(p=>({...p, newPass: e.target.value}))} className="w-full border px-3 py-2 rounded" placeholder="Nhập mật khẩu mới..." required /></div><div><label className="block text-sm font-semibold mb-1">Xác nhận mật khẩu mới</label><input type="password" value={changePassForm.confirm} onChange={e=>setChangePassForm(p=>({...p, confirm: e.target.value}))} className="w-full border px-3 py-2 rounded" placeholder="Nhập lại mật khẩu mới..." required /></div><button type="submit" className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded shadow-sm transition-colors mt-2">Lưu thay đổi</button></form></div></div>
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-[99999]"><div className="bg-white rounded-xl shadow-2xl w-full max-w-sm max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in"><div className="bg-amber-600 p-3 sm:p-4 flex justify-between items-center text-white shrink-0"><h3 className="font-bold flex items-center gap-2 text-sm sm:text-base"><Key className="w-5 h-5"/> Đổi mật khẩu quản trị</h3><button onClick={() => setShowChangePassModal(false)} className="hover:bg-amber-700 p-1 rounded-full"><X className="w-5 h-5"/></button></div><form onSubmit={handleChangePassword} className="p-4 sm:p-6 flex flex-col gap-4 overflow-y-auto flex-1 custom-scrollbar">
+  {changePassError && <div className="bg-red-50 text-red-600 p-3 rounded text-sm font-medium">{changePassError}</div>}
+  <div>
+    <label className="block text-sm font-semibold mb-1">Email đăng ký xác thực</label>
+    <input type="email" value={changePassForm.email || ''} onChange={e=>setChangePassForm(p=>({...p, email: e.target.value}))} className="w-full border px-3 py-2 rounded" placeholder="Nhập email tài khoản của bạn..." required />
+  </div>
+  <div>
+    <label className="block text-sm font-semibold mb-1">Mật khẩu hiện tại</label>
+    <input type="password" value={changePassForm.current || ''} onChange={e=>setChangePassForm(p=>({...p, current: e.target.value}))} className="w-full border px-3 py-2 rounded" placeholder="Nhập mật khẩu cũ..." required />
+  </div>
+  <div>
+    <label className="block text-sm font-semibold mb-1">Mật khẩu mới</label>
+    <input type="password" value={changePassForm.newPass || ''} onChange={e=>setChangePassForm(p=>({...p, newPass: e.target.value}))} className="w-full border px-3 py-2 rounded" placeholder="Nhập mật khẩu mới..." required />
+  </div>
+  <div>
+    <label className="block text-sm font-semibold mb-1">Xác nhận mật khẩu mới</label>
+    <input type="password" value={changePassForm.confirm || ''} onChange={e=>setChangePassForm(p=>({...p, confirm: e.target.value}))} className="w-full border px-3 py-2 rounded" placeholder="Nhập lại mật khẩu mới..." required />
+  </div>
+  <button type="submit" className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded shadow-sm transition-colors mt-2">Lưu thay đổi</button>
+</form></div></div>
           )}
 
           {showDbModal && (
