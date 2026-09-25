@@ -131,43 +131,45 @@
         padding: 0;
       }
     }
-  /* ----- ĐÓNG BĂNG DUY NHẤT CỘT TÊN QUY HOẠCH (CỘT SỐ 6) ----- */
-    /* 1. Thiết lập vị trí bám dính sát mép trái màn hình */
+  /* ----- ĐÓNG BĂNG & CĂN CHỈNH BẢNG QUY HOẠCH ----- */
+    /* 1. Thiết lập vị trí bám dính cột Tên Quy hoạch (Cột số 6) */
     .freeze-cols th:nth-child(6), .freeze-cols td:nth-child(6) { 
-      position: sticky; 
-      left: 0px; 
+      position: sticky !important; 
+      left: 0px !important; 
       box-shadow: 4px 0 10px rgba(0,0,0,0.08); 
       border-right: 2px solid #94a3b8 !important; 
     }
 
-    /* 2. SỬA LỖI MẤT TIÊU ĐỀ: Bổ sung top:0 và Z-index cao để bám dính trần */
-    .freeze-cols td:nth-child(6) { z-index: 10; }
-    .freeze-cols th:nth-child(6) { 
-      z-index: 30 !important; 
-      top: 0px; 
+    /* 2. KHẮC PHỤC LỖI TRÔI TIÊU ĐỀ KHI KÉO DỌC (Z-INDEX) */
+    /* Ép toàn bộ thanh Tiêu đề (Header) nổi lên lớp cao nhất (z-50) */
+    .freeze-cols thead {
+      z-index: 50 !important;
+    }
+    /* Hạ lớp hiển thị của các ô dữ liệu đóng băng xuống thấp hơn (z-20) để luôn chui xuống dưới Header */
+    .freeze-cols tbody td:nth-child(6) { 
+      z-index: 20 !important; 
     }
 
-    /* 3. SỬA LỖI LỆCH HÀNG: Ép toàn bộ nội dung ô căn lên trên cùng (Top) */
-    .freeze-cols td, .freeze-cols th {
+    /* 3. KHẮC PHỤC LỖI CANH HÀNG KHÔNG ĐỀU NHAU */
+    /* Ép tất cả các ô dữ liệu trong bảng canh thẳng lên trên cùng (Top) và thêm khoảng không cho thoáng */
+    .freeze-cols tbody td {
       vertical-align: top !important;
-      padding-top: 12px !important;
+      padding-top: 14px !important;
+      padding-bottom: 14px !important;
     }
 
-    /* 4. Màu nền cho Tab Quy hoạch Chung (Xanh) */
+    /* 4. MÀU NỀN ĐÓNG BĂNG CHỐNG NHÌN XUYÊN THẤU CHO 3 TAB */
     .table-qhchung thead th:nth-child(6) { background-color: #e2e8f0 !important; }
-    .table-qhchung tbody td:nth-child(6) { background-color: #ffffff; }
+    .table-qhchung tbody td:nth-child(6) { background-color: #ffffff !important; }
     .table-qhchung tbody tr:hover td:nth-child(6) { background-color: #eff6ff !important; }
 
-    /* 5. Màu nền cho Tab Quy hoạch Phân khu (Cam) */
     .table-qhphankhu thead th:nth-child(6) { background-color: #ffedd5 !important; }
-    .table-qhphankhu tbody td:nth-child(6) { background-color: #ffffff; }
+    .table-qhphankhu tbody td:nth-child(6) { background-color: #ffffff !important; }
     .table-qhphankhu tbody tr:hover td:nth-child(6) { background-color: #fff7ed !important; }
 
-    /* 6. Màu nền cho Tab Quy hoạch Chi tiết (Tím) */
     .table-qhchitiet thead th:nth-child(6) { background-color: #e0e7ff !important; }
-    .table-qhchitiet tbody td:nth-child(6) { background-color: #ffffff; }
+    .table-qhchitiet tbody td:nth-child(6) { background-color: #ffffff !important; }
     .table-qhchitiet tbody tr:hover td:nth-child(6) { background-color: #eef2ff !important; }
-  </style>
 </head>
 <body>
   <div id="root">
