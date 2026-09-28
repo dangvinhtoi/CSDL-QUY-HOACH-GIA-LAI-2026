@@ -770,17 +770,36 @@ function App() {
       };
 
       const syncToCloud = (overrides = {}) => {
-        const cloudUrl = getCloudUrl();
-        const payload = {
-          qhChung: overrides.data || data,
-          qhChiTiet: overrides.detailData || detailData,
-          qhSapNhap: overrides.mergedData || mergedData,
-          qhLienHe: overrides.contactData || contactData,
-          qhRaSoat: overrides.reviewData || reviewData,
-          adminPassword: overrides.adminPassword || adminPassword,
-          membersList: overrides.membersList || membersList,
-          pendingDataChanges: overrides.pendingDataChanges || pendingDataChanges
-        };
+    const cloudUrl = getCloudUrl();
+
+    // 1. Hàm hỗ trợ lấy dữ liệu mới nhất tức thời để trị dứt điểm lỗi Race Condition
+    const getLatest = (localKey, stateVar, overrideVar) => {
+      if (overrideVar !== undefined) return overrideVar;
+      try {
+        const local = localStorage.getItem(localKey);
+        return local ? JSON.parse(local) : stateVar;
+      } catch (e) {
+        return stateVar;
+      }
+    };
+
+    // 2. Đóng gói dữ liệu chuẩn xác (Đã bổ sung Phân khu và Nhật ký)
+    const payload = {
+      qhChung: getLatest('gialai_qh_chung', data, overrides.data),
+      qhChiTiet: getLatest('gialai_qh_chitiet', detailData, overrides.detailData),
+      qhPhanKhu: getLatest('gialai_qh_phankhu', typeof phankhuData !== 'undefined' ? phankhuData : [], overrides.phankhuData),
+      qhSapNhap: overrides.mergedData || mergedData,
+      qhLienHe: overrides.contactData || contactData,
+      qhRaSoat: overrides.reviewData || reviewData,
+      adminPassword: overrides.adminPassword || localStorage.getItem('gialai_admin_pass') || adminPassword,
+      membersList: getLatest('gialai_members_list', membersList, overrides.membersList),
+      pendingDataChanges: getLatest('gialai_pending_changes', pendingDataChanges, overrides.pendingDataChanges),
+      
+      // BỔ SUNG QUAN TRỌNG: Đã đưa Nhật ký vào kiện hàng để đẩy lên Đám mây
+      systemLogs: getLatest('gialai_system_logs', typeof systemLogs !== 'undefined' ? systemLogs : [], overrides.systemLogs)
+    };
+
+    // --- ANH GIỮ NGUYÊN PHẦN LỆNH GỌI FETCH HOẶC AXIOS Ở BÊN DƯỚI ĐOẠN NÀY ---
 
         if (cloudUrl && !cloudUrl.includes('DÁN_LINK_GOOGLE')) {
           fetch(cloudUrl, {
