@@ -1367,6 +1367,12 @@ function App() {
           reviewData: nextReview,
           pendingDataChanges: nextPending
         });
+        // --- GHI NHẬT KÝ THAO TÁC PHÊ DUYỆT ---
+    let actionName = item.type === 'ADD' ? 'PHÊ DUYỆT (Thêm mới)' : 'PHÊ DUYỆT (Cập nhật)';
+    let projectName = item.recordData?.tenQh || 'Không tên';
+    let projectLocation = item.recordData?.xa || '';
+    
+    addSystemLog(actionName, `Đồ án: ${projectName} (Vị trí: ${projectLocation})`);
 
         showNotification('🎉 Đã phê duyệt và cập nhật chính thức dữ liệu lên hệ thống web!');
       };
