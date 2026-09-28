@@ -1536,7 +1536,7 @@ function App() {
       // --- LỆNH GHI NHẬT KÝ KHI THÀNH VIÊN GỬI YÊU CẦU ---
       addSystemLog(
         editingRecord?.id ? 'CẬP NHẬT (Chờ duyệt)' : 'THÊM MỚI (Chờ duyệt)', 
-        `Đồ án: ${formData.tenQh \vert{}\vert{} 'Không tên'} (Vị trí: ${formData.xa || ''})`
+        `Đồ án: ${formData.tenQh || 'Không tên'} (Vị trí: ${formData.xa || ''})`
       );
       
       setIsModalOpen(false);
