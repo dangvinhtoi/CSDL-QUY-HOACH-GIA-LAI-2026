@@ -1279,6 +1279,11 @@ function App() {
         setMembersList(nextMembers);
         localStorage.setItem('gialai_members_list', JSON.stringify(nextMembers));
         syncToCloud({ membersList: nextMembers });
+        // --- GHI NHẬT KÝ KHI DUYỆT TÀI KHOẢN ---
+    const approvedMember = (membersList || []).find(m => m.id === memberId);
+    if (approvedMember) {
+        addSystemLog('DUYỆT TÀI KHOẢN', `Cấp quyền cho: ${approvedMember.fullName || approvedMember.email}`);
+    }
         showNotification('✅ Đã duyệt cấp quyền tài khoản thành viên thành công!');
       };
 
@@ -1287,6 +1292,11 @@ function App() {
         setMembersList(nextMembers);
         localStorage.setItem('gialai_members_list', JSON.stringify(nextMembers));
         syncToCloud({ membersList: nextMembers });
+        // --- GHI NHẬT KÝ KHI TỪ CHỐI/XÓA TÀI KHOẢN ---
+    const rejectedMember = (membersList || []).find(m => m.id === memberId);
+    if (rejectedMember) {
+        addSystemLog('XÓA TÀI KHOẢN', `Từ chối/Xóa tài khoản của: ${rejectedMember.fullName || rejectedMember.email}`);
+    }
         showNotification('Đã từ chối / xóa yêu cầu đăng ký tài khoản.');
       };
 
@@ -1523,10 +1533,14 @@ function App() {
       const approvalCategory = targetType === 'CHITIET' ? 'QH_CHITIET' : targetType === 'PHANKHU' ? 'QH_PHANKHU' : 'QH_CHUNG';
       submitPendingChange(approvalCategory, editingRecord?.id ? 'EDIT' : 'ADD', editingRecord?.id || null, newRecord);
       
-      // --- ĐÂY CHÍNH LÀ VỊ TRÍ 1: GHI NHẬT KÝ CHO MEMBER ---
-      addSystemLog(editingRecord?.id ? 'CẬP NHẬT (Chờ duyệt)' : 'THÊM MỚI (Chờ duyệt)', detailMsg);
+      // --- LỆNH GHI NHẬT KÝ KHI THÀNH VIÊN GỬI YÊU CẦU ---
+      addSystemLog(
+        editingRecord?.id ? 'CẬP NHẬT (Chờ duyệt)' : 'THÊM MỚI (Chờ duyệt)', 
+        `Đồ án: ${formData.tenQh \vert{}\vert{} 'Không tên'} (Vị trí: ${formData.xa || ''})`
+      );
       
       setIsModalOpen(false);
+      showNotification('Đã gửi yêu cầu phê duyệt lên Quản trị viên!');
       return;
     }
   if (targetType === 'CHITIET') {
