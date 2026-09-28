@@ -1490,6 +1490,23 @@ function App() {
 
       const handleSave = (e) => {
   e.preventDefault();
+        // --- TỰ ĐỘNG BẮT CHI TIẾT THAY ĐỔI DỮ LIỆU ---
+      let detailMsg = `Đồ án: ${formData.tenQh || 'Không tên'}\n`;
+      if (editingRecord?.id) {
+        let changes = [];
+        const fName = {xa: 'Xã/Phường', huyen: 'Huyện', tenQh: 'Tên đồ án', dienTich: 'Diện tích', danSo: 'Dân số', cqToChuc: 'CQ Tổ chức', cqThamDinh: 'CQ Thẩm định', cqPheDuyet: 'CQ Phê duyệt', qdPheDuyet: 'Quyết định PD', file: 'Link tài liệu', ghiChu: 'Ghi chú', tinhHinhGuiHoSo: 'Tình trạng gửi Sở'};
+        
+        for (let key in formData) {
+          if (formData[key] !== editingRecord[key] && key !== '_targetType' && key !== 'id') {
+            let label = fName[key] || key;
+            changes.push(`+ ${label}: [${editingRecord[key] || 'trống'}] ➔ [${formData[key] || 'trống'}]`);
+          }
+        }
+        detailMsg += changes.length > 0 ? `Chi tiết sửa:\n${changes.join('\n')}` : '(Lưu hồ sơ nhưng không thay đổi dữ liệu nào)';
+      } else {
+        detailMsg += '(Thêm mới hồ sơ hoàn toàn)';
+      }
+      // --- KẾT THÚC QUÉT DỮ LIỆU ---
   const targetType = editingRecord?._targetType || 'CHUNG';
   const newRecord = { ...formData };
   delete newRecord._targetType;
@@ -1497,12 +1514,15 @@ function App() {
   newRecord.id = recordId;
 
   if (userRole === 'MEMBER') {
-    const approvalCategory = targetType === 'CHITIET' ? 'QH_CHITIET' : targetType === 'PHANKHU' ? 'QH_PHANKHU' : 'QH_CHUNG';
-    submitPendingChange(approvalCategory, editingRecord?.id ? 'EDIT' : 'ADD', editingRecord?.id || null, newRecord);
-    setIsModalOpen(false);
-    return;
-  }
-
+      const approvalCategory = targetType === 'CHITIET' ? 'QH_CHITIET' : targetType === 'PHANKHU' ? 'QH_PHANKHU' : 'QH_CHUNG';
+      submitPendingChange(approvalCategory, editingRecord?.id ? 'EDIT' : 'ADD', editingRecord?.id || null, newRecord);
+      
+      // --- ĐÂY CHÍNH LÀ VỊ TRÍ 1: GHI NHẬT KÝ CHO MEMBER ---
+      addSystemLog(editingRecord?.id ? 'CẬP NHẬT (Chờ duyệt)' : 'THÊM MỚI (Chờ duyệt)', detailMsg);
+      
+      setIsModalOpen(false);
+      return;
+    }
   if (targetType === 'CHITIET') {
     const nextDetail = (detailData || []).some(r => r.id === recordId) ? detailData.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(detailData || [])];
     setDetailData(nextDetail);
@@ -1519,7 +1539,7 @@ function App() {
     syncToCloud({ data: nextData });
   }
   // Ghi nhận vào Nhật ký hệ thống
-    addSystemLog(editingRecord?.id ? 'CẬP NHẬT' : 'THÊM MỚI', `Đồ án: ${formData.tenQh || 'Không tên'} (Vị trí: ${formData.xa || ''})`);
+    addSystemLog(editingRecord?.id ? 'CẬP NHẬT' : 'THÊM MỚI', detailMsg);
   setIsModalOpen(false);
   showNotification('Đã lưu hồ sơ thành công!');
 };
@@ -2513,7 +2533,7 @@ function App() {
                           <td className="p-3 text-slate-700 font-semibold text-xs">
                             {log.user}
                           </td>
-                          <td className="p-3 text-slate-800 text-sm leading-relaxed">
+                          <td className="p-3 text-slate-800 text-sm leading-relaxed whitespace-pre-wrap">
                             {log.details}
                           </td>
                         </tr>
