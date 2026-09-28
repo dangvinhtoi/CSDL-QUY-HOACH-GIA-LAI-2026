@@ -678,14 +678,22 @@ function App() {
   const [logFilterDate, setLogFilterDate] = useState('');
 
   // Hàm tự động ghi nhận lịch sử thao tác
-  const addSystemLog = (action, details) => {
+  const addSystemLog = (action, details, skipSync = false) => {
     const newLog = {
       id: Date.now().toString(),
       time: new Date().toISOString(),
-      action: action, // 'THÊM MỚI', 'CẬP NHẬT', 'XÓA'
+      action: action,
       details: details,
       user: currentUser?.fullName || currentUser?.email || 'Admin'
     };
+    const updatedLogs = [newLog, ...(systemLogs || [])].slice(0, 500);
+    setSystemLogs(updatedLogs);
+    localStorage.setItem('gialai_system_logs', JSON.stringify(updatedLogs));
+    
+    // Nếu skipSync = true, hệ thống sẽ gom nhật ký để đẩy cùng dữ liệu chính, tránh xung đột
+    if (!skipSync) syncToCloud({ systemLogs: updatedLogs });
+    return updatedLogs; 
+  };
     // Cập nhật log mới và giữ tối đa 500 dòng gần nhất cho nhẹ máy
     const updatedLogs = [newLog, ...(systemLogs || [])].slice(0, 500);
     setSystemLogs(updatedLogs);
@@ -772,7 +780,6 @@ function App() {
       const syncToCloud = (overrides = {}) => {
     const cloudUrl = getCloudUrl();
 
-    // 1. Hàm hỗ trợ lấy dữ liệu mới nhất tức thời để trị dứt điểm lỗi Race Condition
     const getLatest = (localKey, stateVar, overrideVar) => {
       if (overrideVar !== undefined) return overrideVar;
       try {
@@ -782,6 +789,35 @@ function App() {
         return stateVar;
       }
     };
+
+    // Tất cả dữ liệu đều được kiểm tra bản mới nhất trước khi đóng gói
+    const payload = {
+      qhChung: getLatest('gialai_qh_chung', data, overrides.data),
+      qhChiTiet: getLatest('gialai_qh_chitiet', detailData, overrides.detailData),
+      qhPhanKhu: getLatest('gialai_qh_phankhu', typeof phankhuData !== 'undefined' ? phankhuData : [], overrides.phankhuData),
+      qhSapNhap: getLatest('gialai_qh_sapnhap', mergedData, overrides.mergedData),
+      qhLienHe: getLatest('gialai_qh_lienhe', contactData, overrides.contactData),
+      qhRaSoat: getLatest('gialai_qh_rasoat', reviewData, overrides.reviewData),
+      adminPassword: overrides.adminPassword || localStorage.getItem('gialai_admin_pass') || adminPassword,
+      membersList: getLatest('gialai_members_list', membersList, overrides.membersList),
+      pendingDataChanges: getLatest('gialai_pending_changes', pendingDataChanges, overrides.pendingDataChanges),
+      systemLogs: getLatest('gialai_system_logs', typeof systemLogs !== 'undefined' ? systemLogs : [], overrides.systemLogs)
+    };
+
+    if (cloudUrl && !cloudUrl.includes('DÁN_LINK_GOOGLE')) {
+      fetch(cloudUrl, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(payload) })
+      .then(res => res.text()).then(resText => { if (!resText.includes('<!DOCTYPE')) console.log('Synced to Drive'); })
+      .catch(err => { fetch(cloudUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(payload) }); });
+    }
+
+    if (db) {
+      try {
+        const appIdKey = typeof __app_id !== 'undefined' ? __app_id : 'gialai-qh-default';
+        db.collection('artifacts').doc(appIdKey).collection('config').doc('data').set(payload)
+          .catch(err => console.warn('Lỗi lưu Firebase Cloud:', err));
+      } catch(e) {}
+    }
+  };
 
     // 2. Đóng gói dữ liệu chuẩn xác (Đã bổ sung Phân khu và Nhật ký)
     const payload = {
@@ -1297,49 +1333,43 @@ function App() {
         const nextMembers = (membersList || []).map(m => m.id === memberId ? { ...m, status: 'APPROVED' } : m);
         setMembersList(nextMembers);
         localStorage.setItem('gialai_members_list', JSON.stringify(nextMembers));
-        syncToCloud({ membersList: nextMembers });
-        // --- GHI NHẬT KÝ KHI DUYỆT TÀI KHOẢN ---
-    const approvedMember = (membersList || []).find(m => m.id === memberId);
-    if (approvedMember) {
-        addSystemLog('DUYỆT TÀI KHOẢN', `Cấp quyền cho: ${approvedMember.fullName || approvedMember.email}`);
-    }
+        
+        const approvedMember = (membersList || []).find(m => m.id === memberId);
+        const logs = approvedMember ? addSystemLog('DUYỆT TÀI KHOẢN', `Cấp quyền cho: ${approvedMember.fullName || approvedMember.email}`, true) : systemLogs;
+        
+        syncToCloud({ membersList: nextMembers, systemLogs: logs });
         showNotification('✅ Đã duyệt cấp quyền tài khoản thành viên thành công!');
       };
 
       const handleRejectMember = (memberId) => {
+        const rejectedMember = (membersList || []).find(m => m.id === memberId);
         const nextMembers = (membersList || []).filter(m => m.id !== memberId);
         setMembersList(nextMembers);
         localStorage.setItem('gialai_members_list', JSON.stringify(nextMembers));
-        syncToCloud({ membersList: nextMembers });
-        // --- GHI NHẬT KÝ KHI TỪ CHỐI/XÓA TÀI KHOẢN ---
-    const rejectedMember = (membersList || []).find(m => m.id === memberId);
-    if (rejectedMember) {
-        addSystemLog('XÓA TÀI KHOẢN', `Từ chối/Xóa tài khoản của: ${rejectedMember.fullName || rejectedMember.email}`);
-    }
+        
+        const logs = rejectedMember ? addSystemLog('XÓA TÀI KHOẢN', `Từ chối/Xóa tài khoản của: ${rejectedMember.fullName || rejectedMember.email}`, true) : systemLogs;
+        
+        syncToCloud({ membersList: nextMembers, systemLogs: logs });
         showNotification('Đã từ chối / xóa yêu cầu đăng ký tài khoản.');
       };
 
-      const submitPendingChange = (category, type, targetId, recordData) => {
+      const submitPendingChange = (category, type, targetId, recordData, logsToSync = null) => {
         const pendingItem = {
-          id: Date.now(),
-          category,
-          type,
-          targetId,
-          recordData,
+          id: Date.now(), category, type, targetId, recordData,
           submittedBy: {
-            fullName: currentUser?.fullName || 'Thành viên',
-            unit: currentUser?.unit || '',
-            position: currentUser?.position || '',
-            email: currentUser?.email || '',
-            username: currentUser?.username || ''
+            fullName: currentUser?.fullName || 'Thành viên', unit: currentUser?.unit || '',
+            position: currentUser?.position || '', email: currentUser?.email || '', username: currentUser?.username || ''
           },
-          submittedAt: new Date().toLocaleString('vi-VN'),
-          status: 'PENDING'
+          submittedAt: new Date().toLocaleString('vi-VN'), status: 'PENDING'
         };
         const nextPending = [pendingItem, ...(pendingDataChanges || [])];
         setPendingDataChanges(nextPending);
         localStorage.setItem('gialai_pending_changes', JSON.stringify(nextPending));
-        syncToCloud({ pendingDataChanges: nextPending });
+        
+        const payload = { pendingDataChanges: nextPending };
+        if (logsToSync) payload.systemLogs = logsToSync;
+        
+        syncToCloud(payload);
         showNotification('📑 Đã gửi nội dung ' + (type === 'ADD' ? 'thêm mới' : 'chỉnh sửa') + ' về Admin kiểm duyệt. Dữ liệu sẽ xuất hiện sau khi Admin đồng ý!');
       };
 
@@ -1348,54 +1378,40 @@ function App() {
         let nextData = data, nextDetail = detailData, nextMerged = mergedData, nextContact = contactData, nextReview = reviewData;
 
         if (category === 'QH_CHUNG') {
-          if (type === 'EDIT' && targetId) {
-            nextData = data.map(r => r.id === targetId ? recordData : r);
-          } else {
-            nextData = [recordData, ...data];
-          }
-          setData(nextData);
+          nextData = type === 'EDIT' && targetId ? data.map(r => r.id === targetId ? recordData : r) : [recordData, ...data];
+          setData(nextData); localStorage.setItem('gialai_qh_chung', JSON.stringify(nextData));
         } else if (category === 'QH_CHITIET') {
-          if (type === 'EDIT' && targetId) {
-            nextDetail = detailData.map(r => r.id === targetId ? recordData : r);
-          } else {
-            nextDetail = [recordData, ...detailData];
-          }
-          setDetailData(nextDetail);
+          nextDetail = type === 'EDIT' && targetId ? detailData.map(r => r.id === targetId ? recordData : r) : [recordData, ...detailData];
+          setDetailData(nextDetail); localStorage.setItem('gialai_qh_chitiet', JSON.stringify(nextDetail));
         } else if (category === 'MERGE') {
-          if (type === 'EDIT' && targetId) {
-            nextMerged = mergedData.map(r => r.id === targetId ? recordData : r);
-          } else {
-            nextMerged = [recordData, ...mergedData];
-          }
-          setMergedData(nextMerged);
+          nextMerged = type === 'EDIT' && targetId ? mergedData.map(r => r.id === targetId ? recordData : r) : [recordData, ...mergedData];
+          setMergedData(nextMerged); localStorage.setItem('gialai_qh_sapnhap', JSON.stringify(nextMerged));
         } else if (category === 'CONTACT') {
-          if (type === 'EDIT' && targetId) {
-            nextContact = contactData.map(r => r.id === targetId ? recordData : r);
-          } else {
-            nextContact = [recordData, ...contactData];
-          }
-          setContactData(nextContact);
+          nextContact = type === 'EDIT' && targetId ? contactData.map(r => r.id === targetId ? recordData : r) : [recordData, ...contactData];
+          setContactData(nextContact); localStorage.setItem('gialai_qh_lienhe', JSON.stringify(nextContact));
         } else if (category === 'REVIEW') {
-          if (type === 'EDIT' && targetId) {
-            nextReview = reviewData.map(r => r.id === targetId ? recordData : r);
-          } else {
-            nextReview = [recordData, ...reviewData];
-          }
-          setReviewData(nextReview);
+          nextReview = type === 'EDIT' && targetId ? reviewData.map(r => r.id === targetId ? recordData : r) : [recordData, ...reviewData];
+          setReviewData(nextReview); localStorage.setItem('gialai_qh_rasoat', JSON.stringify(nextReview));
         }
 
         const nextPending = (pendingDataChanges || []).filter(p => p.id !== item.id);
         setPendingDataChanges(nextPending);
         localStorage.setItem('gialai_pending_changes', JSON.stringify(nextPending));
 
+        let actionName = item.type === 'ADD' ? 'PHÊ DUYỆT (Thêm mới)' : 'PHÊ DUYỆT (Cập nhật)';
+        let projectName = item.recordData?.tenQh || 'Không tên';
+        let projectLocation = item.recordData?.xa || '';
+        
+        const logs = addSystemLog(actionName, `Đồ án: ${projectName} (Vị trí: ${projectLocation})`, true);
+
         syncToCloud({
-          data: nextData,
-          detailData: nextDetail,
-          mergedData: nextMerged,
-          contactData: nextContact,
-          reviewData: nextReview,
-          pendingDataChanges: nextPending
+          data: nextData, detailData: nextDetail, mergedData: nextMerged,
+          contactData: nextContact, reviewData: nextReview,
+          pendingDataChanges: nextPending, systemLogs: logs
         });
+
+        showNotification('🎉 Đã phê duyệt và cập nhật chính thức dữ liệu lên hệ thống web!');
+      };
         // --- GHI NHẬT KÝ THAO TÁC PHÊ DUYỆT ---
     let actionName = item.type === 'ADD' ? 'PHÊ DUYỆT (Thêm mới)' : 'PHÊ DUYỆT (Cập nhật)';
     let projectName = item.recordData?.tenQh || 'Không tên';
@@ -1523,65 +1539,58 @@ function App() {
   setIsModalOpen(true);
 };
 
-      const handleSave = (e) => {
-  e.preventDefault();
-        // --- TỰ ĐỘNG BẮT CHI TIẾT THAY ĐỔI DỮ LIỆU ---
-      let detailMsg = `Đồ án: ${formData.tenQh || 'Không tên'}\n`;
-      if (editingRecord?.id) {
-        let changes = [];
-        const fName = {xa: 'Xã/Phường', huyen: 'Huyện', tenQh: 'Tên đồ án', dienTich: 'Diện tích', danSo: 'Dân số', cqToChuc: 'CQ Tổ chức', cqThamDinh: 'CQ Thẩm định', cqPheDuyet: 'CQ Phê duyệt', qdPheDuyet: 'Quyết định PD', file: 'Link tài liệu', ghiChu: 'Ghi chú', tinhHinhGuiHoSo: 'Tình trạng gửi Sở'};
-        
-        for (let key in formData) {
-          if (formData[key] !== editingRecord[key] && key !== '_targetType' && key !== 'id') {
-            let label = fName[key] || key;
-            changes.push(`+ ${label}: [${editingRecord[key] || 'trống'}] ➔ [${formData[key] || 'trống'}]`);
+const handleSave = (e) => {
+        e.preventDefault();
+        let detailMsg = `Đồ án: ${formData.tenQh || 'Không tên'}\n`;
+        if (editingRecord?.id) {
+          let changes = [];
+          const fName = {xa: 'Xã/Phường', huyen: 'Huyện', tenQh: 'Tên đồ án', dienTich: 'Diện tích', danSo: 'Dân số', cqToChuc: 'CQ Tổ chức', cqThamDinh: 'CQ Thẩm định', cqPheDuyet: 'CQ Phê duyệt', qdPheDuyet: 'Quyết định PD', file: 'Link tài liệu', ghiChu: 'Ghi chú', tinhHinhGuiHoSo: 'Tình trạng gửi Sở'};
+          for (let key in formData) {
+            if (formData[key] !== editingRecord[key] && key !== '_targetType' && key !== 'id') {
+              let label = fName[key] || key;
+              changes.push(`+ ${label}: [${editingRecord[key] || 'trống'}] ➔ [${formData[key] || 'trống'}]`);
+            }
           }
+          detailMsg += changes.length > 0 ? `Chi tiết sửa:\n${changes.join('\n')}` : '(Lưu hồ sơ nhưng không thay đổi dữ liệu nào)';
+        } else {
+          detailMsg += '(Thêm mới hồ sơ hoàn toàn)';
         }
-        detailMsg += changes.length > 0 ? `Chi tiết sửa:\n${changes.join('\n')}` : '(Lưu hồ sơ nhưng không thay đổi dữ liệu nào)';
-      } else {
-        detailMsg += '(Thêm mới hồ sơ hoàn toàn)';
-      }
-      // --- KẾT THÚC QUÉT DỮ LIỆU ---
-  const targetType = editingRecord?._targetType || 'CHUNG';
-  const newRecord = { ...formData };
-  delete newRecord._targetType;
-  const recordId = editingRecord?.id ? editingRecord.id : Date.now();
-  newRecord.id = recordId;
+        
+        const targetType = editingRecord?._targetType || 'CHUNG';
+        const newRecord = { ...formData };
+        delete newRecord._targetType;
+        const recordId = editingRecord?.id ? editingRecord.id : Date.now();
+        newRecord.id = recordId;
 
-  if (userRole === 'MEMBER') {
-      const approvalCategory = targetType === 'CHITIET' ? 'QH_CHITIET' : targetType === 'PHANKHU' ? 'QH_PHANKHU' : 'QH_CHUNG';
-      submitPendingChange(approvalCategory, editingRecord?.id ? 'EDIT' : 'ADD', editingRecord?.id || null, newRecord);
-      
-      // --- LỆNH GHI NHẬT KÝ KHI THÀNH VIÊN GỬI YÊU CẦU ---
-      addSystemLog(
-        editingRecord?.id ? 'CẬP NHẬT (Chờ duyệt)' : 'THÊM MỚI (Chờ duyệt)', 
-        `Đồ án: ${formData.tenQh || 'Không tên'} (Vị trí: ${formData.xa || ''})`
-      );
-      
-      setIsModalOpen(false);
-      showNotification('Đã gửi yêu cầu phê duyệt lên Quản trị viên!');
-      return;
-    }
-  if (targetType === 'CHITIET') {
-    const nextDetail = (detailData || []).some(r => r.id === recordId) ? detailData.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(detailData || [])];
-    setDetailData(nextDetail);
-    syncToCloud({ detailData: nextDetail });
-  } else if (targetType === 'PHANKHU') {
-    const nextPhanKhu = (phankhuData || []).some(r => r.id === recordId) ? phankhuData.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(phankhuData || [])];
-    setPhankhuData(nextPhanKhu);
-    // Lưu LocalStorage cho Phân khu
-    localStorage.setItem('gialai_qh_phankhu', JSON.stringify(nextPhanKhu));
-    // Ghi chú: Cần bổ sung phankhuData vào hàm syncToCloud sau nếu anh muốn đồng bộ nó.
-  } else {
-    const nextData = (data || []).some(r => r.id === recordId) ? data.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(data || [])];
-    setData(nextData);
-    syncToCloud({ data: nextData });
-  }
-  // Ghi nhận vào Nhật ký hệ thống
-    addSystemLog(editingRecord?.id ? 'CẬP NHẬT' : 'THÊM MỚI', detailMsg);
-  setIsModalOpen(false);
-  showNotification('Đã lưu hồ sơ thành công!');
-};
+        if (userRole === 'MEMBER') {
+          const approvalCategory = targetType === 'CHITIET' ? 'QH_CHITIET' : targetType === 'PHANKHU' ? 'QH_PHANKHU' : 'QH_CHUNG';
+          const logs = addSystemLog(editingRecord?.id ? 'CẬP NHẬT (Chờ duyệt)' : 'THÊM MỚI (Chờ duyệt)', `Đồ án: ${formData.tenQh || 'Không tên'} (Vị trí: ${formData.xa || ''})`, true);
+          submitPendingChange(approvalCategory, editingRecord?.id ? 'EDIT' : 'ADD', editingRecord?.id || null, newRecord, logs);
+          setIsModalOpen(false);
+          return;
+        }
+        
+        const logs = addSystemLog(editingRecord?.id ? 'CẬP NHẬT' : 'THÊM MỚI', detailMsg, true);
+
+        if (targetType === 'CHITIET') {
+          const nextDetail = (detailData || []).some(r => r.id === recordId) ? detailData.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(detailData || [])];
+          setDetailData(nextDetail);
+          localStorage.setItem('gialai_qh_chitiet', JSON.stringify(nextDetail));
+          syncToCloud({ detailData: nextDetail, systemLogs: logs });
+        } else if (targetType === 'PHANKHU') {
+          const nextPhanKhu = (phankhuData || []).some(r => r.id === recordId) ? phankhuData.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(phankhuData || [])];
+          setPhankhuData(nextPhanKhu);
+          localStorage.setItem('gialai_qh_phankhu', JSON.stringify(nextPhanKhu));
+          syncToCloud({ phankhuData: nextPhanKhu, systemLogs: logs });
+        } else {
+          const nextData = (data || []).some(r => r.id === recordId) ? data.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(data || [])];
+          setData(nextData);
+          localStorage.setItem('gialai_qh_chung', JSON.stringify(nextData));
+          syncToCloud({ data: nextData, systemLogs: logs });
+        }
+        setIsModalOpen(false);
+        showNotification('Đã lưu hồ sơ thành công!');
+      };
       const handleDelete = (id, targetType = 'CHUNG') => {
   if (!isLoggedIn) return;
   openConfirm('Xác nhận xóa', 'Bạn có chắc chắn muốn xóa hồ sơ này?', () => {
