@@ -778,87 +778,35 @@ function App() {
       };
 
       const syncToCloud = (overrides = {}) => {
-    const cloudUrl = getCloudUrl();
+        const cloudUrl = getCloudUrl();
 
-    const getLatest = (localKey, stateVar, overrideVar) => {
-      if (overrideVar !== undefined) return overrideVar;
-      try {
-        const local = localStorage.getItem(localKey);
-        return local ? JSON.parse(local) : stateVar;
-      } catch (e) {
-        return stateVar;
-      }
-    };
+        const getLatest = (localKey, stateVar, overrideVar) => {
+          if (overrideVar !== undefined) return overrideVar;
+          try {
+            const local = localStorage.getItem(localKey);
+            return local ? JSON.parse(local) : stateVar;
+          } catch (e) {
+            return stateVar;
+          }
+        };
 
-    // Tất cả dữ liệu đều được kiểm tra bản mới nhất trước khi đóng gói
-    const payload = {
-      qhChung: getLatest('gialai_qh_chung', data, overrides.data),
-      qhChiTiet: getLatest('gialai_qh_chitiet', detailData, overrides.detailData),
-      qhPhanKhu: getLatest('gialai_qh_phankhu', typeof phankhuData !== 'undefined' ? phankhuData : [], overrides.phankhuData),
-      qhSapNhap: getLatest('gialai_qh_sapnhap', mergedData, overrides.mergedData),
-      qhLienHe: getLatest('gialai_qh_lienhe', contactData, overrides.contactData),
-      qhRaSoat: getLatest('gialai_qh_rasoat', reviewData, overrides.reviewData),
-      adminPassword: overrides.adminPassword || localStorage.getItem('gialai_admin_pass') || adminPassword,
-      membersList: getLatest('gialai_members_list', membersList, overrides.membersList),
-      pendingDataChanges: getLatest('gialai_pending_changes', pendingDataChanges, overrides.pendingDataChanges),
-      systemLogs: getLatest('gialai_system_logs', typeof systemLogs !== 'undefined' ? systemLogs : [], overrides.systemLogs)
-    };
-
-    if (cloudUrl && !cloudUrl.includes('DÁN_LINK_GOOGLE')) {
-      fetch(cloudUrl, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(payload) })
-      .then(res => res.text()).then(resText => { if (!resText.includes('<!DOCTYPE')) console.log('Synced to Drive'); })
-      .catch(err => { fetch(cloudUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(payload) }); });
-    }
-
-    if (db) {
-      try {
-        const appIdKey = typeof __app_id !== 'undefined' ? __app_id : 'gialai-qh-default';
-        db.collection('artifacts').doc(appIdKey).collection('config').doc('data').set(payload)
-          .catch(err => console.warn('Lỗi lưu Firebase Cloud:', err));
-      } catch(e) {}
-    }
-  };
-
-    // 2. Đóng gói dữ liệu chuẩn xác (Đã bổ sung Phân khu và Nhật ký)
-    const payload = {
-      qhChung: getLatest('gialai_qh_chung', data, overrides.data),
-      qhChiTiet: getLatest('gialai_qh_chitiet', detailData, overrides.detailData),
-      qhPhanKhu: getLatest('gialai_qh_phankhu', typeof phankhuData !== 'undefined' ? phankhuData : [], overrides.phankhuData),
-      qhSapNhap: overrides.mergedData || mergedData,
-      qhLienHe: overrides.contactData || contactData,
-      qhRaSoat: overrides.reviewData || reviewData,
-      adminPassword: overrides.adminPassword || localStorage.getItem('gialai_admin_pass') || adminPassword,
-      membersList: getLatest('gialai_members_list', membersList, overrides.membersList),
-      pendingDataChanges: getLatest('gialai_pending_changes', pendingDataChanges, overrides.pendingDataChanges),
-      
-      // BỔ SUNG QUAN TRỌNG: Đã đưa Nhật ký vào kiện hàng để đẩy lên Đám mây
-      systemLogs: getLatest('gialai_system_logs', typeof systemLogs !== 'undefined' ? systemLogs : [], overrides.systemLogs)
-    };
-
-    // --- ANH GIỮ NGUYÊN PHẦN LỆNH GỌI FETCH HOẶC AXIOS Ở BÊN DƯỚI ĐOẠN NÀY ---
+        const payload = {
+          qhChung: getLatest('gialai_qh_chung', data, overrides.data),
+          qhChiTiet: getLatest('gialai_qh_chitiet', detailData, overrides.detailData),
+          qhPhanKhu: getLatest('gialai_qh_phankhu', typeof phankhuData !== 'undefined' ? phankhuData : [], overrides.phankhuData),
+          qhSapNhap: getLatest('gialai_qh_sapnhap', mergedData, overrides.mergedData),
+          qhLienHe: getLatest('gialai_qh_lienhe', contactData, overrides.contactData),
+          qhRaSoat: getLatest('gialai_qh_rasoat', reviewData, overrides.reviewData),
+          adminPassword: overrides.adminPassword || localStorage.getItem('gialai_admin_pass') || adminPassword,
+          membersList: getLatest('gialai_members_list', membersList, overrides.membersList),
+          pendingDataChanges: getLatest('gialai_pending_changes', pendingDataChanges, overrides.pendingDataChanges),
+          systemLogs: getLatest('gialai_system_logs', typeof systemLogs !== 'undefined' ? systemLogs : [], overrides.systemLogs)
+        };
 
         if (cloudUrl && !cloudUrl.includes('DÁN_LINK_GOOGLE')) {
-          fetch(cloudUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain' },
-            body: JSON.stringify(payload)
-          })
-          .then(res => res.text())
-          .then(resText => {
-            if (resText.includes('<!DOCTYPE') || resText.includes('<html')) {
-              console.warn('Google Apps Script returned Login HTML on POST.');
-            } else {
-              console.log('Synced successfully to Google Drive');
-            }
-          })
-          .catch(err => {
-            fetch(cloudUrl, {
-              method: 'POST',
-              mode: 'no-cors',
-              headers: { 'Content-Type': 'text/plain' },
-              body: JSON.stringify(payload)
-            }).catch(e => console.warn('Sync fallback error:', e));
-          });
+          fetch(cloudUrl, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(payload) })
+          .then(res => res.text()).then(resText => { if (!resText.includes('<!DOCTYPE')) console.log('Synced to Drive'); })
+          .catch(err => { fetch(cloudUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(payload) }); });
         }
 
         if (db) {
