@@ -9,7 +9,7 @@
   <!-- 🟢 CẤU HÌNH ĐỒNG BỘ FIREBASE FIRESTORE REALTIME TỰ ĐỘNG ĐA THIẾT BỊ -->
   <script>
     window.firebaseConfig = {
-      apiKey: "AIzaSyAWgr2Evc2ruAUs4DPZVXNCWpxSBsTkxsU",
+      apiKey: "AIzaSyAWgr2Evc2ruAUs4DPZVXNCwpxSBsTkxsU",
       authDomain: "csdl-qh-gia-lai-2026.firebaseapp.com",
       projectId: "csdl-qh-gia-lai-2026",
       storageBucket: "csdl-qh-gia-lai-2026.firebasestorage.app",
@@ -131,46 +131,29 @@
         padding: 0;
       }
     }
-  /* ----- ĐÓNG BĂNG & CĂN CHỈNH BẢNG QUY HOẠCH ----- */
-    /* 1. Thiết lập vị trí bám dính cột Tên Quy hoạch (Cột số 6) */
+  /* ----- ĐÓNG BĂNG DUY NHẤT CỘT TÊN QUY HOẠCH (CỘT SỐ 6) ----- */
+    /* 1. Thiết lập vị trí bám dính sát mép trái màn hình */
     .freeze-cols th:nth-child(6), .freeze-cols td:nth-child(6) { 
-      position: sticky !important; 
-      left: 0px !important; 
+      position: sticky; 
+      left: 0px; 
       box-shadow: 4px 0 10px rgba(0,0,0,0.08); 
       border-right: 2px solid #94a3b8 !important; 
     }
 
-    /* 2. KHẮC PHỤC LỖI TRÔI TIÊU ĐỀ KHI KÉO DỌC (Z-INDEX) */
-    /* Ép toàn bộ thanh Tiêu đề (Header) nổi lên lớp cao nhất (z-50) */
-    .freeze-cols thead {
-      z-index: 50 !important;
-    }
-    /* Hạ lớp hiển thị của các ô dữ liệu đóng băng xuống thấp hơn (z-20) để luôn chui xuống dưới Header */
-    .freeze-cols tbody td:nth-child(6) { 
-      z-index: 20 !important; 
-    }
+    /* 2. Ưu tiên lớp phủ Z-index để không bị các cột khác trượt đè lên */
+    .freeze-cols td:nth-child(6) { z-index: 10; }
+    .freeze-cols th:nth-child(6) { z-index: 20; }
 
-    /* 3. KHẮC PHỤC LỖI CANH HÀNG KHÔNG ĐỀU NHAU */
-    /* Ép tất cả các ô dữ liệu trong bảng canh thẳng lên trên cùng (Top) và thêm khoảng không cho thoáng */
-    .freeze-cols tbody td {
-      vertical-align: top !important;
-      padding-top: 14px !important;
-      padding-bottom: 14px !important;
-    }
-
-    /* 4. MÀU NỀN ĐÓNG BĂNG CHỐNG NHÌN XUYÊN THẤU CHO 3 TAB */
+    /* 3. Xử lý màu nền chống nhìn xuyên thấu cho Tab Quy hoạch Chung */
     .table-qhchung thead th:nth-child(6) { background-color: #e2e8f0 !important; }
-    .table-qhchung tbody td:nth-child(6) { background-color: #ffffff !important; }
+    .table-qhchung tbody td:nth-child(6) { background-color: #ffffff; }
     .table-qhchung tbody tr:hover td:nth-child(6) { background-color: #eff6ff !important; }
 
-    .table-qhphankhu thead th:nth-child(6) { background-color: #ffedd5 !important; }
-    .table-qhphankhu tbody td:nth-child(6) { background-color: #ffffff !important; }
-    .table-qhphankhu tbody tr:hover td:nth-child(6) { background-color: #fff7ed !important; }
-
+    /* 4. Xử lý màu nền chống nhìn xuyên thấu cho Tab Quy hoạch Chi tiết */
     .table-qhchitiet thead th:nth-child(6) { background-color: #e0e7ff !important; }
-    .table-qhchitiet tbody td:nth-child(6) { background-color: #ffffff !important; }
+    .table-qhchitiet tbody td:nth-child(6) { background-color: #ffffff; }
     .table-qhchitiet tbody tr:hover td:nth-child(6) { background-color: #eef2ff !important; }
-    </style>
+  </style>
 </head>
 <body>
   <div id="root">
@@ -673,38 +656,11 @@ function App() {
       const [isLoggedIn, setIsLoggedIn] = useState(false);
       const [showLoginModal, setShowLoginModal] = useState(false);
       const [showDbModal, setShowDbModal] = useState(false);
-  const [showHistoryModal, setShowHistoryModal] = useState(false);
-  const [systemLogs, setSystemLogs] = useState(JSON.parse(localStorage.getItem('gialai_system_logs') || '[]'));
-  const [logFilterDate, setLogFilterDate] = useState('');
-
-  // Hàm tự động ghi nhận lịch sử thao tác
-  const addSystemLog = (action, details, skipSync = false) => {
-    const newLog = {
-      id: Date.now().toString(),
-      time: new Date().toISOString(),
-      action: action,
-      details: details,
-      user: currentUser?.fullName || currentUser?.email || 'Admin'
-    };
-    const updatedLogs = [newLog, ...(systemLogs || [])].slice(0, 500);
-    setSystemLogs(updatedLogs);
-    localStorage.setItem('gialai_system_logs', JSON.stringify(updatedLogs));
-    
-    // Nếu skipSync = true, hệ thống sẽ gom nhật ký để đẩy cùng dữ liệu chính, tránh xung đột
-    if (!skipSync) syncToCloud({ systemLogs: updatedLogs });
-    return updatedLogs; 
-  };
-    // Cập nhật log mới và giữ tối đa 500 dòng gần nhất cho nhẹ máy
-    const updatedLogs = [newLog, ...(systemLogs || [])].slice(0, 500);
-    setSystemLogs(updatedLogs);
-    localStorage.setItem('gialai_system_logs', JSON.stringify(updatedLogs));
-    syncToCloud({ systemLogs: updatedLogs }); // Đồng bộ lên Firebase
-  };
       const [showChangePassModal, setShowChangePassModal] = useState(false);
 
       const [loginForm, setLoginForm] = useState({ username: '', password: '' });
       const [loginError, setLoginError] = useState('');
-      const [changePassForm, setChangePassForm] = useState({ email: '', current: '', newPass: '', confirm: '' });
+      const [changePassForm, setChangePassForm] = useState({ current: '', newPass: '', confirm: '' });
       const [changePassError, setChangePassError] = useState('');
       const [adminPassword, setAdminPassword] = useState(() => localStorage.getItem('gialai_admin_pass') || '123456');
 
@@ -779,34 +735,39 @@ function App() {
 
       const syncToCloud = (overrides = {}) => {
         const cloudUrl = getCloudUrl();
-
-        const getLatest = (localKey, stateVar, overrideVar) => {
-          if (overrideVar !== undefined) return overrideVar;
-          try {
-            const local = localStorage.getItem(localKey);
-            return local ? JSON.parse(local) : stateVar;
-          } catch (e) {
-            return stateVar;
-          }
-        };
-
         const payload = {
-          qhChung: getLatest('gialai_qh_chung', data, overrides.data),
-          qhChiTiet: getLatest('gialai_qh_chitiet', detailData, overrides.detailData),
-          qhPhanKhu: getLatest('gialai_qh_phankhu', typeof phankhuData !== 'undefined' ? phankhuData : [], overrides.phankhuData),
-          qhSapNhap: getLatest('gialai_qh_sapnhap', mergedData, overrides.mergedData),
-          qhLienHe: getLatest('gialai_qh_lienhe', contactData, overrides.contactData),
-          qhRaSoat: getLatest('gialai_qh_rasoat', reviewData, overrides.reviewData),
-          adminPassword: overrides.adminPassword || localStorage.getItem('gialai_admin_pass') || adminPassword,
-          membersList: getLatest('gialai_members_list', membersList, overrides.membersList),
-          pendingDataChanges: getLatest('gialai_pending_changes', pendingDataChanges, overrides.pendingDataChanges),
-          systemLogs: getLatest('gialai_system_logs', typeof systemLogs !== 'undefined' ? systemLogs : [], overrides.systemLogs)
+          qhChung: overrides.data || data,
+          qhChiTiet: overrides.detailData || detailData,
+          qhSapNhap: overrides.mergedData || mergedData,
+          qhLienHe: overrides.contactData || contactData,
+          qhRaSoat: overrides.reviewData || reviewData,
+          adminPassword: overrides.adminPassword || adminPassword,
+          membersList: overrides.membersList || membersList,
+          pendingDataChanges: overrides.pendingDataChanges || pendingDataChanges
         };
 
         if (cloudUrl && !cloudUrl.includes('DÁN_LINK_GOOGLE')) {
-          fetch(cloudUrl, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(payload) })
-          .then(res => res.text()).then(resText => { if (!resText.includes('<!DOCTYPE')) console.log('Synced to Drive'); })
-          .catch(err => { fetch(cloudUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(payload) }); });
+          fetch(cloudUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify(payload)
+          })
+          .then(res => res.text())
+          .then(resText => {
+            if (resText.includes('<!DOCTYPE') || resText.includes('<html')) {
+              console.warn('Google Apps Script returned Login HTML on POST.');
+            } else {
+              console.log('Synced successfully to Google Drive');
+            }
+          })
+          .catch(err => {
+            fetch(cloudUrl, {
+              method: 'POST',
+              mode: 'no-cors',
+              headers: { 'Content-Type': 'text/plain' },
+              body: JSON.stringify(payload)
+            }).catch(e => console.warn('Sync fallback error:', e));
+          });
         }
 
         if (db) {
@@ -1281,43 +1242,39 @@ function App() {
         const nextMembers = (membersList || []).map(m => m.id === memberId ? { ...m, status: 'APPROVED' } : m);
         setMembersList(nextMembers);
         localStorage.setItem('gialai_members_list', JSON.stringify(nextMembers));
-        
-        const approvedMember = (membersList || []).find(m => m.id === memberId);
-        const logs = approvedMember ? addSystemLog('DUYỆT TÀI KHOẢN', `Cấp quyền cho: ${approvedMember.fullName || approvedMember.email}`, true) : systemLogs;
-        
-        syncToCloud({ membersList: nextMembers, systemLogs: logs });
+        syncToCloud({ membersList: nextMembers });
         showNotification('✅ Đã duyệt cấp quyền tài khoản thành viên thành công!');
       };
 
       const handleRejectMember = (memberId) => {
-        const rejectedMember = (membersList || []).find(m => m.id === memberId);
         const nextMembers = (membersList || []).filter(m => m.id !== memberId);
         setMembersList(nextMembers);
         localStorage.setItem('gialai_members_list', JSON.stringify(nextMembers));
-        
-        const logs = rejectedMember ? addSystemLog('XÓA TÀI KHOẢN', `Từ chối/Xóa tài khoản của: ${rejectedMember.fullName || rejectedMember.email}`, true) : systemLogs;
-        
-        syncToCloud({ membersList: nextMembers, systemLogs: logs });
+        syncToCloud({ membersList: nextMembers });
         showNotification('Đã từ chối / xóa yêu cầu đăng ký tài khoản.');
       };
 
-      const submitPendingChange = (category, type, targetId, recordData, logsToSync = null) => {
+      const submitPendingChange = (category, type, targetId, recordData) => {
         const pendingItem = {
-          id: Date.now(), category, type, targetId, recordData,
+          id: Date.now(),
+          category,
+          type,
+          targetId,
+          recordData,
           submittedBy: {
-            fullName: currentUser?.fullName || 'Thành viên', unit: currentUser?.unit || '',
-            position: currentUser?.position || '', email: currentUser?.email || '', username: currentUser?.username || ''
+            fullName: currentUser?.fullName || 'Thành viên',
+            unit: currentUser?.unit || '',
+            position: currentUser?.position || '',
+            email: currentUser?.email || '',
+            username: currentUser?.username || ''
           },
-          submittedAt: new Date().toLocaleString('vi-VN'), status: 'PENDING'
+          submittedAt: new Date().toLocaleString('vi-VN'),
+          status: 'PENDING'
         };
         const nextPending = [pendingItem, ...(pendingDataChanges || [])];
         setPendingDataChanges(nextPending);
         localStorage.setItem('gialai_pending_changes', JSON.stringify(nextPending));
-        
-        const payload = { pendingDataChanges: nextPending };
-        if (logsToSync) payload.systemLogs = logsToSync;
-        
-        syncToCloud(payload);
+        syncToCloud({ pendingDataChanges: nextPending });
         showNotification('📑 Đã gửi nội dung ' + (type === 'ADD' ? 'thêm mới' : 'chỉnh sửa') + ' về Admin kiểm duyệt. Dữ liệu sẽ xuất hiện sau khi Admin đồng ý!');
       };
 
@@ -1326,36 +1283,53 @@ function App() {
         let nextData = data, nextDetail = detailData, nextMerged = mergedData, nextContact = contactData, nextReview = reviewData;
 
         if (category === 'QH_CHUNG') {
-          nextData = type === 'EDIT' && targetId ? data.map(r => r.id === targetId ? recordData : r) : [recordData, ...data];
-          setData(nextData); localStorage.setItem('gialai_qh_chung', JSON.stringify(nextData));
+          if (type === 'EDIT' && targetId) {
+            nextData = data.map(r => r.id === targetId ? recordData : r);
+          } else {
+            nextData = [recordData, ...data];
+          }
+          setData(nextData);
         } else if (category === 'QH_CHITIET') {
-          nextDetail = type === 'EDIT' && targetId ? detailData.map(r => r.id === targetId ? recordData : r) : [recordData, ...detailData];
-          setDetailData(nextDetail); localStorage.setItem('gialai_qh_chitiet', JSON.stringify(nextDetail));
+          if (type === 'EDIT' && targetId) {
+            nextDetail = detailData.map(r => r.id === targetId ? recordData : r);
+          } else {
+            nextDetail = [recordData, ...detailData];
+          }
+          setDetailData(nextDetail);
         } else if (category === 'MERGE') {
-          nextMerged = type === 'EDIT' && targetId ? mergedData.map(r => r.id === targetId ? recordData : r) : [recordData, ...mergedData];
-          setMergedData(nextMerged); localStorage.setItem('gialai_qh_sapnhap', JSON.stringify(nextMerged));
+          if (type === 'EDIT' && targetId) {
+            nextMerged = mergedData.map(r => r.id === targetId ? recordData : r);
+          } else {
+            nextMerged = [recordData, ...mergedData];
+          }
+          setMergedData(nextMerged);
         } else if (category === 'CONTACT') {
-          nextContact = type === 'EDIT' && targetId ? contactData.map(r => r.id === targetId ? recordData : r) : [recordData, ...contactData];
-          setContactData(nextContact); localStorage.setItem('gialai_qh_lienhe', JSON.stringify(nextContact));
+          if (type === 'EDIT' && targetId) {
+            nextContact = contactData.map(r => r.id === targetId ? recordData : r);
+          } else {
+            nextContact = [recordData, ...contactData];
+          }
+          setContactData(nextContact);
         } else if (category === 'REVIEW') {
-          nextReview = type === 'EDIT' && targetId ? reviewData.map(r => r.id === targetId ? recordData : r) : [recordData, ...reviewData];
-          setReviewData(nextReview); localStorage.setItem('gialai_qh_rasoat', JSON.stringify(nextReview));
+          if (type === 'EDIT' && targetId) {
+            nextReview = reviewData.map(r => r.id === targetId ? recordData : r);
+          } else {
+            nextReview = [recordData, ...reviewData];
+          }
+          setReviewData(nextReview);
         }
 
         const nextPending = (pendingDataChanges || []).filter(p => p.id !== item.id);
         setPendingDataChanges(nextPending);
         localStorage.setItem('gialai_pending_changes', JSON.stringify(nextPending));
 
-        let actionName = item.type === 'ADD' ? 'PHÊ DUYỆT (Thêm mới)' : 'PHÊ DUYỆT (Cập nhật)';
-        let projectName = item.recordData?.tenQh || 'Không tên';
-        let projectLocation = item.recordData?.xa || '';
-        
-        const logs = addSystemLog(actionName, `Đồ án: ${projectName} (Vị trí: ${projectLocation})`, true);
-
         syncToCloud({
-          data: nextData, detailData: nextDetail, mergedData: nextMerged,
-          contactData: nextContact, reviewData: nextReview,
-          pendingDataChanges: nextPending, systemLogs: logs
+          data: nextData,
+          detailData: nextDetail,
+          mergedData: nextMerged,
+          contactData: nextContact,
+          reviewData: nextReview,
+          pendingDataChanges: nextPending
         });
 
         showNotification('🎉 Đã phê duyệt và cập nhật chính thức dữ liệu lên hệ thống web!');
@@ -1368,42 +1342,21 @@ function App() {
         syncToCloud({ pendingDataChanges: nextPending });
         showNotification('Đã từ chối đề xuất chỉnh sửa.');
       };
+
       const handleChangePassword = (e) => {
-    e.preventDefault();
+        e.preventDefault();
+        if (changePassForm.current !== adminPassword) return setChangePassError('Mật khẩu hiện tại không đúng!');
+        if (changePassForm.newPass.length < 6) return setChangePassError('Mật khẩu mới phải từ 6 ký tự!');
+        if (changePassForm.newPass !== changePassForm.confirm) return setChangePassError('Xác nhận mật khẩu mới không khớp!');
 
-    if (changePassForm.newPass.length < 6) return setChangePassError('Mật khẩu mới phải từ 6 ký tự!');
-    if (changePassForm.newPass !== changePassForm.confirm) return setChangePassError('Xác nhận mật khẩu mới không khớp!');
-
-    // Xử lý đổi mật khẩu cho ADMIN
-    if (userRole === 'ADMIN') {
-      if (changePassForm.email !== ADMIN_EMAIL) return setChangePassError('Email không khớp với email Admin đã đăng ký!');
-      if (changePassForm.current !== adminPassword) return setChangePassError('Mật khẩu hiện tại không đúng!');
-
-      setAdminPassword(changePassForm.newPass);
-      localStorage.setItem('gialai_admin_pass', changePassForm.newPass);
-      syncToCloud({ adminPassword: changePassForm.newPass });
-      showNotification('Đã đổi mật khẩu Admin thành công & đồng bộ Đám mây!');
-    } 
-    // Xử lý đổi mật khẩu cho THÀNH VIÊN
-    else if (userRole === 'MEMBER' && currentUser) {
-      if (changePassForm.email !== currentUser.email) return setChangePassError('Email không khớp với thông tin tài khoản của bạn!');
-      if (changePassForm.current !== currentUser.password) return setChangePassError('Mật khẩu hiện tại không đúng!');
-
-      const updatedMembers = (membersList || []).map(m => 
-        m.id === currentUser.id ? { ...m, password: changePassForm.newPass } : m
-      );
-      setMembersList(updatedMembers);
-      setCurrentUser({ ...currentUser, password: changePassForm.newPass });
-      localStorage.setItem('gialai_members_list', JSON.stringify(updatedMembers));
-      syncToCloud({ membersList: updatedMembers });
-      showNotification('Đã đổi mật khẩu tài khoản thành công!');
-    }
-
-    // Đóng form và làm sạch dữ liệu
-    setShowChangePassModal(false);
-    setChangePassForm({ email: '', current: '', newPass: '', confirm: '' });
-    setChangePassError('');
-  };
+        setAdminPassword(changePassForm.newPass);
+        localStorage.setItem('gialai_admin_pass', changePassForm.newPass);
+        syncToCloud({ adminPassword: changePassForm.newPass });
+        setShowChangePassModal(false);
+        setChangePassForm({ current: '', newPass: '', confirm: '' });
+        setChangePassError('');
+        showNotification('Đã đổi mật khẩu thành công & đồng bộ Đám mây!');
+      };
 
       const handleSendOTP = (e) => {
   e.preventDefault();
@@ -1477,58 +1430,39 @@ function App() {
   setIsModalOpen(true);
 };
 
-const handleSave = (e) => {
-        e.preventDefault();
-        let detailMsg = `Đồ án: ${formData.tenQh || 'Không tên'}\n`;
-        if (editingRecord?.id) {
-          let changes = [];
-          const fName = {xa: 'Xã/Phường', huyen: 'Huyện', tenQh: 'Tên đồ án', dienTich: 'Diện tích', danSo: 'Dân số', cqToChuc: 'CQ Tổ chức', cqThamDinh: 'CQ Thẩm định', cqPheDuyet: 'CQ Phê duyệt', qdPheDuyet: 'Quyết định PD', file: 'Link tài liệu', ghiChu: 'Ghi chú', tinhHinhGuiHoSo: 'Tình trạng gửi Sở'};
-          for (let key in formData) {
-            if (formData[key] !== editingRecord[key] && key !== '_targetType' && key !== 'id') {
-              let label = fName[key] || key;
-              changes.push(`+ ${label}: [${editingRecord[key] || 'trống'}] ➔ [${formData[key] || 'trống'}]`);
-            }
-          }
-          detailMsg += changes.length > 0 ? `Chi tiết sửa:\n${changes.join('\n')}` : '(Lưu hồ sơ nhưng không thay đổi dữ liệu nào)';
-        } else {
-          detailMsg += '(Thêm mới hồ sơ hoàn toàn)';
-        }
-        
-        const targetType = editingRecord?._targetType || 'CHUNG';
-        const newRecord = { ...formData };
-        delete newRecord._targetType;
-        const recordId = editingRecord?.id ? editingRecord.id : Date.now();
-        newRecord.id = recordId;
+      const handleSave = (e) => {
+  e.preventDefault();
+  const targetType = editingRecord?._targetType || 'CHUNG';
+  const newRecord = { ...formData };
+  delete newRecord._targetType;
+  const recordId = editingRecord?.id ? editingRecord.id : Date.now();
+  newRecord.id = recordId;
 
-        if (userRole === 'MEMBER') {
-          const approvalCategory = targetType === 'CHITIET' ? 'QH_CHITIET' : targetType === 'PHANKHU' ? 'QH_PHANKHU' : 'QH_CHUNG';
-          const logs = addSystemLog(editingRecord?.id ? 'CẬP NHẬT (Chờ duyệt)' : 'THÊM MỚI (Chờ duyệt)', `Đồ án: ${formData.tenQh || 'Không tên'} (Vị trí: ${formData.xa || ''})`, true);
-          submitPendingChange(approvalCategory, editingRecord?.id ? 'EDIT' : 'ADD', editingRecord?.id || null, newRecord, logs);
-          setIsModalOpen(false);
-          return;
-        }
-        
-        const logs = addSystemLog(editingRecord?.id ? 'CẬP NHẬT' : 'THÊM MỚI', detailMsg, true);
+  if (userRole === 'MEMBER') {
+    const approvalCategory = targetType === 'CHITIET' ? 'QH_CHITIET' : targetType === 'PHANKHU' ? 'QH_PHANKHU' : 'QH_CHUNG';
+    submitPendingChange(approvalCategory, editingRecord?.id ? 'EDIT' : 'ADD', editingRecord?.id || null, newRecord);
+    setIsModalOpen(false);
+    return;
+  }
 
-        if (targetType === 'CHITIET') {
-          const nextDetail = (detailData || []).some(r => r.id === recordId) ? detailData.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(detailData || [])];
-          setDetailData(nextDetail);
-          localStorage.setItem('gialai_qh_chitiet', JSON.stringify(nextDetail));
-          syncToCloud({ detailData: nextDetail, systemLogs: logs });
-        } else if (targetType === 'PHANKHU') {
-          const nextPhanKhu = (phankhuData || []).some(r => r.id === recordId) ? phankhuData.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(phankhuData || [])];
-          setPhankhuData(nextPhanKhu);
-          localStorage.setItem('gialai_qh_phankhu', JSON.stringify(nextPhanKhu));
-          syncToCloud({ phankhuData: nextPhanKhu, systemLogs: logs });
-        } else {
-          const nextData = (data || []).some(r => r.id === recordId) ? data.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(data || [])];
-          setData(nextData);
-          localStorage.setItem('gialai_qh_chung', JSON.stringify(nextData));
-          syncToCloud({ data: nextData, systemLogs: logs });
-        }
-        setIsModalOpen(false);
-        showNotification('Đã lưu hồ sơ thành công!');
-      };
+  if (targetType === 'CHITIET') {
+    const nextDetail = (detailData || []).some(r => r.id === recordId) ? detailData.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(detailData || [])];
+    setDetailData(nextDetail);
+    syncToCloud({ detailData: nextDetail });
+  } else if (targetType === 'PHANKHU') {
+    const nextPhanKhu = (phankhuData || []).some(r => r.id === recordId) ? phankhuData.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(phankhuData || [])];
+    setPhankhuData(nextPhanKhu);
+    // Lưu LocalStorage cho Phân khu
+    localStorage.setItem('gialai_qh_phankhu', JSON.stringify(nextPhanKhu));
+    // Ghi chú: Cần bổ sung phankhuData vào hàm syncToCloud sau nếu anh muốn đồng bộ nó.
+  } else {
+    const nextData = (data || []).some(r => r.id === recordId) ? data.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(data || [])];
+    setData(nextData);
+    syncToCloud({ data: nextData });
+  }
+  setIsModalOpen(false);
+  showNotification('Đã lưu hồ sơ thành công!');
+};
       const handleDelete = (id, targetType = 'CHUNG') => {
   if (!isLoggedIn) return;
   openConfirm('Xác nhận xóa', 'Bạn có chắc chắn muốn xóa hồ sơ này?', () => {
@@ -1769,13 +1703,9 @@ const handleSave = (e) => {
                               )}
                             </button>
                             <button onClick={() => setShowDbModal(true)} className="text-xs bg-indigo-500/20 hover:bg-indigo-500 text-indigo-100 hover:text-white border border-indigo-500/50 px-2 py-1 rounded transition-colors flex items-center gap-1 font-medium"><Database className="w-3 h-3"/> Quản lý CSDL</button>
-                          <button onClick={() => setShowHistoryModal(true)} className="text-xs bg-cyan-500/20 hover:bg-cyan-500 text-cyan-100 hover:text-white border border-cyan-500/50 px-2 py-1 rounded transition-colors flex items-center gap-1 font-medium">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
-                              Nhật ký HĐ
-                            </button>
+                            <button onClick={() => setShowChangePassModal(true)} className="text-xs bg-amber-500/20 hover:bg-amber-500 text-amber-100 hover:text-white border border-amber-500/50 px-2 py-1 rounded transition-colors flex items-center gap-1 font-medium"><Key className="w-3 h-3"/> Đổi MK</button>
                           </>
                         )}
-                        <button onClick={() => setShowChangePassModal(true)} className="text-xs bg-amber-500/20 hover:bg-amber-500 text-amber-100 hover:text-white border border-amber-500/50 px-2 py-1 rounded transition-colors flex items-center gap-1 font-medium"><Key className="w-3 h-3"/> Đổi MK</button>
                         <button onClick={() => { setIsLoggedIn(false); setUserRole('GUEST'); setCurrentUser(null); showNotification('Đã đăng xuất.'); }} className="text-xs bg-red-500/20 hover:bg-red-500 text-red-100 hover:text-white border border-red-500/50 px-2 py-1 rounded transition-colors flex items-center gap-1 font-medium"><LogOut className="w-3 h-3"/> Đăng xuất</button>
                       </div>
                     </div>
@@ -2399,26 +2329,7 @@ const handleSave = (e) => {
           )}
 
           {showChangePassModal && (
-            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-[99999]"><div className="bg-white rounded-xl shadow-2xl w-full max-w-sm max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in"><div className="bg-amber-600 p-3 sm:p-4 flex justify-between items-center text-white shrink-0"><h3 className="font-bold flex items-center gap-2 text-sm sm:text-base"><Key className="w-5 h-5"/> Đổi mật khẩu quản trị</h3><button onClick={() => setShowChangePassModal(false)} className="hover:bg-amber-700 p-1 rounded-full"><X className="w-5 h-5"/></button></div><form onSubmit={handleChangePassword} className="p-4 sm:p-6 flex flex-col gap-4 overflow-y-auto flex-1 custom-scrollbar">
-  {changePassError && <div className="bg-red-50 text-red-600 p-3 rounded text-sm font-medium">{changePassError}</div>}
-  <div>
-    <label className="block text-sm font-semibold mb-1">Email đăng ký xác thực</label>
-    <input type="email" value={changePassForm.email || ''} onChange={e=>setChangePassForm(p=>({...p, email: e.target.value}))} className="w-full border px-3 py-2 rounded" placeholder="Nhập email tài khoản của bạn..." required />
-  </div>
-  <div>
-    <label className="block text-sm font-semibold mb-1">Mật khẩu hiện tại</label>
-    <input type="password" value={changePassForm.current || ''} onChange={e=>setChangePassForm(p=>({...p, current: e.target.value}))} className="w-full border px-3 py-2 rounded" placeholder="Nhập mật khẩu cũ..." required />
-  </div>
-  <div>
-    <label className="block text-sm font-semibold mb-1">Mật khẩu mới</label>
-    <input type="password" value={changePassForm.newPass || ''} onChange={e=>setChangePassForm(p=>({...p, newPass: e.target.value}))} className="w-full border px-3 py-2 rounded" placeholder="Nhập mật khẩu mới..." required />
-  </div>
-  <div>
-    <label className="block text-sm font-semibold mb-1">Xác nhận mật khẩu mới</label>
-    <input type="password" value={changePassForm.confirm || ''} onChange={e=>setChangePassForm(p=>({...p, confirm: e.target.value}))} className="w-full border px-3 py-2 rounded" placeholder="Nhập lại mật khẩu mới..." required />
-  </div>
-  <button type="submit" className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded shadow-sm transition-colors mt-2">Lưu thay đổi</button>
-</form></div></div>
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-[99999]"><div className="bg-white rounded-xl shadow-2xl w-full max-w-sm max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in"><div className="bg-amber-600 p-3 sm:p-4 flex justify-between items-center text-white shrink-0"><h3 className="font-bold flex items-center gap-2 text-sm sm:text-base"><Key className="w-5 h-5"/> Đổi mật khẩu quản trị</h3><button onClick={() => setShowChangePassModal(false)} className="hover:bg-amber-700 p-1 rounded-full"><X className="w-5 h-5"/></button></div><form onSubmit={handleChangePassword} className="p-4 sm:p-6 flex flex-col gap-4 overflow-y-auto flex-1 custom-scrollbar">{changePassError && <div className="bg-red-50 text-red-600 p-3 rounded text-sm font-medium">{changePassError}</div>}<div><label className="block text-sm font-semibold mb-1">Mật khẩu hiện tại</label><input type="password" value={changePassForm.current} onChange={e=>setChangePassForm(p=>({...p, current: e.target.value}))} className="w-full border px-3 py-2 rounded" placeholder="Nhập mật khẩu cũ..." required /></div><div><label className="block text-sm font-semibold mb-1">Mật khẩu mới</label><input type="password" value={changePassForm.newPass} onChange={e=>setChangePassForm(p=>({...p, newPass: e.target.value}))} className="w-full border px-3 py-2 rounded" placeholder="Nhập mật khẩu mới..." required /></div><div><label className="block text-sm font-semibold mb-1">Xác nhận mật khẩu mới</label><input type="password" value={changePassForm.confirm} onChange={e=>setChangePassForm(p=>({...p, confirm: e.target.value}))} className="w-full border px-3 py-2 rounded" placeholder="Nhập lại mật khẩu mới..." required /></div><button type="submit" className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded shadow-sm transition-colors mt-2">Lưu thay đổi</button></form></div></div>
           )}
 
           {showDbModal && (
@@ -2473,113 +2384,37 @@ const handleSave = (e) => {
               </div>
             </div></div></div>
           )}
-{/* MODAL LỊCH SỬ HOẠT ĐỘNG (NHẬT KÝ) */}
-          {showHistoryModal && (
-            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-[99999]">
-              <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in">
-                <div className="flex justify-between items-center p-3 sm:p-4 border-b bg-cyan-50 rounded-t-xl shrink-0">
-                  <h3 className="font-bold uppercase text-cyan-800 flex items-center gap-2 text-sm sm:text-base">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
-                    Nhật ký Cập nhật Dữ liệu
-                  </h3>
-                  <button type="button" onClick={() => setShowHistoryModal(false)} className="text-slate-400 hover:text-slate-700 bg-white p-1.5 rounded-full shadow-sm">
-                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                  </button>
-                </div>
-                
-                <div className="p-3 sm:p-4 border-b bg-slate-50 shrink-0 flex items-center gap-3">
-                  <label className="text-sm font-semibold text-slate-700">Lọc theo ngày:</label>
-                  <input type="date" value={logFilterDate} onChange={(e) => setLogFilterDate(e.target.value)} className="border rounded px-3 py-1.5 text-sm outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200" />
-                  {logFilterDate && <button onClick={() => setLogFilterDate('')} className="text-xs text-red-500 hover:underline font-medium">Xóa bộ lọc</button>}
-                </div>
 
-                <div className="overflow-y-auto p-0 flex-1 custom-scrollbar bg-slate-50/30">
-                  <table className="w-full text-left text-sm border-collapse">
-                    <thead className="bg-slate-200 sticky top-0 z-10 shadow-sm">
-                      <tr>
-                        <th className="p-3 border-b font-semibold text-slate-700 w-40 whitespace-nowrap">Thời gian</th>
-                        <th className="p-3 border-b font-semibold text-slate-700 w-32">Thao tác</th>
-                        <th className="p-3 border-b font-semibold text-slate-700 w-48">Người thực hiện</th>
-                        <th className="p-3 border-b font-semibold text-slate-700">Nội dung thay đổi</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200 bg-white">
-                      {(systemLogs || [])
-                        .filter(log => !logFilterDate || log.time.startsWith(logFilterDate))
-                        .map((log, idx) => (
-                        <tr key={log.id || idx} className="hover:bg-cyan-50/50 transition-colors">
-                          <td className="p-3 text-slate-600 text-xs font-medium">
-                            {new Date(log.time).toLocaleString('vi-VN')}
-                          </td>
-                          <td className="p-3">
-                            <span className={`px-2 py-1 rounded text-[10px] font-bold ${log.action === 'THÊM MỚI' ? 'bg-green-100 text-green-700' : log.action === 'XÓA' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
-                              {log.action}
-                            </span>
-                          </td>
-                          <td className="p-3 text-slate-700 font-semibold text-xs">
-                            {log.user}
-                          </td>
-                          <td className="p-3 text-slate-800 text-sm leading-relaxed whitespace-pre-wrap">
-                            {log.details}
-                          </td>
-                        </tr>
-                      ))}
-                      {(!systemLogs || systemLogs.length === 0) && (
-                        <tr><td colSpan="4" className="p-10 text-center text-slate-500 font-medium">Chưa có dữ liệu nhật ký hoạt động nào.</td></tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
           {/* MODAL FORMS: CHUNG & CHI TIET */}
           {isModalOpen && (
-            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-[99999]">
-              <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in">
-                <div className={`flex justify-between items-center p-3 sm:p-4 border-b rounded-t-xl shrink-0 ${editingRecord?._targetType === 'CHITIET' ? 'bg-indigo-50' : editingRecord?._targetType === 'PHANKHU' ? 'bg-orange-50' : 'bg-slate-50'}`}>
-                  <h3 className={`font-bold uppercase text-xs sm:text-sm md:text-base ${editingRecord?._targetType === 'CHITIET' ? 'text-indigo-800' : editingRecord?._targetType === 'PHANKHU' ? 'text-orange-800' : 'text-slate-800'}`}>
-                    {editingRecord?.id ? `Cập nhật: ${editingRecord.xa}` : `Thêm mới ${editingRecord?._targetType === 'CHITIET' ? 'Quy hoạch chi tiết' : editingRecord?._targetType === 'PHANKHU' ? 'Quy hoạch phân khu' : 'Quy hoạch chung'}`}
-                  </h3>
-                  <button type="button" onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-700 bg-white p-1.5 rounded-full shadow-sm"><X className="h-5 w-5" /></button>
-                </div>
-                <div className="overflow-y-auto p-3 sm:p-5 bg-slate-50/50 flex-1 custom-scrollbar">
-                  <form id="qh-form" onSubmit={handleSave} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 bg-white p-3 sm:p-5 rounded-xl border max-w-full">
-                    <div className="col-span-full pb-1 border-b-2 border-blue-100"><h4 className="text-sm font-bold text-blue-800">I. THÔNG TIN HÀNH CHÍNH</h4></div>
-                    <div><label className="block text-xs font-semibold mb-1">Tỉnh mới <span className="text-red-500">*</span></label><input type="text" value={formData.tinhMoi || ''} onChange={(e) => setFormData(prev => ({...prev, tinhMoi: e.target.value}))} className="w-full px-3 py-2 border rounded bg-slate-50 text-sm" required readOnly/></div>
-                    <div><label className="block text-xs font-semibold mb-1">Huyện/Thị xã/Thành phố <span className="text-red-500">*</span></label><select value={formData.huyen || ''} onChange={(e) => {let p=''; OLD_REGIONS.forEach(prov=>prov.districts.forEach(d=>{if(d.name===e.target.value) p=prov.province;})); setFormData(prev => ({...prev, huyen: e.target.value, tinhCu: p}));}} className="w-full px-3 py-2 border rounded text-sm" required><option value="" disabled>-- Chọn --</option>{OLD_REGIONS.map(prov => (<optgroup key={prov.province} label={`Tỉnh ${prov.province}`}><>{prov.districts.map(dist => <option key={dist.name} value={dist.name}>{dist.name}</option>)}</></optgroup>))}</select></div>
-                    <div><label className="block text-xs font-semibold mb-1">Tỉnh cũ</label><input type="text" value={formData.tinhCu || ''} className="w-full px-3 py-2 border rounded bg-slate-50 text-sm font-semibold" readOnly /></div>
-                    <div><label className="block text-xs font-semibold mb-1">Xã/Phường <span className="text-red-500">*</span></label><input type="text" value={formData.xa || ''} onChange={(e) => setFormData(prev => ({...prev, xa: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm" required /></div>
-                    
-                    <div className="col-span-full pb-1 mt-2 border-b-2 border-blue-100"><h4 className="text-sm font-bold text-blue-800">II. THÔNG TIN ĐỒ ÁN</h4></div>
-                    <div className="col-span-full xl:col-span-2"><label className="block text-xs font-semibold mb-1">Tên đồ án <span className="text-red-500">*</span></label><input type="text" value={formData.tenQh || ''} onChange={(e) => setFormData(prev => ({...prev, tenQh: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm font-medium" required /></div>
-                    <div><label className="block text-xs font-semibold mb-1">Diện tích (ha)</label><input type="text" value={formData.dienTich || ''} onChange={(e) => setFormData(prev => ({...prev, dienTich: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm" /></div>
-                    <div><label className="block text-xs font-semibold mb-1">{editingRecord?._targetType === 'CHUNG' ? 'Dân số (2025/2035/2045)' : 'Dân số'}</label><input type="text" value={formData.danSo || ''} onChange={(e) => setFormData(prev => ({...prev, danSo: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm" /></div>
-                    
-                    <div className="col-span-full pb-1 mt-2 border-b-2 border-amber-100"><h4 className="text-sm font-bold text-amber-700">III. TIẾN ĐỘ PHÁP LÝ</h4></div>
-                    <div><label className="block text-xs font-semibold mb-1">CQ tổ chức lập</label><input type="text" value={formData.cqToChuc || ''} onChange={(e) => setFormData(prev => ({...prev, cqToChuc: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm" /></div>
-                    <div><label className="block text-xs font-semibold mb-1">CQ thẩm định</label><input type="text" value={formData.cqThamDinh || ''} onChange={(e) => setFormData(prev => ({...prev, cqThamDinh: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm" /></div>
-                    <div><label className="block text-xs font-semibold mb-1">Báo cáo thẩm định</label><input type="text" value={formData.bcThamDinh || ''} onChange={(e) => setFormData(prev => ({...prev, bcThamDinh: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm" /></div>
-                    <div><label className="block text-xs font-semibold mb-1">Ý kiến Sở Xây dựng</label><input type="text" value={formData.yKienSxd || ''} onChange={(e) => setFormData(prev => ({...prev, yKienSxd: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm" /></div>
-                    <div><label className="block text-xs font-semibold mb-1">CQ phê duyệt</label><input type="text" value={formData.cqPheDuyet || ''} onChange={(e) => setFormData(prev => ({...prev, cqPheDuyet: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm bg-amber-50" /></div>
-                    <div className="col-span-1 xl:col-span-3"><label className="block text-xs font-semibold mb-1">QĐ Phê duyệt (Số/Ngày)</label><input type="text" value={formData.qdPheDuyet || ''} onChange={(e) => setFormData(prev => ({...prev, qdPheDuyet: e.target.value}))} className="w-full px-3 py-2 border-emerald-400 rounded text-sm bg-emerald-50 font-bold text-emerald-700" /></div>
-                    
-                    <div className="col-span-full pb-1 mt-2 border-b-2 border-emerald-100"><h4 className="text-sm font-bold text-emerald-700">IV. THỰC HIỆN & KHÁC</h4></div>
-                    <div><label className="block text-xs font-semibold mb-1">Công bố</label><select value={formData.congBo || 'Chưa công bố'} onChange={(e) => setFormData(prev => ({...prev, congBo: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm"><option value="Chưa công bố">Chưa công bố</option><option value="Đã công bố">Đã công bố</option></select></div>
-                    <div><label className="block text-xs font-semibold mb-1">Cắm mốc</label><select value={formData.camMoc || 'Chưa cắm mốc'} onChange={(e) => setFormData(prev => ({...prev, camMoc: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm"><option value="Chưa cắm mốc">Chưa cắm mốc</option><option value="Đã cắm mốc">Đã cắm mốc</option></select></div>
-                    <div><label className="block text-xs font-semibold mb-1">Kế hoạch thực hiện</label><input type="text" value={formData.keHoach || ''} onChange={(e) => setFormData(prev => ({...prev, keHoach: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm" /></div>
-                    <div><label className="block text-xs font-semibold mb-1">Link tài liệu (Đính kèm)</label><input type="text" value={formData.file || ''} onChange={(e) => setFormData(prev => ({...prev, file: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm" placeholder="Dán link Drive, OneDrive..." /></div>
-                    <div><label className="block text-xs font-semibold mb-1">Link Bản đồ</label><input type="text" value={formData.mapLink || ''} onChange={(e) => setFormData(prev => ({...prev, mapLink: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm" /></div>
-                    <div className="col-span-full xl:col-span-3"><label className="block text-xs font-semibold mb-1">Gửi hồ sơ về SXD</label><select value={formData.tinhHinhGuiHoSo || 'Chưa gửi'} onChange={(e) => setFormData(prev => ({...prev, tinhHinhGuiHoSo: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm"><option value="Chưa gửi">Chưa gửi Sở XD</option><option value="Đã gửi">Đã gửi Sở XD</option></select></div>
-                    <div className="col-span-full"><label className="block text-xs font-semibold mb-1">Ghi chú</label><textarea rows="2" value={formData.ghiChu || ''} onChange={(e) => setFormData(prev => ({...prev, ghiChu: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm"></textarea></div>
-                  </form>
-                </div>
-                <div className="p-4 border-t bg-slate-100 flex justify-end gap-3 rounded-b-xl shrink-0">
-                  <button onClick={() => setIsModalOpen(false)} className="px-5 py-2 text-sm bg-white border rounded font-semibold">Hủy bỏ</button>
-                  <button type="submit" form="qh-form" className={`px-6 py-2 text-sm text-white rounded font-semibold flex items-center gap-2 ${editingRecord?._targetType === 'CHITIET' ? 'bg-indigo-600 hover:bg-indigo-700' : editingRecord?._targetType === 'PHANKHU' ? 'bg-orange-600 hover:bg-orange-700' : 'bg-blue-600 hover:bg-blue-700'}`}><Plus className="h-4 w-4" /> {editingRecord?.id ? 'Lưu' : 'Thêm'}</button>
-                </div>
-              </div>
-            </div>
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-[99999]"><div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in"><div className={`flex justify-between items-center p-3 sm:p-4 border-b rounded-t-xl shrink-0 ${editingRecord?._isDetail ? 'bg-indigo-50' : 'bg-slate-50'}`}><h3 className={`font-bold uppercase text-xs sm:text-sm md:text-base ${editingRecord?._isDetail ? 'text-indigo-800' : 'text-slate-800'}`}>{editingRecord?.id ? `Cập nhật: ${editingRecord.xa}` : `Thêm mới ${editingRecord?._isDetail ? 'QH chi tiết' : 'QH chung'}`}</h3><button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-700 bg-white p-1.5 rounded-full shadow-sm"><X className="h-5 w-5" /></button></div><div className="overflow-y-auto p-3 sm:p-5 bg-slate-50/50 flex-1 custom-scrollbar"><form id="qh-form" onSubmit={handleSave} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 bg-white p-3 sm:p-5 rounded-xl border max-w-full">
+              <div className="col-span-full pb-1 border-b-2 border-blue-100"><h4 className="text-sm font-bold text-blue-800">I. THÔNG TIN HÀNH CHÍNH</h4></div>
+              <div><label className="block text-xs font-semibold mb-1">Tỉnh mới <span className="text-red-500">*</span></label><input type="text" value={formData.tinhMoi || ''} onChange={(e) => setFormData(prev => ({...prev, tinhMoi: e.target.value}))} className="w-full px-3 py-2 border rounded bg-slate-50 text-sm" required readOnly/></div>
+              <div><label className="block text-xs font-semibold mb-1">Huyện/Thị xã/Thành phố <span className="text-red-500">*</span></label><select value={formData.huyen || ''} onChange={(e) => {let p=''; OLD_REGIONS.forEach(prov=>prov.districts.forEach(d=>{if(d.name===e.target.value) p=prov.province;})); setFormData(prev => ({...prev, huyen: e.target.value, tinhCu: p}));}} className="w-full px-3 py-2 border rounded text-sm" required><option value="" disabled>-- Chọn --</option>{OLD_REGIONS.map(prov => (<optgroup key={prov.province} label={`Tỉnh ${prov.province}`}><>{prov.districts.map(dist => <option key={dist.name} value={dist.name}>{dist.name}</option>)}</></optgroup>))}</select></div>
+              <div><label className="block text-xs font-semibold mb-1">Tỉnh cũ</label><input type="text" value={formData.tinhCu || ''} className="w-full px-3 py-2 border rounded bg-slate-50 text-sm font-semibold" readOnly /></div>
+              <div><label className="block text-xs font-semibold mb-1">Xã/Phường <span className="text-red-500">*</span></label><input type="text" value={formData.xa || ''} onChange={(e) => setFormData(prev => ({...prev, xa: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm" required /></div>
+              <div className="col-span-full pb-1 mt-2 border-b-2 border-blue-100"><h4 className="text-sm font-bold text-blue-800">II. THÔNG TIN ĐỒ ÁN</h4></div>
+              <div className="col-span-full xl:col-span-2"><label className="block text-xs font-semibold mb-1">Tên đồ án <span className="text-red-500">*</span></label><input type="text" value={formData.tenQh || ''} onChange={(e) => setFormData(prev => ({...prev, tenQh: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm font-medium" required /></div>
+              <div><label className="block text-xs font-semibold mb-1">Diện tích (ha)</label><input type="text" value={formData.dienTich || ''} onChange={(e) => setFormData(prev => ({...prev, dienTich: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm" /></div>
+              <div><label className="block text-xs font-semibold mb-1">{editingRecord?._isDetail ? 'Dân số' : 'Dân số (2025/2035/2045)'}</label><input type="text" value={formData.danSo || ''} onChange={(e) => setFormData(prev => ({...prev, danSo: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm" /></div>
+              <div className="col-span-full pb-1 mt-2 border-b-2 border-amber-100"><h4 className="text-sm font-bold text-amber-700">III. TIẾN ĐỘ PHÁP LÝ</h4></div>
+              <div><label className="block text-xs font-semibold mb-1">CQ tổ chức lập</label><input type="text" value={formData.cqToChuc || ''} onChange={(e) => setFormData(prev => ({...prev, cqToChuc: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm" /></div>
+              <div><label className="block text-xs font-semibold mb-1">CQ thẩm định</label><input type="text" value={formData.cqThamDinh || ''} onChange={(e) => setFormData(prev => ({...prev, cqThamDinh: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm" /></div>
+              <div><label className="block text-xs font-semibold mb-1">Báo cáo thẩm định</label><input type="text" value={formData.bcThamDinh || ''} onChange={(e) => setFormData(prev => ({...prev, bcThamDinh: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm" /></div>
+              <div><label className="block text-xs font-semibold mb-1">Ý kiến Sở Xây dựng</label><input type="text" value={formData.yKienSxd || ''} onChange={(e) => setFormData(prev => ({...prev, yKienSxd: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm" /></div>
+              <div><label className="block text-xs font-semibold mb-1">CQ phê duyệt</label><input type="text" value={formData.cqPheDuyet || ''} onChange={(e) => setFormData(prev => ({...prev, cqPheDuyet: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm bg-amber-50" /></div>
+              <div className="col-span-1 xl:col-span-3"><label className="block text-xs font-semibold mb-1">QĐ Phê duyệt (Số/Ngày)</label><input type="text" value={formData.qdPheDuyet || ''} onChange={(e) => setFormData(prev => ({...prev, qdPheDuyet: e.target.value}))} className="w-full px-3 py-2 border-emerald-400 rounded text-sm bg-emerald-50 font-bold text-emerald-700" /></div>
+              <div className="col-span-full pb-1 mt-2 border-b-2 border-emerald-100"><h4 className="text-sm font-bold text-emerald-700">IV. THỰC HIỆN & KHÁC</h4></div>
+              <div><label className="block text-xs font-semibold mb-1">Công bố</label><select value={formData.congBo || 'Chưa công bố'} onChange={(e) => setFormData(prev => ({...prev, congBo: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm"><option value="Chưa công bố">Chưa công bố</option><option value="Đã công bố">Đã công bố</option></select></div>
+              <div><label className="block text-xs font-semibold mb-1">Cắm mốc</label><select value={formData.camMoc || 'Chưa cắm mốc'} onChange={(e) => setFormData(prev => ({...prev, camMoc: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm"><option value="Chưa cắm mốc">Chưa cắm mốc</option><option value="Đã cắm mốc">Đã cắm mốc</option></select></div>
+              <div><label className="block text-xs font-semibold mb-1">Kế hoạch thực hiện</label><input type="text" value={formData.keHoach || ''} onChange={(e) => setFormData(prev => ({...prev, keHoach: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm" /></div>
+              <div><label className="block text-xs font-semibold mb-1">Link tài liệu (Đính kèm)</label><input type="text" value={formData.file || ''} onChange={(e) => setFormData(prev => ({...prev, file: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm" placeholder="Dán link Drive, OneDrive..." /></div>
+              <div><label className="block text-xs font-semibold mb-1">Link Bản đồ</label><input type="text" value={formData.mapLink || ''} onChange={(e) => setFormData(prev => ({...prev, mapLink: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm" /></div>
+              <div className="col-span-full xl:col-span-3"><label className="block text-xs font-semibold mb-1">Gửi hồ sơ về SXD</label><select value={formData.tinhHinhGuiHoSo || 'Chưa gửi'} onChange={(e) => setFormData(prev => ({...prev, tinhHinhGuiHoSo: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm"><option value="Chưa gửi">Chưa gửi Sở XD</option><option value="Đã gửi">Đã gửi Sở XD</option></select></div>
+              <div className="col-span-full"><label className="block text-xs font-semibold mb-1">Ghi chú</label><textarea rows="2" value={formData.ghiChu || ''} onChange={(e) => setFormData(prev => ({...prev, ghiChu: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm"></textarea></div>
+            </form></div>
+            <div className="p-4 border-t bg-slate-100 flex justify-end gap-3 rounded-b-xl shrink-0"><button onClick={() => setIsModalOpen(false)} className="px-5 py-2 text-sm bg-white border rounded font-semibold">Hủy bỏ</button><button type="submit" form="qh-form" className={`px-6 py-2 text-sm text-white rounded font-semibold flex items-center gap-2 ${editingRecord?._isDetail ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-blue-600 hover:bg-blue-700'}`}><Plus className="h-4 w-4" /> {editingRecord?.id ? 'Lưu' : 'Thêm'}</button></div>
+          </div></div>
           )}
 
           {/* MODAL SÁP NHẬP */}
