@@ -1750,7 +1750,7 @@ function App() {
             setReportProgress(40);
             setReportStatus('Đang tổng hợp số liệu QHC, QHPK, QHCT...');
             
-           // Tính toán số liệu thực tế từ hệ thống cho QHC, QHPK, QHCT
+            // Tính toán đầy đủ tất cả các biến số thống kê
             const totalQHC = (data || []).length;
             const approvedQHC = (data || []).filter(d => d.qdPheDuyet && d.qdPheDuyet !== 'Đang cập nhật').length;
             const pendingQHC = totalQHC - approvedQHC;
@@ -1772,9 +1772,7 @@ function App() {
             const camMocQHCT = (detailData || []).filter(d => (d.camMoc || '').toLowerCase().includes('đã')).length;
             const guiSXDQHCT = (detailData || []).filter(d => (d.tinhHinhGuiHoSo || '').toLowerCase().includes('đã')).length;
 
-            const todayStr = new Date().toLocaleDateString('vi-VN');
-
-            // Tạo bảng HTML cho các Phụ lục đầy đủ
+            // Tạo bảng HTML cho các Phụ lục
             let tableQHC = `<table border="1" cellspacing="0" cellpadding="6" style="width:100%; border-collapse:collapse; font-size:10pt; margin-top:10px;">
               <tr style="background:#f1f5f9;"><th style="padding:8px;">STT</th><th style="padding:8px;">Huyện/Thị xã</th><th style="padding:8px;">Xã/Phường</th><th style="padding:8px;">Tên quy hoạch</th><th style="padding:8px;">Diện tích (ha)</th><th style="padding:8px;">Phê duyệt</th></tr>`;
             (data || []).forEach((r, idx) => {
@@ -1796,18 +1794,16 @@ function App() {
             });
             tableQHCT += `</table>`;
 
-            // Lưu tạm vào biến window để phần giao diện hiển thị
             window.__reportTables = { qhc: tableQHC, qhpk: tableQHPK, qhct: tableQHCT };
 
             setReportProgress(75);
-            setReportStatus('Đang thay thế các biến số và ghép bảng phụ lục...');
+            setReportStatus('Đang tạo bản xem trước báo cáo...');
 
-            // Đọc nội dung file docx hoặc hiển thị bản xem trước thông minh
             setTimeout(() => {
               setReportProgress(100);
               setReportStatus('Hoàn tất!');
               setTimeout(() => setShowGeneratedReport(true), 300);
-            }, 1000);
+            }, 800);
 
           } catch (err) {
             console.error(err);
