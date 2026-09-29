@@ -2665,7 +2665,18 @@ function App() {
                     a.click();
                     showNotification('✅ Đã tải xuống file báo cáo chuẩn thể thức Word thành công!');
                   }} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-sm flex items-center gap-2"><Download className="w-4 h-4" /> Tải file Word (.doc)</button>
-                  <button onClick={() => window.print()} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-sm flex items-center gap-2"><Download className="w-4 h-4" /> In / Tải file PDF</button>
+                  <button onClick={() => {
+                    const reportHtml = document.getElementById('report-print-container').innerHTML;
+                    const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Bao Cao</title><style>@page{size:21cm 29.7cm;margin:2cm 2cm 2cm 3cm;}body{font-family:'Times New Roman',Times,serif;font-size:14pt;line-height:1.5;text-align:justify;}</style></head><body>";
+                    const footer = "</body></html>";
+                    const blob = new Blob(['\ufeff' + header + reportHtml + footer], { type: 'application/msword' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `Bao_Cao_Quy_Hoach_Chuan_The_Thuc_${new Date().getTime()}.doc`;
+                    a.click();
+                    showNotification('✅ Đã tải xuống file Word chuẩn thể thức hành chính thành công!');
+                  }} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-sm flex items-center gap-2"><Download className="w-4 h-4" /> Tải file Word chuẩn (.doc)</button>
                 </div>
               </div>
               <div className="flex-1 overflow-auto p-4 flex justify-center custom-scrollbar print-area">
