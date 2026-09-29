@@ -526,6 +526,7 @@ function App() {
                 if (Array.isArray(cloudData.qhSapNhap)) setMergedData(cloudData.qhSapNhap);
                 if (Array.isArray(cloudData.qhLienHe)) setContactData(cloudData.qhLienHe);
                 if (Array.isArray(cloudData.qhRaSoat)) setReviewData(cloudData.qhRaSoat);
+                if (Array.isArray(cloudData.qhPhanKhu)) setPhankhuData(cloudData.qhPhanKhu);
                 if (cloudData.adminPassword) {
                   setAdminPassword(cloudData.adminPassword);
                   localStorage.setItem('gialai_admin_pass', cloudData.adminPassword);
@@ -563,6 +564,7 @@ function App() {
                 if (Array.isArray(cloudData.qhSapNhap) && cloudData.qhSapNhap.length > 0) setMergedData(cloudData.qhSapNhap);
                 if (Array.isArray(cloudData.qhLienHe) && cloudData.qhLienHe.length > 0) setContactData(cloudData.qhLienHe);
                 if (Array.isArray(cloudData.qhRaSoat) && cloudData.qhRaSoat.length > 0) setReviewData(cloudData.qhRaSoat);
+                if (Array.isArray(cloudData.qhPhanKhu) && cloudData.qhPhanKhu.length > 0) setPhankhuData(cloudData.qhPhanKhu);
                 if (cloudData.adminPassword) {
                   setAdminPassword(cloudData.adminPassword);
                   localStorage.setItem('gialai_admin_pass', cloudData.adminPassword);
@@ -742,6 +744,7 @@ function App() {
           qhSapNhap: overrides.mergedData || mergedData,
           qhLienHe: overrides.contactData || contactData,
           qhRaSoat: overrides.reviewData || reviewData,
+          qhPhanKhu: overrides.phankhuData || phankhuData,
           adminPassword: overrides.adminPassword || adminPassword,
           membersList: overrides.membersList || membersList,
           pendingDataChanges: overrides.pendingDataChanges || pendingDataChanges
@@ -811,6 +814,7 @@ function App() {
               if (Array.isArray(cloudData.qhSapNhap) && cloudData.qhSapNhap.length > 0) { setMergedData(cloudData.qhSapNhap); updated = true; }
               if (Array.isArray(cloudData.qhLienHe) && cloudData.qhLienHe.length > 0) { setContactData(cloudData.qhLienHe); updated = true; }
               if (Array.isArray(cloudData.qhRaSoat) && cloudData.qhRaSoat.length > 0) { setReviewData(cloudData.qhRaSoat); updated = true; }
+              if (Array.isArray(cloudData.qhPhanKhu) && cloudData.qhPhanKhu.length > 0) { setPhankhuData(cloudData.qhPhanKhu); updated = true; }
               if (cloudData.adminPassword) {
                 setAdminPassword(cloudData.adminPassword);
                 localStorage.setItem('gialai_admin_pass', cloudData.adminPassword);
@@ -1453,9 +1457,8 @@ function App() {
   } else if (targetType === 'PHANKHU') {
     const nextPhanKhu = (phankhuData || []).some(r => r.id === recordId) ? phankhuData.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(phankhuData || [])];
     setPhankhuData(nextPhanKhu);
-    // Lưu LocalStorage cho Phân khu
     localStorage.setItem('gialai_qh_phankhu', JSON.stringify(nextPhanKhu));
-    // Ghi chú: Cần bổ sung phankhuData vào hàm syncToCloud sau nếu anh muốn đồng bộ nó.
+          syncToCloud({ phankhuData: nextPhanKhu });
   } else {
     const nextData = (data || []).some(r => r.id === recordId) ? data.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(data || [])];
     setData(nextData);
@@ -1476,7 +1479,9 @@ function App() {
       const nextPhanKhu = (phankhuData || []).filter(r => r.id !== id);
       setPhankhuData(nextPhanKhu);
       localStorage.setItem('gialai_qh_phankhu', JSON.stringify(nextPhanKhu));
-    } else {
+      syncToCloud({ phankhuData: nextPhanKhu });
+    }
+    else {
       const nextData = (data || []).filter(r => r.id !== id);
       setData(nextData);
       syncToCloud({ data: nextData });
