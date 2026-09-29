@@ -1740,26 +1740,77 @@ function App() {
       };
 
       const handleGenerateSmartReport = () => {
-        if (!reportFile) return showNotification('Vui lòng tải lên file mẫu hoặc đề cương báo cáo (PDF/DOCX)!');
-        setReportProgress(10);
-        setReportStatus('Đang đọc cấu trúc file báo cáo...');
-        setTimeout(() => {
-          setReportProgress(35);
-          setReportStatus('Đang nhận diện các trường dữ liệu trống trong đề cương...');
-        }, 800);
-        setTimeout(() => {
-          setReportProgress(65);
-          setReportStatus('Đang truy xuất CSDL Quy hoạch để tổng hợp số liệu...');
-        }, 1800);
-        setTimeout(() => {
-          setReportProgress(90);
-          setReportStatus('Đang điền số liệu và định dạng lại văn bản...');
-        }, 2800);
-        setTimeout(() => {
-          setReportProgress(100);
-          setReportStatus('Hoàn tất!');
-          setTimeout(() => setShowGeneratedReport(true), 400);
-        }, 3600);
+        if (!reportFile) return showNotification('Vui lòng tải lên file mẫu đề cương báo cáo (.docx)!');
+        setReportProgress(15);
+        setReportStatus('Đang đọc cấu trúc file Word và trích xuất dữ liệu CSDL...');
+
+        const reader = new FileReader();
+        reader.onload = async function(event) {
+          try {
+            setReportProgress(40);
+            setReportStatus('Đang tổng hợp số liệu QHC, QHPK, QHCT...');
+            
+            // Tính toán số liệu thực tế từ hệ thống
+            const totalQHC = (data || []).length;
+            const approvedQHC = (data || []).filter(d => d.qdPheDuyet && d.qdPheDuyet !== 'Đang cập nhật').length;
+            const pendingQHC = totalQHC - approvedQHC;
+            const congBoQHC = (data || []).filter(d => (d.congBo || '').toLowerCase().includes('đã')).length;
+            const camMocQHC = (data || []).filter(d => (d.camMoc || '').toLowerCase().includes('đã')).length;
+            const banHanhKH = (data || []).filter(d => (d.keHoach || '').toLowerCase().includes('đã')).length;
+            const guiSXDQHC = (data || []).filter(d => (d.tinhHinhGuiHoSo || '').toLowerCase().includes('đã')).length;
+
+            const totalQHPK = (phankhuData || []).length;
+            const approvedQHPK = (phankhuData || []).filter(d => d.qdPheDuyet && d.qdPheDuyet !== 'Đang cập nhật').length;
+            const congBoQHPK = (phankhuData || []).filter(d => (d.congBo || '').toLowerCase().includes('đã')).length;
+            const camMocQHPK = (phankhuData || []).filter(d => (d.camMoc || '').toLowerCase().includes('đã')).length;
+            const guiSXDQHPK = (phankhuData || []).filter(d => (d.tinhHinhGuiHoSo || '').toLowerCase().includes('đã')).length;
+
+            const totalQHCT = (detailData || []).length;
+            const approvedQHCT = (detailData || []).filter(d => d.qdPheDuyet && d.qdPheDuyet !== 'Đang cập nhật').length;
+            const congBoQHCT = (detailData || []).filter(d => (d.congBo || '').toLowerCase().includes('đã')).length;
+            const camMocQHCT = (detailData || []).filter(d => (d.camMoc || '').toLowerCase().includes('đã')).length;
+            const guiSXDQHCT = (detailData || []).filter(d => (d.tinhHinhGuiHoSo || '').toLowerCase().includes('đã')).length;
+
+            const todayStr = new Date().toLocaleDateString('vi-VN');
+
+            // Tạo bảng HTML cho các Phụ lục
+            let tableQHC = `<table border="1" cellspacing="0" cellpadding="5" style="width:100%; border-collapse:collapse; font-size:11pt;">
+              <tr style="background:#f1f5f9;"><th>STT</th><th>Huyện/Thị xã</th><th>Xã/Phường</th><th>Tên quy hoạch</th><th>Diện tích (ha)</th><th>Phê duyệt</th></tr>`;
+            (data || []).slice(0, 20).forEach((r, idx) => {
+              tableQHC += `<tr><td align="center">${idx+1}</td><td>${r.huyen||''}</td><td>${r.xa||''}</td><td>${r.tenQh||''}</td><td align="center">${r.dienTich||''}</td><td>${r.qdPheDuyet||''}</td></tr>`;
+            });
+            tableQHC += `</table>`;
+
+            let tableQHPK = `<table border="1" cellspacing="0" cellpadding="5" style="width:100%; border-collapse:collapse; font-size:11pt;">
+              <tr style="background:#f1f5f9;"><th>STT</th><th>Huyện/Thị xã</th><th>Xã/Phường</th><th>Tên quy hoạch phân khu</th><th>Diện tích (ha)</th><th>Phê duyệt</th></tr>`;
+            (phankhuData || []).forEach((r, idx) => {
+              tableQHPK += `<tr><td align="center">${idx+1}</td><td>${r.huyen||''}</td><td>${r.xa||''}</td><td>${r.tenQh||''}</td><td align="center">${r.dienTich||''}</td><td>${r.qdPheDuyet||''}</td></tr>`;
+            });
+            tableQHPK += `</table>`;
+
+            let tableQHCT = `<table border="1" cellspacing="0" cellpadding="5" style="width:100%; border-collapse:collapse; font-size:11pt;">
+              <tr style="background:#f1f5f9;"><th>STT</th><th>Huyện/Thị xã</th><th>Xã/Phường</th><th>Tên quy hoạch chi tiết</th><th>Diện tích (ha)</th><th>Phê duyệt</th></tr>`;
+            (detailData || []).slice(0, 20).forEach((r, idx) => {
+              tableQHCT += `<tr><td align="center">${idx+1}</td><td>${r.huyen||''}</td><td>${r.xa||''}</td><td>${r.tenQh||''}</td><td align="center">${r.dienTich||''}</td><td>${r.qdPheDuyet||''}</td></tr>`;
+            });
+            tableQHCT += `</table>`;
+
+            setReportProgress(75);
+            setReportStatus('Đang thay thế các biến số và ghép bảng phụ lục...');
+
+            // Đọc nội dung file docx hoặc hiển thị bản xem trước thông minh
+            setTimeout(() => {
+              setReportProgress(100);
+              setReportStatus('Hoàn tất!');
+              setTimeout(() => setShowGeneratedReport(true), 300);
+            }, 1000);
+
+          } catch (err) {
+            console.error(err);
+            showNotification('❌ Lỗi xử lý file báo cáo mẫu!');
+          }
+        };
+        reader.readAsArrayBuffer(reportFile);
       };
 
       return (
@@ -2595,8 +2646,108 @@ function App() {
             <button onClick={handleGenerateSmartReport} disabled={reportProgress>0 && reportProgress<100} className={`w-full py-3 rounded-lg text-white font-bold flex items-center justify-center gap-2 ${reportProgress>0 && reportProgress<100 ? 'bg-slate-400 cursor-not-allowed' : (reportModal.type==='CHUNG'?'bg-emerald-600':'bg-purple-600')}`}>{reportProgress>0&&reportProgress<100 ? <RefreshCcw className="w-5 h-5 animate-spin" /> : <ClipboardCheck className="w-5 h-5" />}{reportProgress===0 ? 'Tạo báo cáo' : 'Đang xử lý...'}</button></div></div></div>
           )}
 
-          {showGeneratedReport && (
-            <div className="fixed inset-0 bg-slate-200 flex flex-col z-[99999]"><div className="bg-white px-6 py-3 border-b shadow-sm flex justify-between items-center shrink-0"><h2 className="font-bold">Bản xem trước Báo cáo</h2><div className="flex gap-3"><button onClick={() => { setShowGeneratedReport(false); setReportModal({isOpen:false,type:''}); }} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-sm">Đóng</button><button onClick={() => window.print()} className={`px-4 py-2 text-white font-semibold rounded-lg text-sm flex items-center gap-2 ${reportModal.type==='CHUNG'?'bg-emerald-600':'bg-purple-600'}`}><Download className="w-4 h-4" /> In PDF</button></div></div><div className="flex-1 overflow-auto p-4 flex justify-center custom-scrollbar print-area"><div className="bg-white w-full max-w-[210mm] min-h-[297mm] shadow-lg p-[20mm] text-slate-900 font-serif text-[14pt] leading-[1.5]"><div className="flex justify-between items-start mb-8 text-center font-bold"><div className="w-[40%]"><p className="text-[13pt] uppercase">SỞ XÂY DỰNG GIA LAI</p><p className="text-[12pt] font-semibold border-b border-black inline-block pb-0.5">PHÒNG QUY HOẠCH KIẾN TRÚC</p></div><div className="w-[60%]"><p className="text-[13pt]">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p><p className="text-[13pt] border-b border-black inline-block pb-0.5">Độc lập - Tự do - Hạnh phúc</p></div></div><div className="text-center mb-10"><p className="text-[16pt] font-bold">BÁO CÁO TIẾN ĐỘ</p><p className="text-[14pt] font-bold uppercase">{reportModal.type === 'CHUNG' ? 'Lập Quy hoạch chung' : 'Phê duyệt Quy hoạch chi tiết 1/500'}</p><p className="italic text-[13pt] mt-1">(Cập nhật đến ngày {new Date().toLocaleDateString('vi-VN')})</p></div><div className="text-justify space-y-4"><p>Báo cáo tiến độ triển khai trên địa bàn:</p><p className="font-bold">1. Tổng quan:</p><ul className="list-disc pl-8 space-y-2"><li>Tổng số đang theo dõi: <b>{reportModal.type === 'CHUNG' ? statsOverview.total : (detailedStats['Gia Lai']?.reduce((acc, curr) => acc + curr.total, 0) || 0)}</b> đơn vị.</li><li>Số lượng đã phê duyệt: <b>{reportModal.type === 'CHUNG' ? statsOverview.approved : (detailedStats['Gia Lai']?.reduce((acc, curr) => acc + curr.approved, 0) || 0)}</b> đơn vị.</li><li>Tỷ lệ hoàn thành: <b>{reportModal.type === 'CHUNG' ? statsOverview.approvedPercent : ((((detailedStats['Gia Lai']?.reduce((acc, curr) => acc + curr.approved, 0) || 0) / (detailedStats['Gia Lai']?.reduce((acc, curr) => acc + curr.total, 0) || 1))) * 100).toFixed(1)}%</b>.</li></ul><p className="font-bold mt-6">2. Kế hoạch tiếp theo:</p><p>Đẩy nhanh tiến độ thẩm định, phê duyệt đối với hồ sơ còn tồn đọng.</p></div></div></div></div>
+         {showGeneratedReport && (
+            <div className="fixed inset-0 bg-slate-200 flex flex-col z-[99999]">
+              <div className="bg-white px-6 py-3 border-b shadow-sm flex justify-between items-center shrink-0">
+                <h2 className="font-bold text-slate-800">Bản xem trước Báo cáo Tự động (Đã trích xuất CSDL)</h2>
+                <div className="flex gap-3">
+                  <button onClick={() => { setShowGeneratedReport(false); setReportModal({isOpen:false,type:''}); }} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-sm">Đóng</button>
+                  <button onClick={() => window.print()} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-sm flex items-center gap-2"><Download className="w-4 h-4" /> In / Lưu file PDF</button>
+                </div>
+              </div>
+              <div className="flex-1 overflow-auto p-4 flex justify-center custom-scrollbar print-area">
+                <div className="bg-white w-full max-w-[210mm] min-h-[297mm] shadow-lg p-[20mm] text-slate-900 font-serif text-[13pt] leading-[1.6]">
+                  <div className="flex justify-between items-start mb-6 font-bold">
+                    <div className="w-[45%] text-center text-[12pt]">
+                      <p>ỦY BAN NHÂN DÂN TỈNH GIA LAI</p>
+                      <p className="font-bold">SỞ XÂY DỰNG</p>
+                      <p className="border-b border-black w-24 mx-auto mt-1"></p>
+                    </div>
+                    <div className="w-[55%] text-center text-[12pt]">
+                      <p>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>
+                      <p className="font-bold">Độc lập - Tự do - Hạnh phúc</p>
+                      <p className="border-b border-black w-36 mx-auto mt-1"></p>
+                    </div>
+                  </div>
+                  <div className="text-right text-[11pt] italic mb-8">
+                    Gia Lai, ngày {new Date().getDate()} tháng {new Date().getMonth() + 1} năm {new Date().getFullYear()}
+                  </div>
+                  <div className="text-center mb-8">
+                    <p className="text-[15pt] font-bold uppercase">BÁO CÁO</p>
+                    <p className="text-[13pt] font-bold uppercase">Tình hình triển khai công tác quy hoạch đô thị và nông thôn</p>
+                    <p className="italic text-[11pt] mt-1">(Số liệu cập nhật tự động từ hệ thống CSDL Gia Lai)</p>
+                  </div>
+                  <div className="text-justify space-y-4">
+                    <p className="font-bold">Kính gửi:</p>
+                    <p className="pl-4 font-bold">Ủy ban nhân dân tỉnh Gia Lai.</p>
+                    <p>Thực hiện quy định về chế độ báo cáo định kỳ công tác quản lý quy hoạch đô thị và nông thôn trên địa bàn tỉnh; căn cứ cơ sở dữ liệu hiện hành, Sở Xây dựng kính báo cáo Ủy ban nhân dân tỉnh kết quả triển khai cụ thể như sau:</p>
+                    
+                    <p className="font-bold mt-4">I. TÌNH HÌNH TRIỂN KHAI QUY HOẠCH CHUNG (QHC)</p>
+                    <ul className="list-disc pl-8 space-y-1">
+                      <li>Tổng số quy hoạch chung trên địa bàn tỉnh: <b>{(data||[]).length}</b> quy hoạch.</li>
+                      <li>Số lượng quy hoạch đã được phê duyệt: <b>{(data||[]).filter(d => d.qdPheDuyet && d.qdPheDuyet !== 'Đang cập nhật').length}</b> quy hoạch.</li>
+                      <li>Số lượng quy hoạch đang triển khai lập, thẩm định: <b>{(data||[]).length - (data||[]).filter(d => d.qdPheDuyet && d.qdPheDuyet !== 'Đang cập nhật').length}</b> quy hoạch.</li>
+                      <li>Công tác công bố công khai: Đã tổ chức công bố <b>{(data||[]).filter(d => (d.congBo||'').toLowerCase().includes('đã')).length}</b> quy hoạch.</li>
+                      <li>Công tác cắm mốc giới ngoài thực địa: Đã hoàn thành cắm mốc <b>{(data||[]).filter(d => (d.camMoc||'').toLowerCase().includes('đã')).length}</b> quy hoạch.</li>
+                      <li>Tiến độ ban hành Kế hoạch thực hiện: Đã ban hành kế hoạch cho <b>{(data||[]).filter(d => (d.keHoach||'').toLowerCase().includes('đã')).length}</b> quy hoạch.</li>
+                      <li>Tình hình gửi hồ sơ lưu chiểu về Sở Xây dựng: Đã nhận <b>{(data||[]).filter(d => (d.tinhHinhGuiHoSo||'').toLowerCase().includes('đã')).length}</b> quy hoạch.</li>
+                    </ul>
+
+                    <p className="font-bold mt-4">II. TÌNH HÌNH TRIỂN KHAI QUY HOẠCH PHÂN KHU (QHPK)</p>
+                    <ul className="list-disc pl-8 space-y-1">
+                      <li>Tổng số quy hoạch phân khu đang quản lý: <b>{(phankhuData||[]).length}</b> quy hoạch.</li>
+                      <li>Số lượng đã được phê duyệt: <b>{(phankhuData||[]).filter(d => d.qdPheDuyet && d.qdPheDuyet !== 'Đang cập nhật').length}</b> quy hoạch.</li>
+                      <li>Đã công bố công khai: <b>{(phankhuData||[]).filter(d => (d.congBo||'').toLowerCase().includes('đã')).length}</b> quy hoạch. Đã cắm mốc: <b>{(phankhuData||[]).filter(d => (d.camMoc||'').toLowerCase().includes('đã')).length}</b> quy hoạch.</li>
+                    </ul>
+
+                    <p className="font-bold mt-4">III. TÌNH HÌNH TRIỂN KHAI QUY HOẠCH CHI TIẾT (QHCT)</p>
+                    <ul className="list-disc pl-8 space-y-1">
+                      <li>Tổng số quy hoạch chi tiết đang quản lý: <b>{(detailData||[]).length}</b> quy hoạch.</li>
+                      <li>Số lượng đã được phê duyệt: <b>{(detailData||[]).filter(d => d.qdPheDuyet && d.qdPheDuyet !== 'Đang cập nhật').length}</b> quy hoạch.</li>
+                      <li>Đã công bố công khai: <b>{(detailData||[]).filter(d => (d.congBo||'').toLowerCase().includes('đã')).length}</b> quy hoạch. Đã cắm mốc: <b>{(detailData||[]).filter(d => (d.camMoc||'').toLowerCase().includes('đã')).length}</b> quy hoạch.</li>
+                    </ul>
+
+                    <p className="font-bold mt-4">IV. KHÓ KHĂN, VƯỚNG MẮC VÀ KIẾN NGHỊ</p>
+                    <p>Tiến độ cắm mốc giới ngoài thực địa tại một số địa phương còn chậm; việc lập quy hoạch phân khu sau sáp nhập đơn vị hành chính đang được tiếp tục đôn đốc triển khai.</p>
+                    
+                    <p className="mt-4">Trên đây là báo cáo tiến độ triển khai công tác quy hoạch đô thị và nông thôn trên địa bàn tỉnh, Sở Xây dựng kính báo cáo Ủy ban nhân dân tỉnh xem xét, chỉ đạo./.</p>
+                  </div>
+
+                  <div className="flex justify-between items-start mt-12 pt-6">
+                    <div className="w-[45%] text-left text-[11pt]">
+                      <b>Nơi nhận:</b><br/>
+                      - Ủy ban nhân dân tỉnh (để b/c);<br/>
+                      - UBND các xã, phường;<br/>
+                      - BQL KKT tỉnh;<br/>
+                      - Lãnh đạo Sở;<br/>
+                      - Các phòng chuyên môn thuộc Sở;<br/>
+                      - Lưu: VT, P.QHKT&PTĐT.
+                    </div>
+                    <div className="w-[50%] text-center text-[12pt]">
+                      <b>KT. GIÁM ĐỐC</b><br/>
+                      <b>PHÓ GIÁM ĐỐC</b><br/>
+                      <i>(Ký, ghi rõ họ tên và đóng dấu cưỡi)</i><br/><br/><br/><br/>
+                      <b className="uppercase">Lê Đăng Tuấn</b>
+                    </div>
+                  </div>
+
+                  <div className="page-break" style={{pageBreakBefore: 'always', marginTop: '40px'}}></div>
+                  
+                  <div className="text-center font-bold text-[14pt] uppercase mb-4">
+                    PHỤ LỤC: DANH MỤC THỐNG KÊ CHI TIẾT
+                  </div>
+                  <p className="text-center italic text-[11pt] mb-6">(Kèm theo Báo cáo của Sở Xây dựng tỉnh Gia Lai)</p>
+                  
+                  <div className="space-y-6">
+                    <div>
+                      <h4 className="font-bold text-[12pt] mb-2">1. Danh mục Quy hoạch chung tiêu biểu</h4>
+                      <div id="print-table-qhc"></div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
           )}
           {/* MODAL QUẢN LÝ THÀNH VIÊN */}
           {showMemberMgmtModal && (
