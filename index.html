@@ -2714,7 +2714,6 @@ function App() {
                   ) : (
                     <div className="flex flex-col gap-3">
                       {(activityLogs || []).map(log => (
-                        {(activityLogs || []).map(log => (
                         <div key={log.id} className={`bg-white border rounded-lg p-3 sm:p-4 flex flex-col md:flex-row justify-between gap-4 shadow-sm hover:border-slate-300 ${log.restored ? 'opacity-60 bg-slate-50' : ''}`}>
                           <div className="flex flex-col gap-2 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
