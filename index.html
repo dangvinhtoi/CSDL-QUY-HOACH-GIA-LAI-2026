@@ -679,7 +679,49 @@ function App() {
         const local = localStorage.getItem('gialai_pending_changes');
         return local ? JSON.parse(local) : [];
       });
+// --- HỆ THỐNG NHẬT KÝ & KHÔI PHỤC ---
+      const [activityLogs, setActivityLogs] = useState(() => {
+        const local = localStorage.getItem('gialai_activity_logs');
+        return local ? JSON.parse(local) : [];
+      });
+      const [showLogModal, setShowLogModal] = useState(false);
 
+      const recordActivityLog = (action, category, targetId, oldData, newData) => {
+        const newLog = {
+          id: Date.now(), action, category, targetId, oldData, newData,
+          user: currentUser?.fullName || (userRole === 'ADMIN' ? 'Quản trị viên Admin' : 'Thành viên'),
+          timestamp: new Date().toLocaleString('vi-VN')
+        };
+        const nextLogs = [newLog, ...(activityLogs || [])].slice(0, 300); // Lưu tối đa 300 lịch sử gần nhất để web không bị nặng
+        setActivityLogs(nextLogs);
+        localStorage.setItem('gialai_activity_logs', JSON.stringify(nextLogs));
+        return nextLogs;
+      };
+
+      const handleRestoreLog = (log) => {
+        openConfirm('Khôi phục dữ liệu', `Bạn có chắc muốn khôi phục lại trạng thái trước khi [${log.action === 'ADD' ? 'THÊM MỚI' : log.action === 'EDIT' ? 'CẬP NHẬT' : 'XÓA'}] của hồ sơ này?`, () => {
+          closeConfirm();
+          let nextData = data, nextDetail = detailData, nextPhanKhu = phankhuData;
+          
+          const applyRestore = (currentArray) => {
+            if (log.action === 'ADD') return currentArray.filter(r => r.id !== log.targetId); // Hoàn tác Thêm mới là Xóa đi
+            if (log.action === 'DELETE') return [log.oldData, ...currentArray]; // Hoàn tác Xóa là Thêm lại
+            if (log.action === 'EDIT') return currentArray.map(r => r.id === log.targetId ? log.oldData : r); // Hoàn tác Cập nhật là ghi đè lại dữ liệu cũ
+            return currentArray;
+          };
+
+          if (log.category === 'CHUNG') { nextData = applyRestore(data); setData(nextData); }
+          if (log.category === 'CHITIET') { nextDetail = applyRestore(detailData); setDetailData(nextDetail); }
+          if (log.category === 'PHANKHU') { 
+            nextPhanKhu = applyRestore(phankhuData); setPhankhuData(nextPhanKhu); 
+            localStorage.setItem('gialai_qh_phankhu', JSON.stringify(nextPhanKhu)); 
+          }
+          syncToCloud({ data: nextData, detailData: nextDetail, phankhuData: nextPhanKhu });
+          showNotification('✅ Đã khôi phục dữ liệu thành công!');
+          setShowLogModal(false);
+        });
+      };
+      // ------------------------------------
       const [showRegisterModal, setShowRegisterModal] = useState(false);
       const [registerForm, setRegisterForm] = useState({ fullName: '', unit: '', position: '', email: '', username: '', password: '' });
       const [registerError, setRegisterError] = useState('');
@@ -747,7 +789,8 @@ function App() {
           qhPhanKhu: overrides.phankhuData || phankhuData,
           adminPassword: overrides.adminPassword || adminPassword,
           membersList: overrides.membersList || membersList,
-          pendingDataChanges: overrides.pendingDataChanges || pendingDataChanges
+          pendingDataChanges: overrides.pendingDataChanges || pendingDataChanges,
+          activityLogs: overrides.activityLogs || activityLogs
         };
 
         if (cloudUrl && !cloudUrl.includes('DÁN_LINK_GOOGLE')) {
@@ -1480,59 +1523,74 @@ function App() {
 };
 
       const handleSave = (e) => {
-  e.preventDefault();
-  const targetType = editingRecord?._targetType || 'CHUNG';
-  const newRecord = { ...formData };
-  delete newRecord._targetType;
-  const recordId = editingRecord?.id ? editingRecord.id : Date.now();
-  newRecord.id = recordId;
+        e.preventDefault();
+        const targetType = editingRecord?._targetType || 'CHUNG';
+        const newRecord = { ...formData };
+        delete newRecord._targetType;
+        const recordId = editingRecord?.id ? editingRecord.id : Date.now();
+        newRecord.id = recordId;
 
-  if (userRole === 'MEMBER') {
-    const approvalCategory = targetType === 'CHITIET' ? 'QH_CHITIET' : targetType === 'PHANKHU' ? 'QH_PHANKHU' : 'QH_CHUNG';
-    submitPendingChange(approvalCategory, editingRecord?.id ? 'EDIT' : 'ADD', editingRecord?.id || null, newRecord);
-    setIsModalOpen(false);
-    return;
-  }
+        if (userRole === 'MEMBER') {
+          const approvalCategory = targetType === 'CHITIET' ? 'QH_CHITIET' : targetType === 'PHANKHU' ? 'QH_PHANKHU' : 'QH_CHUNG';
+          submitPendingChange(approvalCategory, editingRecord?.id ? 'EDIT' : 'ADD', editingRecord?.id || null, newRecord);
+          setIsModalOpen(false);
+          return;
+        }
 
-  if (targetType === 'CHITIET') {
-    const nextDetail = (detailData || []).some(r => r.id === recordId) ? detailData.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(detailData || [])];
-    setDetailData(nextDetail);
-    syncToCloud({ detailData: nextDetail });
-  } else if (targetType === 'PHANKHU') {
-    const nextPhanKhu = (phankhuData || []).some(r => r.id === recordId) ? phankhuData.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(phankhuData || [])];
-    setPhankhuData(nextPhanKhu);
-    localStorage.setItem('gialai_qh_phankhu', JSON.stringify(nextPhanKhu));
-          syncToCloud({ phankhuData: nextPhanKhu });
-  } else {
-    const nextData = (data || []).some(r => r.id === recordId) ? data.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(data || [])];
-    setData(nextData);
-    syncToCloud({ data: nextData });
-  }
-  setIsModalOpen(false);
-  showNotification('Đã lưu hồ sơ thành công!');
-};
+        let oldRecord = null;
+        let nextLogs = activityLogs;
+
+        if (targetType === 'CHITIET') {
+          oldRecord = (detailData || []).find(r => r.id === recordId);
+          const nextDetail = oldRecord ? detailData.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(detailData || [])];
+          setDetailData(nextDetail);
+          nextLogs = recordActivityLog(oldRecord ? 'EDIT' : 'ADD', 'CHITIET', recordId, oldRecord, newRecord);
+          syncToCloud({ detailData: nextDetail, activityLogs: nextLogs });
+        } else if (targetType === 'PHANKHU') {
+          oldRecord = (phankhuData || []).find(r => r.id === recordId);
+          const nextPhanKhu = oldRecord ? phankhuData.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(phankhuData || [])];
+          setPhankhuData(nextPhanKhu);
+          localStorage.setItem('gialai_qh_phankhu', JSON.stringify(nextPhanKhu));
+          nextLogs = recordActivityLog(oldRecord ? 'EDIT' : 'ADD', 'PHANKHU', recordId, oldRecord, newRecord);
+          syncToCloud({ phankhuData: nextPhanKhu, activityLogs: nextLogs });
+        } else {
+          oldRecord = (data || []).find(r => r.id === recordId);
+          const nextData = oldRecord ? data.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(data || [])];
+          setData(nextData);
+          nextLogs = recordActivityLog(oldRecord ? 'EDIT' : 'ADD', 'CHUNG', recordId, oldRecord, newRecord);
+          syncToCloud({ data: nextData, activityLogs: nextLogs });
+        }
+        setIsModalOpen(false);
+        showNotification('Đã lưu hồ sơ thành công & Ghi nhật ký!');
+      };
       const handleDelete = (id, targetType = 'CHUNG') => {
-  if (!isLoggedIn) return;
-  openConfirm('Xác nhận xóa', 'Bạn có chắc chắn muốn xóa hồ sơ này?', () => {
-    closeConfirm();
-    if (targetType === 'CHITIET') {
-      const nextDetail = (detailData || []).filter(r => r.id !== id);
-      setDetailData(nextDetail);
-      syncToCloud({ detailData: nextDetail });
-    } else if (targetType === 'PHANKHU') {
-      const nextPhanKhu = (phankhuData || []).filter(r => r.id !== id);
-      setPhankhuData(nextPhanKhu);
-      localStorage.setItem('gialai_qh_phankhu', JSON.stringify(nextPhanKhu));
-      syncToCloud({ phankhuData: nextPhanKhu });
-    }
-    else {
-      const nextData = (data || []).filter(r => r.id !== id);
-      setData(nextData);
-      syncToCloud({ data: nextData });
-    }
-    showNotification('Đã xóa hồ sơ.');
-  });
-};
+        if (!isLoggedIn) return;
+        openConfirm('Xác nhận xóa', 'Bạn có chắc chắn muốn xóa hồ sơ này?', () => {
+          closeConfirm();
+          let nextLogs = activityLogs;
+          if (targetType === 'CHITIET') {
+            const oldRecord = (detailData || []).find(r => r.id === id);
+            const nextDetail = (detailData || []).filter(r => r.id !== id);
+            setDetailData(nextDetail);
+            nextLogs = recordActivityLog('DELETE', 'CHITIET', id, oldRecord, null);
+            syncToCloud({ detailData: nextDetail, activityLogs: nextLogs });
+          } else if (targetType === 'PHANKHU') {
+            const oldRecord = (phankhuData || []).find(r => r.id === id);
+            const nextPhanKhu = (phankhuData || []).filter(r => r.id !== id);
+            setPhankhuData(nextPhanKhu);
+            localStorage.setItem('gialai_qh_phankhu', JSON.stringify(nextPhanKhu));
+            nextLogs = recordActivityLog('DELETE', 'PHANKHU', id, oldRecord, null);
+            syncToCloud({ phankhuData: nextPhanKhu, activityLogs: nextLogs });
+          } else {
+            const oldRecord = (data || []).find(r => r.id === id);
+            const nextData = (data || []).filter(r => r.id !== id);
+            setData(nextData);
+            nextLogs = recordActivityLog('DELETE', 'CHUNG', id, oldRecord, null);
+            syncToCloud({ data: nextData, activityLogs: nextLogs });
+          }
+          showNotification('Đã xóa hồ sơ và lưu vào Nhật ký!');
+        });
+      };
 
       const openMergeModal = (record = null) => {
         if (!isLoggedIn) return setShowLoginModal(true);
@@ -1752,6 +1810,7 @@ function App() {
                                 </span>
                               )}
                             </button>
+                            <button onClick={() => setShowLogModal(true)} className="text-xs bg-slate-500/30 hover:bg-slate-500 text-slate-100 hover:text-white border border-slate-400/60 px-2 py-1 rounded transition-colors flex items-center gap-1 font-medium"><Clock className="w-3 h-3"/> Nhật ký</button>
                             <button onClick={() => setShowDbModal(true)} className="text-xs bg-indigo-500/20 hover:bg-indigo-500 text-indigo-100 hover:text-white border border-indigo-500/50 px-2 py-1 rounded transition-colors flex items-center gap-1 font-medium"><Database className="w-3 h-3"/> Quản lý CSDL</button>
                             </>
                         )}
@@ -2637,6 +2696,51 @@ function App() {
           )}
 
           {/* DIALOG XÁC NHẬN CHUNG */}
+          {/* MODAL NHẬT KÝ HỆ THỐNG */}
+          {showLogModal && (
+            <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-[99999]">
+              <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in">
+                <div className="bg-slate-800 p-3 sm:p-4 flex justify-between items-center text-white shrink-0">
+                  <h3 className="font-bold flex items-center gap-2"><Clock className="w-5 h-5"/> Nhật ký Chỉnh sửa Dữ liệu</h3>
+                  <button onClick={() => setShowLogModal(false)} className="hover:bg-slate-700 p-1 rounded-full"><X className="w-5 h-5"/></button>
+                </div>
+                <div className="p-4 sm:p-6 overflow-y-auto flex-1 custom-scrollbar bg-slate-50">
+                  {(activityLogs || []).length === 0 ? (
+                    <div className="text-center py-8 text-slate-500">Chưa có lịch sử thay đổi nào được ghi nhận.</div>
+                  ) : (
+                    <div className="flex flex-col gap-3">
+                      {(activityLogs || []).map(log => (
+                        <div key={log.id} className="bg-white border rounded-lg p-3 sm:p-4 flex flex-col md:flex-row justify-between gap-4 shadow-sm hover:border-slate-300">
+                          <div className="flex flex-col gap-2 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className={`text-xs font-bold px-2 py-1 rounded-md text-white ${log.action === 'ADD' ? 'bg-emerald-500' : log.action === 'EDIT' ? 'bg-blue-500' : 'bg-red-500'}`}>
+                                {log.action === 'ADD' ? '+ THÊM MỚI' : log.action === 'EDIT' ? '📝 CẬP NHẬT' : '🗑️ ĐÃ XÓA'}
+                              </span>
+                              <span className="text-sm font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded border">
+                                {log.category === 'CHUNG' ? 'QH Chung' : log.category === 'CHITIET' ? 'QH Chi tiết' : 'QH Phân khu'}
+                              </span>
+                              <span className="text-xs text-slate-500 font-medium">bởi <b className="text-blue-800">{log.user}</b> lúc {log.timestamp}</span>
+                            </div>
+                            <div className="text-sm text-slate-800 font-semibold mt-1">
+                              Tên hồ sơ: <span className="text-blue-700">{log.newData?.tenQh || log.oldData?.tenQh || 'Không xác định'}</span>
+                            </div>
+                            {log.action === 'EDIT' && (
+                              <div className="text-xs bg-amber-50 text-amber-900 border border-amber-200 p-2 rounded max-h-24 overflow-y-auto custom-scrollbar italic">
+                                * Lưu ý: Việc khôi phục sẽ đưa toàn bộ thông số của hồ sơ này về nguyên trạng như trước lúc bị cập nhật.
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-center justify-end shrink-0">
+                            <button onClick={() => handleRestoreLog(log)} className="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm transition-colors"><RefreshCcw className="w-4 h-4"/> Khôi phục lại</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
           {confirmDialog.isOpen && (
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-[999999]">
               <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm max-h-[90vh] flex flex-col overflow-y-auto custom-scrollbar p-4 sm:p-6 text-center">
