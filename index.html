@@ -1750,23 +1750,24 @@ function App() {
             setReportProgress(40);
             setReportStatus('Đang tổng hợp số liệu QHC, QHPK, QHCT...');
             
-            // Tính toán số liệu thực tế từ hệ thống
+           // Tính toán số liệu thực tế từ hệ thống cho QHC, QHPK, QHCT
             const totalQHC = (data || []).length;
             const approvedQHC = (data || []).filter(d => d.qdPheDuyet && d.qdPheDuyet !== 'Đang cập nhật').length;
             const pendingQHC = totalQHC - approvedQHC;
             const congBoQHC = (data || []).filter(d => (d.congBo || '').toLowerCase().includes('đã')).length;
             const camMocQHC = (data || []).filter(d => (d.camMoc || '').toLowerCase().includes('đã')).length;
-            const banHanhKH = (data || []).filter(d => (d.keHoach || '').toLowerCase().includes('đã')).length;
             const guiSXDQHC = (data || []).filter(d => (d.tinhHinhGuiHoSo || '').toLowerCase().includes('đã')).length;
 
             const totalQHPK = (phankhuData || []).length;
             const approvedQHPK = (phankhuData || []).filter(d => d.qdPheDuyet && d.qdPheDuyet !== 'Đang cập nhật').length;
+            const pendingQHPK = totalQHPK - approvedQHPK;
             const congBoQHPK = (phankhuData || []).filter(d => (d.congBo || '').toLowerCase().includes('đã')).length;
             const camMocQHPK = (phankhuData || []).filter(d => (d.camMoc || '').toLowerCase().includes('đã')).length;
             const guiSXDQHPK = (phankhuData || []).filter(d => (d.tinhHinhGuiHoSo || '').toLowerCase().includes('đã')).length;
 
             const totalQHCT = (detailData || []).length;
             const approvedQHCT = (detailData || []).filter(d => d.qdPheDuyet && d.qdPheDuyet !== 'Đang cập nhật').length;
+            const pendingQHCT = totalQHCT - approvedQHCT;
             const congBoQHCT = (detailData || []).filter(d => (d.congBo || '').toLowerCase().includes('đã')).length;
             const camMocQHCT = (detailData || []).filter(d => (d.camMoc || '').toLowerCase().includes('đã')).length;
             const guiSXDQHCT = (detailData || []).filter(d => (d.tinhHinhGuiHoSo || '').toLowerCase().includes('đã')).length;
@@ -2651,13 +2652,13 @@ function App() {
 
         {showGeneratedReport && (
             <div className="fixed inset-0 bg-slate-200 flex flex-col z-[99999]">
-              {/* THANH CÔNG CỤ ĐIỀU HƯỚNG PHÍA TRÊN */}
+              {/* THANH CÔNG CỤ ĐIỀU HƯỚNG PHÍA TRÊN (ĐÃ RÚT GỌN CÒN 2 NÚT CHUẨN) */}
               <div className="bg-white px-6 py-3 border-b shadow-sm flex justify-between items-center shrink-0">
-                <h2 className="font-bold text-slate-800">Bản xem trước Báo cáo (Chuẩn Thể thức Hành chính Nhà nước)</h2>
+                <h2 className="font-bold text-slate-800">Bản xem trước Báo cáo (Chuẩn Form Mẫu & Thể thức Hành chính)</h2>
                 <div className="flex gap-3">
                   <button onClick={() => { setShowGeneratedReport(false); setReportModal({isOpen:false,type:''}); }} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-sm">Đóng</button>
                   
-                  {/* NÚT TẢI FILE WORD CHUẨN THỂ THƯỚC */}
+                  {/* NÚT TẢI FILE WORD CHUẨN MẪU */}
                   <button onClick={() => {
                     const reportHtml = document.getElementById('report-print-container').innerHTML;
                     const header = `
@@ -2666,20 +2667,9 @@ function App() {
                         <meta charset='utf-8'>
                         <title>Bao Cao Quy Hoach</title>
                         <style>
-                          @page Section1 {
-                            size: 21cm 29.7cm;
-                            margin: 2cm 2cm 2cm 3cm;
-                            mso-header-margin: 36pt;
-                            mso-footer-margin: 36pt;
-                          }
+                          @page Section1 { size: 21cm 29.7cm; margin: 2cm 2cm 2cm 3cm; mso-header-margin: 36pt; mso-footer-margin: 36pt; }
                           div.Section1 { page: Section1; }
-                          body {
-                            font-family: 'Times New Roman', Times, serif;
-                            font-size: 14pt;
-                            line-height: 1.5;
-                            color: #000000;
-                            text-align: justify;
-                          }
+                          body { font-family: 'Times New Roman', Times, serif; font-size: 14pt; line-height: 1.5; color: #000000; text-align: justify; }
                           table { border-collapse: collapse; width: 100%; margin-top: 10px; }
                           th, td { border: 1px solid #000000; padding: 6px; font-size: 11pt; font-family: 'Times New Roman', Times, serif; }
                         </style>
@@ -2694,7 +2684,7 @@ function App() {
                     a.href = url;
                     a.download = `Bao_Cao_Quy_Hoach_SXD_GiaLai_${new Date().getTime()}.doc`;
                     a.click();
-                    showNotification('✅ Đã tải file Word chuẩn thể thức thành công!');
+                    showNotification('✅ Đã tải file Word chuẩn mẫu thành công!');
                   }} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-sm flex items-center gap-2"><Download className="w-4 h-4" /> Tải file Word (.doc)</button>
                   
                   {/* NÚT IN / TẢI FILE PDF */}
@@ -2723,12 +2713,12 @@ function App() {
                 `}</style>
 
                 <div id="report-print-container" className="admin-report-page shadow-lg">
-                  {/* QUỐC HIỆU & TIÊU ĐỀ SỬ DỤNG BẢNG ẨN ĐỂ ĐẢM BẢO CỐ ĐỊNH NGANG HÀNG */}
+                  {/* QUỐC HIỆU & TIÊU ĐỀ */}
                   <table style={{ width: '100%', border: 'none', borderCollapse: 'collapse', marginBottom: '20px' }}>
                     <tbody>
                       <tr>
                         <td style={{ width: '42%', textAlign: 'center', verticalAlign: 'top', border: 'none', padding: 0, fontSize: '12pt', lineHeight: '1.3' }}>
-                          <b>ỦY BAN NHÂN DÂN TỈNH GIA LAI</b><br/>
+                          <b>UBND TỈNH GIA LAI</b><br/>
                           <b>SỞ XÂY DỰNG</b><br/>
                           <div style={{ borderBottom: '1px solid #000', width: '90px', margin: '4px auto 6px auto' }}></div>
                           <span style={{ fontSize: '11pt' }}>Số: ..... /BC-SXD</span>
@@ -2747,59 +2737,92 @@ function App() {
                   <div style={{ textAlign: 'center', margin: '24px 0' }}>
                     <p style={{ fontSize: '14pt', fontWeight: 'bold', textTransform: 'uppercase', margin: 0 }}>BÁO CÁO</p>
                     <p style={{ fontSize: '13pt', fontWeight: 'bold', textTransform: 'uppercase', margin: '4px 0 0 0' }}>Tình hình triển khai công tác quy hoạch đô thị và nông thôn</p>
-                    <p style={{ fontSize: '11pt', fontStyle: 'italic', margin: '4px 0 0 0' }}>(Số liệu trích xuất tự động từ Hệ thống CSDL Quy hoạch Gia Lai)</p>
+                    <p style={{ fontSize: '11pt', fontStyle: 'italic', margin: '4px 0 0 0' }}>(Số liệu cập nhật đến ngày {new Date().toLocaleDateString('vi-VN')})</p>
                   </div>
 
                   {/* KÍNH GỬI */}
                   <div style={{ marginBottom: '15px' }}>
-                    <p style={{ margin: 0, fontWeight: 'bold' }}>Kính gửi:</p>
-                    <p style={{ margin: '2px 0 0 20px', fontWeight: 'bold' }}>Ủy ban nhân dân tỉnh Gia Lai.</p>
+                    <p style={{ margin: 0, fontWeight: 'bold' }}>Kính gửi: Ủy ban nhân dân tỉnh Gia Lai</p>
                   </div>
 
-                  {/* NỘI DUNG VĂN BẢN */}
+                  {/* NỘI DUNG VĂN BẢN CHUẨN FORM MẪU */}
                   <div style={{ textAlign: 'justify' }}>
-                    <p style={{ textIndent: '30px', margin: '0 0 10px 0' }}>Thực hiện quy định về chế độ báo cáo định kỳ công tác quản lý quy hoạch đô thị và nông thôn trên địa bàn tỉnh; căn cứ cơ sở dữ liệu hiện hành trên hệ thống, Sở Xây dựng kính báo cáo Ủy ban nhân dân tỉnh kết quả triển khai cụ thể như sau:</p>
+                    <p style={{ textIndent: '30px', margin: '0 0 10px 0' }}>Thực hiện quy định về chế độ báo cáo định kỳ công tác quản lý quy hoạch đô thị và nông thôn trên địa bàn tỉnh; căn cứ cơ sở dữ liệu hiện hành, Sở Xây dựng kính báo cáo Ủy ban nhân dân tỉnh kết quả triển khai cụ thể như sau:</p>
                     
-                    <p style={{ fontWeight: 'bold', textTransform: 'uppercase', margin: '15px 0 5px 0' }}>I. Tình hình triển khai quy hoạch chung (QHC)</p>
-                    <ul style={{ margin: '0 0 10px 0', paddingLeft: '25px' }}>
-                      <li>Tổng số quy hoạch chung trên địa bàn tỉnh: <b>{(data||[]).length}</b> quy hoạch.</li>
-                      <li>Số lượng quy hoạch đã được phê duyệt: <b>{(data||[]).filter(d => d.qdPheDuyet && d.qdPheDuyet !== 'Đang cập nhật').length}</b> quy hoạch.</li>
-                      <li>Số lượng quy hoạch đang triển khai lập, thẩm định: <b>{(data||[]).length - (data||[]).filter(d => d.qdPheDuyet && d.qdPheDuyet !== 'Đang cập nhật').length}</b> quy hoạch.</li>
-                      <li>Công tác công bố công khai: Đã tổ chức công bố <b>{(data||[]).filter(d => (d.congBo||'').toLowerCase().includes('đã')).length}</b> quy hoạch.</li>
-                      <li>Công tác cắm mốc giới ngoài thực địa: Đã hoàn thành cắm mốc <b>{(data||[]).filter(d => (d.camMoc||'').toLowerCase().includes('đã')).length}</b> quy hoạch.</li>
-                      <li>Tiến độ ban hành Kế hoạch thực hiện: Đã ban hành kế hoạch cho <b>{(data||[]).filter(d => (d.keHoach||'').toLowerCase().includes('đã')).length}</b> quy hoạch.</li>
-                      <li>Tình hình gửi hồ sơ lưu chiểu về Sở Xây dựng: Đã nhận <b>{(data||[]).filter(d => (d.tinhHinhGuiHoSo||'').toLowerCase().includes('đã')).length}</b> quy hoạch.</li>
+                    {/* I. QUY HOẠCH CHUNG */}
+                    <p style={{ fontWeight: 'bold', textTransform: 'uppercase', margin: '15px 0 5px 0' }}>I. TÌNH HÌNH TRIỂN KHAI QUY HOẠCH CHUNG (QHC)</p>
+                    <p style={{ fontWeight: 'bold', margin: '5px 0 2px 0' }}>1. Tình hình lập, thẩm định và phê duyệt:</p>
+                    <ul style={{ margin: '0 0 8px 0', paddingLeft: '25px', listStyleType: 'none' }}>
+                      <li>- Tổng số quy hoạch chung trên địa bàn tỉnh: <b>{totalQHC}</b> quy hoạch.</li>
+                      <li>- Số lượng quy hoạch đã được phê duyệt: <b>{approvedQHC}</b> quy hoạch.</li>
+                      <li>- Số lượng quy hoạch đang triển khai lập, thẩm định (chưa phê duyệt): <b>{pendingQHC}</b> quy hoạch.</li>
+                    </ul>
+                    <p style={{ fontWeight: 'bold', margin: '5px 0 2px 0' }}>2. Công tác thực hiện sau phê duyệt:</p>
+                    <ul style={{ margin: '0 0 8px 0', paddingLeft: '25px', listStyleType: 'none' }}>
+                      <li>- Tình hình công bố công khai: Đã tổ chức công bố <b>{congBoQHC}</b> quy hoạch; chưa công bố <b>{totalQHC - congBoQHC}</b> quy hoạch.</li>
+                      <li>- Công tác cắm mốc giới ngoài thực địa: Đã hoàn thành cắm mốc <b>{camMocQHC}</b> quy hoạch; chưa cắm mốc <b>{totalQHC - camMocQHC}</b> quy hoạch.</li>
+                      <li>- Tiến độ ban hành Kế hoạch thực hiện: Đã ban hành kế hoạch đối với <b>{(data||[]).filter(d => (d.keHoach||'').toLowerCase().includes('đã')).length}</b> quy hoạch.</li>
+                    </ul>
+                    <p style={{ fontWeight: 'bold', margin: '5px 0 2px 0' }}>3. Tình hình gửi hồ sơ về Sở Xây dựng:</p>
+                    <ul style={{ margin: '0 0 10px 0', paddingLeft: '25px', listStyleType: 'none' }}>
+                      <li>- Đã nhận hồ sơ từ các địa phương: <b>{guiSXDQHC}</b> quy hoạch.</li>
+                      <li>- Đang hoàn thiện, chưa gửi Sở Xây dựng: <b>{totalQHC - guiSXDQHC}</b> quy hoạch.</li>
                     </ul>
 
-                    <p style={{ fontWeight: 'bold', textTransform: 'uppercase', margin: '15px 0 5px 0' }}>II. Tình hình triển khai quy hoạch phân khu (QHPK)</p>
-                    <ul style={{ margin: '0 0 10px 0', paddingLeft: '25px' }}>
-                      <li>Tổng số quy hoạch phân khu đang quản lý: <b>{(phankhuData||[]).length}</b> quy hoạch.</li>
-                      <li>Số lượng đã được phê duyệt: <b>{(phankhuData||[]).filter(d => d.qdPheDuyet && d.qdPheDuyet !== 'Đang cập nhật').length}</b> quy hoạch.</li>
-                      <li>Đã công bố công khai: <b>{(phankhuData||[]).filter(d => (d.congBo||'').toLowerCase().includes('đã')).length}</b> quy hoạch. Đã cắm mốc: <b>{(phankhuData||[]).filter(d => (d.camMoc||'').toLowerCase().includes('đã')).length}</b> quy hoạch.</li>
+                    {/* II. QUY HOẠCH PHÂN KHU (ĐÃ ĐẦY ĐỦ CÁC MỤC THEO MẪU) */}
+                    <p style={{ fontWeight: 'bold', textTransform: 'uppercase', margin: '15px 0 5px 0' }}>II. TÌNH HÌNH TRIỂN KHAI QUY HOẠCH PHÂN KHU (QHPK)</p>
+                    <p style={{ fontWeight: 'bold', margin: '5px 0 2px 0' }}>1. Tình hình lập, thẩm định và phê duyệt:</p>
+                    <ul style={{ margin: '0 0 8px 0', paddingLeft: '25px', listStyleType: 'none' }}>
+                      <li>- Tổng số quy hoạch phân khu trên địa bàn tỉnh: <b>{totalQHPK}</b> quy hoạch.</li>
+                      <li>- Số lượng quy hoạch đã được phê duyệt: <b>{approvedQHPK}</b> quy hoạch.</li>
+                      <li>- Số lượng quy hoạch đang triển khai lập, thẩm định (chưa phê duyệt): <b>{pendingQHPK}</b> quy hoạch.</li>
+                    </ul>
+                    <p style={{ fontWeight: 'bold', margin: '5px 0 2px 0' }}>2. Công tác thực hiện sau phê duyệt:</p>
+                    <ul style={{ margin: '0 0 8px 0', paddingLeft: '25px', listStyleType: 'none' }}>
+                      <li>- Tình hình công bố công khai: Đã tổ chức công bố <b>{congBoQHPK}</b> quy hoạch; chưa công bố <b>{totalQHPK - congBoQHPK}</b> quy hoạch.</li>
+                      <li>- Công tác cắm mốc giới ngoài thực địa: Đã hoàn thành cắm mốc <b>{camMocQHPK}</b> quy hoạch; chưa cắm mốc <b>{totalQHPK - camMocQHPK}</b> quy hoạch.</li>
+                    </ul>
+                    <p style={{ fontWeight: 'bold', margin: '5px 0 2px 0' }}>3. Tình hình gửi hồ sơ về Sở Xây dựng:</p>
+                    <ul style={{ margin: '0 0 10px 0', paddingLeft: '25px', listStyleType: 'none' }}>
+                      <li>- Đã nhận hồ sơ từ các địa phương: <b>{guiSXDQHPK}</b> quy hoạch.</li>
+                      <li>- Đang hoàn thiện, chưa gửi Sở Xây dựng: <b>{totalQHPK - guiSXDQHPK}</b> quy hoạch.</li>
                     </ul>
 
-                    <p style={{ fontWeight: 'bold', textTransform: 'uppercase', margin: '15px 0 5px 0' }}>III. Tình hình triển khai quy hoạch chi tiết (QHCT)</p>
-                    <ul style={{ margin: '0 0 10px 0', paddingLeft: '25px' }}>
-                      <li>Tổng số quy hoạch chi tiết đang quản lý: <b>{(detailData||[]).length}</b> quy hoạch.</li>
-                      <li>Số lượng đã được phê duyệt: <b>{(detailData||[]).filter(d => d.qdPheDuyet && d.qdPheDuyet !== 'Đang cập nhật').length}</b> quy hoạch.</li>
-                      <li>Đã công bố công khai: <b>{(detailData||[]).filter(d => (d.congBo||'').toLowerCase().includes('đã')).length}</b> quy hoạch. Đã cắm mốc: <b>{(detailData||[]).filter(d => (d.camMoc||'').toLowerCase().includes('đã')).length}</b> quy hoạch.</li>
+                    {/* III. QUY HOẠCH CHI TIẾT (ĐÃ ĐẦY ĐỦ CÁC MỤC THEO MẪU) */}
+                    <p style={{ fontWeight: 'bold', textTransform: 'uppercase', margin: '15px 0 5px 0' }}>III. TÌNH HÌNH TRIỂN KHAI QUY HOẠCH CHI TIẾT (QHCT)</p>
+                    <p style={{ fontWeight: 'bold', margin: '5px 0 2px 0' }}>1. Tình hình lập, thẩm định và phê duyệt:</p>
+                    <ul style={{ margin: '0 0 8px 0', paddingLeft: '25px', listStyleType: 'none' }}>
+                      <li>- Tổng số quy hoạch chi tiết trên địa bàn tỉnh: <b>{totalQHCT}</b> quy hoạch.</li>
+                      <li>- Số lượng quy hoạch đã được phê duyệt: <b>{approvedQHCT}</b> quy hoạch.</li>
+                      <li>- Số lượng quy hoạch đang triển khai lập, thẩm định (chưa phê duyệt): <b>{pendingQHCT}</b> quy hoạch.</li>
+                    </ul>
+                    <p style={{ fontWeight: 'bold', margin: '5px 0 2px 0' }}>2. Công tác thực hiện sau phê duyệt:</p>
+                    <ul style={{ margin: '0 0 8px 0', paddingLeft: '25px', listStyleType: 'none' }}>
+                      <li>- Tình hình công bố công khai: Đã tổ chức công bố <b>{congBoQHCT}</b> quy hoạch; chưa công bố <b>{totalQHCT - congBoQHCT}</b> quy hoạch.</li>
+                      <li>- Công tác cắm mốc giới ngoài thực địa: Đã hoàn thành cắm mốc <b>{camMocQHCT}</b> quy hoạch; chưa cắm mốc <b>{totalQHCT - camMocQHCT}</b> quy hoạch.</li>
+                    </ul>
+                    <p style={{ fontWeight: 'bold', margin: '5px 0 2px 0' }}>3. Tình hình gửi hồ sơ về Sở Xây dựng:</p>
+                    <ul style={{ margin: '0 0 10px 0', paddingLeft: '25px', listStyleType: 'none' }}>
+                      <li>- Đã nhận hồ sơ từ các địa phương: <b>{guiSXDQHCT}</b> quy hoạch.</li>
+                      <li>- Đang hoàn thiện, chưa gửi Sở Xây dựng: <b>{totalQHCT - guiSXDQHCT}</b> quy hoạch.</li>
                     </ul>
 
-                    <p style={{ fontWeight: 'bold', textTransform: 'uppercase', margin: '15px 0 5px 0' }}>IV. Khó khăn, vướng mắc và kiến nghị</p>
-                    <p style={{ textIndent: '30px', margin: '0 0 10px 0' }}>Tiến độ cắm mốc giới ngoài thực địa tại một số địa phương còn chậm; việc lập quy hoạch phân khu sau sáp nhập đơn vị hành chính đang được tiếp tục đôn đốc triển khai nghiêm túc.</p>
+                    {/* IV. KHÓ KHĂN VƯỚNG MẮC */}
+                    <p style={{ fontWeight: 'bold', textTransform: 'uppercase', margin: '15px 0 5px 0' }}>IV. KHÓ KHĂN, VƯỚNG MẮC VÀ KIẾN NGHỊ</p>
+                    <p style={{ textIndent: '30px', margin: '0 0 10px 0' }}>Tiến độ cắm mốc giới ngoài thực địa tại một số địa phương còn chậm; việc lập quy hoạch phân khu và chi tiết sau sáp nhập đơn vị hành chính đang được tiếp tục đôn đốc triển khai nghiêm túc.</p>
                     
-                    <p style={{ textIndent: '30px', margin: '10px 0 0 0' }}>Trên đây là báo cáo tiến độ triển khai công tác quy hoạch đô thị và nông thôn trên địa bàn tỉnh, Sở Xây dựng kính báo cáo Ủy ban nhân dân tỉnh xem xét, chỉ đạo./.</p>
+                    <p style={{ textIndent: '30px', margin: '10px 0 0 0' }}>Trên đây là báo cáo tình hình triển khai công tác quy hoạch đô thị và nông thôn trên địa bàn tỉnh, Sở Xây dựng kính báo cáo UBND tỉnh xem xét, chỉ đạo./.</p>
                   </div>
 
-                  {/* NƠI NHẬN & CHỮ KÝ SỬ DỤNG BẢNG ĐỂ CỐ ĐỊNH CHUẨN XÁC */}
+                  {/* NƠI NHẬN & CHỮ KÝ */}
                   <table style={{ width: '100%', border: 'none', borderCollapse: 'collapse', marginTop: '30px' }}>
                     <tbody>
                       <tr>
                         <td style={{ width: '45%', verticalAlign: 'top', border: 'none', padding: 0, fontSize: '11pt', lineHeight: '1.4' }}>
                           <b>Nơi nhận:</b><br/>
-                          - Ủy ban nhân dân tỉnh (để b/c);<br/>
+                          - Như trên;<br/>
                           - UBND các xã, phường;<br/>
-                          - BQL KKT tỉnh;<br/>
+                          - Ban Quản lý KKT tỉnh;<br/>
                           - Lãnh đạo Sở;<br/>
                           - Các phòng chuyên môn thuộc Sở;<br/>
                           - Lưu: VT, P.QHKT&PTĐT.
@@ -2814,25 +2837,28 @@ function App() {
                     </tbody>
                   </table>
 
-                  {/* NGẮT TRANG SANG PHỤ LỤC */}
+                  {/* PHỤ LỤC */}
                   <div className="page-break" style={{ pageBreakBefore: 'always', marginTop: '40px' }}></div>
                   
                   <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '13pt', textTransform: 'uppercase', marginBottom: '4px' }}>
-                    PHỤ LỤC: DANH MỤC THỐNG KÊ CHI TIẾT TÌNH HÌNH TRIỂN KHAI QUY HOẠCH
+                    PHỤ LỤC
                   </div>
-                  <p style={{ textAlign: 'center', fontStyle: 'italic', fontSize: '11pt', marginBottom: '20px' }}>(Kèm theo Báo cáo số ..... /BC-SXD của Sở Xây dựng tỉnh Gia Lai)</p>
+                  <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '12pt', textTransform: 'uppercase', marginBottom: '6px' }}>
+                    DANH MỤC THỐNG KÊ CHI TIẾT TÌNH HÌNH TRIỂN KHAI QUY HOẠCH ĐÔ THỊ VÀ NÔNG THÔN TRÊN ĐỊA BÀN TỈNH GIA LAI
+                  </div>
+                  <p style={{ textAlign: 'center', fontStyle: 'italic', fontSize: '11pt', marginBottom: '20px' }}>(Kèm theo Báo cáo số ..... /BC-SXD ngày ..... tháng ..... năm 202... của Sở Xây dựng tỉnh Gia Lai)</p>
                   
                   <div style={{ fontSize: '11pt' }}>
                     <div>
-                      <h4 style={{ fontWeight: 'bold', fontSize: '12pt', margin: '15px 0 5px 0' }}>1. Danh mục Quy hoạch chung</h4>
+                      <h4 style={{ fontWeight: 'bold', fontSize: '12pt', margin: '15px 0 5px 0' }}>1. Phụ lục 01: Bảng tổng hợp chi tiết danh mục Quy hoạch chung</h4>
                       <div dangerouslySetInnerHTML={{ __html: window.__reportTables?.qhc || '<p>Đang tải...</p>' }} />
                     </div>
-                    <div style={{ marginTop: '20px' }}>
-                      <h4 style={{ fontWeight: 'bold', fontSize: '12pt', margin: '15px 0 5px 0' }}>2. Danh mục Quy hoạch phân khu</h4>
+                    <div style={{ marginTop: '25px' }}>
+                      <h4 style={{ fontWeight: 'bold', fontSize: '12pt', margin: '15px 0 5px 0' }}>2. Phụ lục 02: Bảng tổng hợp chi tiết danh mục Quy hoạch phân khu</h4>
                       <div dangerouslySetInnerHTML={{ __html: window.__reportTables?.qhpk || '<p>Chưa có dữ liệu</p>' }} />
                     </div>
-                    <div style={{ marginTop: '20px' }}>
-                      <h4 style={{ fontWeight: 'bold', fontSize: '12pt', margin: '15px 0 5px 0' }}>3. Danh mục Quy hoạch chi tiết</h4>
+                    <div style={{ marginTop: '25px' }}>
+                      <h4 style={{ fontWeight: 'bold', fontSize: '12pt', margin: '15px 0 5px 0' }}>3. Phụ lục 03: Bảng tổng hợp chi tiết danh mục Quy hoạch chi tiết</h4>
                       <div dangerouslySetInnerHTML={{ __html: window.__reportTables?.qhct || '<p>Chưa có dữ liệu</p>' }} />
                     </div>
                   </div>
