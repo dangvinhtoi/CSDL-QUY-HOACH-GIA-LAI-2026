@@ -663,7 +663,7 @@ function App() {
 
       const [loginForm, setLoginForm] = useState({ username: '', password: '' });
       const [loginError, setLoginError] = useState('');
-      const [changePassForm, setChangePassForm] = useState({ current: '', newPass: '', confirm: '' });
+      const [changePassForm, setChangePassForm] = useState({ verifyEmail: '', current: '', newPass: '', confirm: '' });
       const [changePassError, setChangePassError] = useState('');
       const [adminPassword, setAdminPassword] = useState(() => localStorage.getItem('gialai_admin_pass') || '123456');
 
@@ -1350,17 +1350,37 @@ function App() {
 
       const handleChangePassword = (e) => {
         e.preventDefault();
-        if (changePassForm.current !== adminPassword) return setChangePassError('Mật khẩu hiện tại không đúng!');
-        if (changePassForm.newPass.length < 6) return setChangePassError('Mật khẩu mới phải từ 6 ký tự!');
-        if (changePassForm.newPass !== changePassForm.confirm) return setChangePassError('Xác nhận mật khẩu mới không khớp!');
+        
+        if (userRole === 'ADMIN') {
+          if (changePassForm.current !== adminPassword) return setChangePassError('Mật khẩu hiện tại không đúng!');
+          if (changePassForm.newPass.length < 6) return setChangePassError('Mật khẩu mới phải từ 6 ký tự!');
+          if (changePassForm.newPass !== changePassForm.confirm) return setChangePassError('Xác nhận mật khẩu mới không khớp!');
 
-        setAdminPassword(changePassForm.newPass);
-        localStorage.setItem('gialai_admin_pass', changePassForm.newPass);
-        syncToCloud({ adminPassword: changePassForm.newPass });
-        setShowChangePassModal(false);
-        setChangePassForm({ current: '', newPass: '', confirm: '' });
-        setChangePassError('');
-        showNotification('Đã đổi mật khẩu thành công & đồng bộ Đám mây!');
+          setAdminPassword(changePassForm.newPass);
+          localStorage.setItem('gialai_admin_pass', changePassForm.newPass);
+          syncToCloud({ adminPassword: changePassForm.newPass });
+          setShowChangePassModal(false);
+          setChangePassForm({ verifyEmail: '', current: '', newPass: '', confirm: '' });
+          setChangePassError('');
+          showNotification('Đã đổi mật khẩu Admin thành công & đồng bộ Đám mây!');
+        } 
+        else if (userRole === 'MEMBER') {
+          if (changePassForm.verifyEmail.trim() !== currentUser.email) return setChangePassError('Thông tin Email/Zalo không khớp với lúc đăng ký!');
+          if (changePassForm.current !== currentUser.password) return setChangePassError('Mật khẩu hiện tại không đúng!');
+          if (changePassForm.newPass.length < 6) return setChangePassError('Mật khẩu mới phải từ 6 ký tự!');
+          if (changePassForm.newPass !== changePassForm.confirm) return setChangePassError('Xác nhận mật khẩu mới không khớp!');
+
+          const updatedMembers = (membersList || []).map(m => m.id === currentUser.id ? { ...m, password: changePassForm.newPass } : m);
+          setMembersList(updatedMembers);
+          localStorage.setItem('gialai_members_list', JSON.stringify(updatedMembers));
+          syncToCloud({ membersList: updatedMembers });
+          
+          setCurrentUser({ ...currentUser, password: changePassForm.newPass });
+          setShowChangePassModal(false);
+          setChangePassForm({ verifyEmail: '', current: '', newPass: '', confirm: '' });
+          setChangePassError('');
+          showNotification('Đã đổi mật khẩu thành viên thành công!');
+        }
       };
 
       const handleSendOTP = (e) => {
@@ -1709,9 +1729,9 @@ function App() {
                               )}
                             </button>
                             <button onClick={() => setShowDbModal(true)} className="text-xs bg-indigo-500/20 hover:bg-indigo-500 text-indigo-100 hover:text-white border border-indigo-500/50 px-2 py-1 rounded transition-colors flex items-center gap-1 font-medium"><Database className="w-3 h-3"/> Quản lý CSDL</button>
-                            <button onClick={() => setShowChangePassModal(true)} className="text-xs bg-amber-500/20 hover:bg-amber-500 text-amber-100 hover:text-white border border-amber-500/50 px-2 py-1 rounded transition-colors flex items-center gap-1 font-medium"><Key className="w-3 h-3"/> Đổi MK</button>
-                          </>
+                            </>
                         )}
+                        <button onClick={() => setShowChangePassModal(true)} className="text-xs bg-amber-500/20 hover:bg-amber-500 text-amber-100 hover:text-white border border-amber-500/50 px-2 py-1 rounded transition-colors flex items-center gap-1 font-medium"><Key className="w-3 h-3"/> Đổi MK</button>
                         <button onClick={() => { setIsLoggedIn(false); setUserRole('GUEST'); setCurrentUser(null); showNotification('Đã đăng xuất.'); }} className="text-xs bg-red-500/20 hover:bg-red-500 text-red-100 hover:text-white border border-red-500/50 px-2 py-1 rounded transition-colors flex items-center gap-1 font-medium"><LogOut className="w-3 h-3"/> Đăng xuất</button>
                       </div>
                     </div>
@@ -2335,7 +2355,14 @@ function App() {
           )}
 
           {showChangePassModal && (
-            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-[99999]"><div className="bg-white rounded-xl shadow-2xl w-full max-w-sm max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in"><div className="bg-amber-600 p-3 sm:p-4 flex justify-between items-center text-white shrink-0"><h3 className="font-bold flex items-center gap-2 text-sm sm:text-base"><Key className="w-5 h-5"/> Đổi mật khẩu quản trị</h3><button onClick={() => setShowChangePassModal(false)} className="hover:bg-amber-700 p-1 rounded-full"><X className="w-5 h-5"/></button></div><form onSubmit={handleChangePassword} className="p-4 sm:p-6 flex flex-col gap-4 overflow-y-auto flex-1 custom-scrollbar">{changePassError && <div className="bg-red-50 text-red-600 p-3 rounded text-sm font-medium">{changePassError}</div>}<div><label className="block text-sm font-semibold mb-1">Mật khẩu hiện tại</label><input type="password" value={changePassForm.current} onChange={e=>setChangePassForm(p=>({...p, current: e.target.value}))} className="w-full border px-3 py-2 rounded" placeholder="Nhập mật khẩu cũ..." required /></div><div><label className="block text-sm font-semibold mb-1">Mật khẩu mới</label><input type="password" value={changePassForm.newPass} onChange={e=>setChangePassForm(p=>({...p, newPass: e.target.value}))} className="w-full border px-3 py-2 rounded" placeholder="Nhập mật khẩu mới..." required /></div><div><label className="block text-sm font-semibold mb-1">Xác nhận mật khẩu mới</label><input type="password" value={changePassForm.confirm} onChange={e=>setChangePassForm(p=>({...p, confirm: e.target.value}))} className="w-full border px-3 py-2 rounded" placeholder="Nhập lại mật khẩu mới..." required /></div><button type="submit" className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded shadow-sm transition-colors mt-2">Lưu thay đổi</button></form></div></div>
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-[99999]"><div className="bg-white rounded-xl shadow-2xl w-full max-w-sm max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in"><div className="bg-amber-600 p-3 sm:p-4 flex justify-between items-center text-white shrink-0"><h3 className="font-bold flex items-center gap-2 text-sm sm:text-base"><Key className="w-5 h-5"/> Đổi mật khẩu</h3><button onClick={() => setShowChangePassModal(false)} className="hover:bg-amber-700 p-1 rounded-full"><X className="w-5 h-5"/></button></div><form onSubmit={handleChangePassword} className="p-4 sm:p-6 flex flex-col gap-4 overflow-y-auto flex-1 custom-scrollbar">{changePassError && <div className="bg-red-50 text-red-600 p-3 rounded text-sm font-medium">{changePassError}</div>}
+              {userRole === 'MEMBER' && (
+                <div>
+                  <label className="block text-sm font-semibold mb-1">Xác thực Email/Zalo đã đăng ký</label>
+                  <input type="text" value={changePassForm.verifyEmail || ''} onChange={e=>setChangePassForm(p=>({...p, verifyEmail: e.target.value}))} className="w-full border px-3 py-2 rounded focus:ring-2 focus:ring-amber-500 outline-none" placeholder="Nhập đúng Email/Zalo..." required />
+                </div>
+              )}
+              <div><label className="block text-sm font-semibold mb-1">Mật khẩu hiện tại</label><input type="password" value={changePassForm.current} onChange={e=>setChangePassForm(p=>({...p, current: e.target.value}))} className="w-full border px-3 py-2 rounded focus:ring-2 focus:ring-amber-500 outline-none" placeholder="Nhập mật khẩu cũ..." required /></div><div><label className="block text-sm font-semibold mb-1">Mật khẩu mới</label><input type="password" value={changePassForm.newPass} onChange={e=>setChangePassForm(p=>({...p, newPass: e.target.value}))} className="w-full border px-3 py-2 rounded focus:ring-2 focus:ring-amber-500 outline-none" placeholder="Nhập mật khẩu mới..." required /></div><div><label className="block text-sm font-semibold mb-1">Xác nhận mật khẩu mới</label><input type="password" value={changePassForm.confirm} onChange={e=>setChangePassForm(p=>({...p, confirm: e.target.value}))} className="w-full border px-3 py-2 rounded focus:ring-2 focus:ring-amber-500 outline-none" placeholder="Nhập lại mật khẩu mới..." required /></div><button type="submit" className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded shadow-sm transition-colors mt-2">Lưu thay đổi</button></form></div></div>
           )}
 
           {showDbModal && (
