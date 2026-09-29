@@ -716,9 +716,13 @@ function App() {
             nextPhanKhu = applyRestore(phankhuData); setPhankhuData(nextPhanKhu); 
             localStorage.setItem('gialai_qh_phankhu', JSON.stringify(nextPhanKhu)); 
           }
-          syncToCloud({ data: nextData, detailData: nextDetail, phankhuData: nextPhanKhu });
+          // Cập nhật trạng thái đã khôi phục vào nhật ký
+          const nextLogs = (activityLogs || []).map(l => l.id === log.id ? { ...l, restored: true } : l);
+          setActivityLogs(nextLogs);
+          localStorage.setItem('gialai_activity_logs', JSON.stringify(nextLogs));
+
+          syncToCloud({ data: nextData, detailData: nextDetail, phankhuData: nextPhanKhu, activityLogs: nextLogs });
           showNotification('✅ Đã khôi phục dữ liệu thành công!');
-          setShowLogModal(false);
         });
       };
       // ------------------------------------
@@ -2710,9 +2714,10 @@ function App() {
                   ) : (
                     <div className="flex flex-col gap-3">
                       {(activityLogs || []).map(log => (
-                        <div key={log.id} className="bg-white border rounded-lg p-3 sm:p-4 flex flex-col md:flex-row justify-between gap-4 shadow-sm hover:border-slate-300">
+                        {(activityLogs || []).map(log => (
+                        <div key={log.id} className={`bg-white border rounded-lg p-3 sm:p-4 flex flex-col md:flex-row justify-between gap-4 shadow-sm hover:border-slate-300 ${log.restored ? 'opacity-60 bg-slate-50' : ''}`}>
                           <div className="flex flex-col gap-2 flex-1">
-                            <div className="flex flex-wrap items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
                               <span className={`text-xs font-bold px-2 py-1 rounded-md text-white ${log.action === 'ADD' ? 'bg-emerald-500' : log.action === 'EDIT' ? 'bg-blue-500' : 'bg-red-500'}`}>
                                 {log.action === 'ADD' ? '+ THÊM MỚI' : log.action === 'EDIT' ? '📝 CẬP NHẬT' : '🗑️ ĐÃ XÓA'}
                               </span>
@@ -2731,7 +2736,11 @@ function App() {
                             )}
                           </div>
                           <div className="flex items-center justify-end shrink-0">
-                            <button onClick={() => handleRestoreLog(log)} className="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm transition-colors"><RefreshCcw className="w-4 h-4"/> Khôi phục lại</button>
+                            {log.restored ? (
+                              <span className="text-slate-500 font-semibold text-sm flex items-center gap-1 bg-slate-200 px-4 py-2 rounded-lg border border-slate-300 shadow-inner"><CheckCircle className="w-4 h-4"/> Đã khôi phục</span>
+                            ) : (
+                              <button onClick={() => handleRestoreLog(log)} className="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm transition-colors"><RefreshCcw className="w-4 h-4"/> Khôi phục lại</button>
+                            )}
                           </div>
                         </div>
                       ))}
