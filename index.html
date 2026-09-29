@@ -1252,11 +1252,14 @@ function App() {
       };
 
       const handleRejectMember = (memberId) => {
-        const nextMembers = (membersList || []).filter(m => m.id !== memberId);
-        setMembersList(nextMembers);
-        localStorage.setItem('gialai_members_list', JSON.stringify(nextMembers));
-        syncToCloud({ membersList: nextMembers });
-        showNotification('Đã từ chối / xóa yêu cầu đăng ký tài khoản.');
+        openConfirm('Xác nhận xóa tài khoản', 'Bạn có chắc chắn muốn xóa tài khoản thành viên này không? Hành động này không thể hoàn tác.', () => {
+          closeConfirm();
+          const nextMembers = (membersList || []).filter(m => m.id !== memberId);
+          setMembersList(nextMembers);
+          localStorage.setItem('gialai_members_list', JSON.stringify(nextMembers));
+          syncToCloud({ membersList: nextMembers });
+          showNotification('Đã xóa tài khoản thành viên thành công.');
+        });
       };
   const handleAdminChangeMemberPassword = (memberId, currentName) => {
           const newPass = window.prompt(`Nhập mật khẩu mới cho tài khoản của [ ${currentName} ]:`);
