@@ -1300,7 +1300,7 @@ function App() {
 
       const handleApproveContent = (item) => {
         const { category, type, targetId, recordData } = item;
-        let nextData = data, nextDetail = detailData, nextMerged = mergedData, nextContact = contactData, nextReview = reviewData;
+        let nextData = data, nextDetail = detailData, nextMerged = mergedData, nextContact = contactData, nextReview = reviewData, nextPhanKhu = phankhuData;
 
         if (category === 'QH_CHUNG') {
           if (type === 'EDIT' && targetId) {
@@ -1309,6 +1309,14 @@ function App() {
             nextData = [recordData, ...data];
           }
           setData(nextData);
+        } else if (category === 'QH_PHANKHU') {
+          if (type === 'EDIT' && targetId) {
+            nextPhanKhu = phankhuData.map(r => r.id === targetId ? recordData : r);
+          } else {
+            nextPhanKhu = [recordData, ...phankhuData];
+          }
+          setPhankhuData(nextPhanKhu);
+          localStorage.setItem('gialai_qh_phankhu', JSON.stringify(nextPhanKhu));
         } else if (category === 'QH_CHITIET') {
           if (type === 'EDIT' && targetId) {
             nextDetail = detailData.map(r => r.id === targetId ? recordData : r);
@@ -1349,6 +1357,7 @@ function App() {
           mergedData: nextMerged,
           contactData: nextContact,
           reviewData: nextReview,
+          phankhuData: nextPhanKhu,
           pendingDataChanges: nextPending
         });
 
@@ -2601,7 +2610,7 @@ function App() {
                                   {item.type === 'ADD' ? '+ THÊM MỚI' : '📝 CẬP NHẬT'}
                                 </span>
                                 <span className="text-sm font-bold text-slate-700">
-                                  {item.category === 'QH_CHUNG' ? 'Quy hoạch Chung' : item.category === 'QH_CHITIET' ? 'Quy hoạch Chi tiết' : item.category === 'MERGE' ? 'Sáp nhập ĐVHC' : item.category === 'CONTACT' ? 'Danh bạ' : 'Rà soát'}
+                                  {item.category === 'QH_CHUNG' ? 'Quy hoạch Chung' : item.category === 'QH_PHANKHU' ? 'Quy hoạch Phân khu' : item.category === 'QH_CHITIET' ? 'Quy hoạch Chi tiết' : item.category === 'MERGE' ? 'Sáp nhập ĐVHC' : item.category === 'CONTACT' ? 'Danh bạ' : 'Rà soát'}
                                 </span>
                               </div>
                             </div>
