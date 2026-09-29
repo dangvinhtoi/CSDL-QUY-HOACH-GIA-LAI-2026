@@ -1773,27 +1773,30 @@ function App() {
 
             const todayStr = new Date().toLocaleDateString('vi-VN');
 
-            // Tạo bảng HTML cho các Phụ lục
-            let tableQHC = `<table border="1" cellspacing="0" cellpadding="5" style="width:100%; border-collapse:collapse; font-size:11pt;">
-              <tr style="background:#f1f5f9;"><th>STT</th><th>Huyện/Thị xã</th><th>Xã/Phường</th><th>Tên quy hoạch</th><th>Diện tích (ha)</th><th>Phê duyệt</th></tr>`;
-            (data || []).slice(0, 20).forEach((r, idx) => {
-              tableQHC += `<tr><td align="center">${idx+1}</td><td>${r.huyen||''}</td><td>${r.xa||''}</td><td>${r.tenQh||''}</td><td align="center">${r.dienTich||''}</td><td>${r.qdPheDuyet||''}</td></tr>`;
+            // Tạo bảng HTML cho các Phụ lục đầy đủ
+            let tableQHC = `<table border="1" cellspacing="0" cellpadding="6" style="width:100%; border-collapse:collapse; font-size:10pt; margin-top:10px;">
+              <tr style="background:#f1f5f9;"><th style="padding:8px;">STT</th><th style="padding:8px;">Huyện/Thị xã</th><th style="padding:8px;">Xã/Phường</th><th style="padding:8px;">Tên quy hoạch</th><th style="padding:8px;">Diện tích (ha)</th><th style="padding:8px;">Phê duyệt</th></tr>`;
+            (data || []).forEach((r, idx) => {
+              tableQHC += `<tr><td align="center" style="padding:6px;">${idx+1}</td><td style="padding:6px;">${r.huyen||''}</td><td style="padding:6px;">${r.xa||''}</td><td style="padding:6px;">${r.tenQh||''}</td><td align="center" style="padding:6px;">${r.dienTich||''}</td><td style="padding:6px;">${r.qdPheDuyet||''}</td></tr>`;
             });
             tableQHC += `</table>`;
 
-            let tableQHPK = `<table border="1" cellspacing="0" cellpadding="5" style="width:100%; border-collapse:collapse; font-size:11pt;">
-              <tr style="background:#f1f5f9;"><th>STT</th><th>Huyện/Thị xã</th><th>Xã/Phường</th><th>Tên quy hoạch phân khu</th><th>Diện tích (ha)</th><th>Phê duyệt</th></tr>`;
+            let tableQHPK = `<table border="1" cellspacing="0" cellpadding="6" style="width:100%; border-collapse:collapse; font-size:10pt; margin-top:10px;">
+              <tr style="background:#f1f5f9;"><th style="padding:8px;">STT</th><th style="padding:8px;">Huyện/Thị xã</th><th style="padding:8px;">Xã/Phường</th><th style="padding:8px;">Tên quy hoạch phân khu</th><th style="padding:8px;">Diện tích (ha)</th><th style="padding:8px;">Phê duyệt</th></tr>`;
             (phankhuData || []).forEach((r, idx) => {
-              tableQHPK += `<tr><td align="center">${idx+1}</td><td>${r.huyen||''}</td><td>${r.xa||''}</td><td>${r.tenQh||''}</td><td align="center">${r.dienTich||''}</td><td>${r.qdPheDuyet||''}</td></tr>`;
+              tableQHPK += `<tr><td align="center" style="padding:6px;">${idx+1}</td><td style="padding:6px;">${r.huyen||''}</td><td style="padding:6px;">${r.xa||''}</td><td style="padding:6px;">${r.tenQh||''}</td><td align="center" style="padding:6px;">${r.dienTich||''}</td><td style="padding:6px;">${r.qdPheDuyet||''}</td></tr>`;
             });
             tableQHPK += `</table>`;
 
-            let tableQHCT = `<table border="1" cellspacing="0" cellpadding="5" style="width:100%; border-collapse:collapse; font-size:11pt;">
-              <tr style="background:#f1f5f9;"><th>STT</th><th>Huyện/Thị xã</th><th>Xã/Phường</th><th>Tên quy hoạch chi tiết</th><th>Diện tích (ha)</th><th>Phê duyệt</th></tr>`;
-            (detailData || []).slice(0, 20).forEach((r, idx) => {
-              tableQHCT += `<tr><td align="center">${idx+1}</td><td>${r.huyen||''}</td><td>${r.xa||''}</td><td>${r.tenQh||''}</td><td align="center">${r.dienTich||''}</td><td>${r.qdPheDuyet||''}</td></tr>`;
+            let tableQHCT = `<table border="1" cellspacing="0" cellpadding="6" style="width:100%; border-collapse:collapse; font-size:10pt; margin-top:10px;">
+              <tr style="background:#f1f5f9;"><th style="padding:8px;">STT</th><th style="padding:8px;">Huyện/Thị xã</th><th style="padding:8px;">Xã/Phường</th><th style="padding:8px;">Tên quy hoạch chi tiết</th><th style="padding:8px;">Diện tích (ha)</th><th style="padding:8px;">Phê duyệt</th></tr>`;
+            (detailData || []).forEach((r, idx) => {
+              tableQHCT += `<tr><td align="center" style="padding:6px;">${idx+1}</td><td style="padding:6px;">${r.huyen||''}</td><td style="padding:6px;">${r.xa||''}</td><td style="padding:6px;">${r.tenQh||''}</td><td align="center" style="padding:6px;">${r.dienTich||''}</td><td style="padding:6px;">${r.qdPheDuyet||''}</td></tr>`;
             });
             tableQHCT += `</table>`;
+
+            // Lưu tạm vào biến window để phần giao diện hiển thị
+            window.__reportTables = { qhc: tableQHC, qhpk: tableQHPK, qhct: tableQHCT };
 
             setReportProgress(75);
             setReportStatus('Đang thay thế các biến số và ghép bảng phụ lục...');
@@ -2646,17 +2649,27 @@ function App() {
             <button onClick={handleGenerateSmartReport} disabled={reportProgress>0 && reportProgress<100} className={`w-full py-3 rounded-lg text-white font-bold flex items-center justify-center gap-2 ${reportProgress>0 && reportProgress<100 ? 'bg-slate-400 cursor-not-allowed' : (reportModal.type==='CHUNG'?'bg-emerald-600':'bg-purple-600')}`}>{reportProgress>0&&reportProgress<100 ? <RefreshCcw className="w-5 h-5 animate-spin" /> : <ClipboardCheck className="w-5 h-5" />}{reportProgress===0 ? 'Tạo báo cáo' : 'Đang xử lý...'}</button></div></div></div>
           )}
 
-         {showGeneratedReport && (
+        {showGeneratedReport && (
             <div className="fixed inset-0 bg-slate-200 flex flex-col z-[99999]">
               <div className="bg-white px-6 py-3 border-b shadow-sm flex justify-between items-center shrink-0">
                 <h2 className="font-bold text-slate-800">Bản xem trước Báo cáo Tự động (Đã trích xuất CSDL)</h2>
                 <div className="flex gap-3">
                   <button onClick={() => { setShowGeneratedReport(false); setReportModal({isOpen:false,type:''}); }} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg text-sm">Đóng</button>
-                  <button onClick={() => window.print()} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-sm flex items-center gap-2"><Download className="w-4 h-4" /> In / Lưu file PDF</button>
+                  <button onClick={() => {
+                    const reportHtml = document.getElementById('report-print-container').innerHTML;
+                    const blob = new Blob(['\ufeff' + `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Bao Cao</title></head><body>${reportHtml}</body></html>`], { type: 'application/msword' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `Bao_Cao_Quy_Hoach_${new Date().getTime()}.doc`;
+                    a.click();
+                    showNotification('✅ Đã tải xuống file báo cáo định dạng Word thành công!');
+                  }} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-sm flex items-center gap-2"><Download className="w-4 h-4" /> Tải file Word (.doc)</button>
+                  <button onClick={() => window.print()} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-sm flex items-center gap-2"><Download className="w-4 h-4" /> In / Tải file PDF</button>
                 </div>
               </div>
               <div className="flex-1 overflow-auto p-4 flex justify-center custom-scrollbar print-area">
-                <div className="bg-white w-full max-w-[210mm] min-h-[297mm] shadow-lg p-[20mm] text-slate-900 font-serif text-[13pt] leading-[1.6]">
+                <div id="report-print-container" className="bg-white w-full max-w-[210mm] min-h-[297mm] shadow-lg p-[20mm] text-slate-900 font-serif text-[13pt] leading-[1.6]">
                   <div className="flex justify-between items-start mb-6 font-bold">
                     <div className="w-[45%] text-center text-[12pt]">
                       <p>ỦY BAN NHÂN DÂN TỈNH GIA LAI</p>
@@ -2726,22 +2739,30 @@ function App() {
                     <div className="w-[50%] text-center text-[12pt]">
                       <b>KT. GIÁM ĐỐC</b><br/>
                       <b>PHÓ GIÁM ĐỐC</b><br/>
-                      <i>(Ký, ghi rõ họ tên và đóng dấu cưỡi)</i><br/><br/><br/><br/>
+                      <i>(Ký, ghi rõ họ tên và đóng dấu)</i><br/><br/><br/><br/>
                       <b className="uppercase">Lê Đăng Tuấn</b>
                     </div>
                   </div>
 
-                  <div className="page-break" style={{pageBreakBefore: 'always', marginTop: '40px'}}></div>
+                  <div className="page-break" style={{pageBreakBefore: 'always', marginTop: '50px'}}></div>
                   
-                  <div className="text-center font-bold text-[14pt] uppercase mb-4">
+                  <div className="text-center font-bold text-[14pt] uppercase mb-2">
                     PHỤ LỤC: DANH MỤC THỐNG KÊ CHI TIẾT
                   </div>
-                  <p className="text-center italic text-[11pt] mb-6">(Kèm theo Báo cáo của Sở Xây dựng tỉnh Gia Lai)</p>
+                  <p className="text-center italic text-[11pt] mb-6">(Kèm theo Báo cáo số ..... /BC-SXD của Sở Xây dựng tỉnh Gia Lai)</p>
                   
-                  <div className="space-y-6">
+                  <div className="space-y-6 text-[11pt]">
                     <div>
-                      <h4 className="font-bold text-[12pt] mb-2">1. Danh mục Quy hoạch chung tiêu biểu</h4>
-                      <div id="print-table-qhc"></div>
+                      <h4 className="font-bold text-[12pt] mb-1">1. Danh mục Quy hoạch chung</h4>
+                      <div dangerouslySetInnerHTML={{ __html: window.__reportTables?.qhc || '<p>Đang tải...</p>' }} />
+                    </div>
+                    <div style={{marginTop: '25px'}}>
+                      <h4 className="font-bold text-[12pt] mb-1">2. Danh mục Quy hoạch phân khu</h4>
+                      <div dangerouslySetInnerHTML={{ __html: window.__reportTables?.qhpk || '<p>Chưa có dữ liệu</p>' }} />
+                    </div>
+                    <div style={{marginTop: '25px'}}>
+                      <h4 className="font-bold text-[12pt] mb-1">3. Danh mục Quy hoạch chi tiết</h4>
+                      <div dangerouslySetInnerHTML={{ __html: window.__reportTables?.qhct || '<p>Chưa có dữ liệu</p>' }} />
                     </div>
                   </div>
 
