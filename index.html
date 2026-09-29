@@ -586,7 +586,7 @@ function App() {
 
       
       const handlePushLocalToCloud = () => {
-        syncToCloud({ data, detailData, mergedData, contactData, reviewData, adminPassword });
+        syncToCloud({ data, detailData, mergedData, contactData, reviewData, phankhuData, adminPassword });
         if (db) {
           showNotification('⚡ ĐÃ ĐẨY DỮ LIỆU & MẬT KHẨU MỚI LÊN FIREBASE FIRESTORE THÀNH CÔNG!');
         } else if (isGasConnected) {
