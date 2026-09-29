@@ -141,8 +141,9 @@
     }
 
     /* 2. Ưu tiên lớp phủ Z-index để không bị các cột khác trượt đè lên */
-    .freeze-cols td:nth-child(6) { z-index: 10; }
-    .freeze-cols th:nth-child(6) { z-index: 20; }
+.freeze-cols thead { z-index: 30 !important; }
+.freeze-cols th:nth-child(6) { z-index: 31 !important; }
+.freeze-cols td:nth-child(6) { z-index: 10 !important; }
 
     /* 3. Xử lý màu nền chống nhìn xuyên thấu cho Tab Quy hoạch Chung */
     .table-qhchung thead th:nth-child(6) { background-color: #e2e8f0 !important; }
