@@ -686,13 +686,13 @@ function App() {
       });
       const [showLogModal, setShowLogModal] = useState(false);
 
-      const recordActivityLog = (action, category, targetId, oldData, newData) => {
+      const recordActivityLog = (action, category, targetId, oldData, newData, customUser = null) => {
         const newLog = {
           id: Date.now(), action, category, targetId, oldData, newData,
-          user: currentUser?.fullName || (userRole === 'ADMIN' ? 'Quản trị viên Admin' : 'Thành viên'),
+          user: customUser || currentUser?.fullName || (userRole === 'ADMIN' ? 'Quản trị viên Admin' : 'Thành viên'),
           timestamp: new Date().toLocaleString('vi-VN')
         };
-        const nextLogs = [newLog, ...(activityLogs || [])].slice(0, 300); // Lưu tối đa 300 lịch sử gần nhất để web không bị nặng
+        const nextLogs = [newLog, ...(activityLogs || [])].slice(0, 300);
         setActivityLogs(nextLogs);
         localStorage.setItem('gialai_activity_logs', JSON.stringify(nextLogs));
         return nextLogs;
@@ -1348,49 +1348,50 @@ function App() {
       const handleApproveContent = (item) => {
         const { category, type, targetId, recordData } = item;
         let nextData = data, nextDetail = detailData, nextMerged = mergedData, nextContact = contactData, nextReview = reviewData, nextPhanKhu = phankhuData;
+        
+        let nextLogs = activityLogs;
+        let oldData = null;
+        const logUser = `Admin (Duyệt của ${item.submittedBy?.fullName || 'Thành viên'})`;
 
         if (category === 'QH_CHUNG') {
           if (type === 'EDIT' && targetId) {
+            oldData = data.find(r => r.id === targetId);
             nextData = data.map(r => r.id === targetId ? recordData : r);
           } else {
             nextData = [recordData, ...data];
           }
           setData(nextData);
+          nextLogs = recordActivityLog(type, 'CHUNG', targetId || recordData.id, oldData, recordData, logUser);
         } else if (category === 'QH_PHANKHU') {
           if (type === 'EDIT' && targetId) {
+            oldData = phankhuData.find(r => r.id === targetId);
             nextPhanKhu = phankhuData.map(r => r.id === targetId ? recordData : r);
           } else {
             nextPhanKhu = [recordData, ...phankhuData];
           }
           setPhankhuData(nextPhanKhu);
           localStorage.setItem('gialai_qh_phankhu', JSON.stringify(nextPhanKhu));
+          nextLogs = recordActivityLog(type, 'PHANKHU', targetId || recordData.id, oldData, recordData, logUser);
         } else if (category === 'QH_CHITIET') {
           if (type === 'EDIT' && targetId) {
+            oldData = detailData.find(r => r.id === targetId);
             nextDetail = detailData.map(r => r.id === targetId ? recordData : r);
           } else {
             nextDetail = [recordData, ...detailData];
           }
           setDetailData(nextDetail);
+          nextLogs = recordActivityLog(type, 'CHITIET', targetId || recordData.id, oldData, recordData, logUser);
         } else if (category === 'MERGE') {
-          if (type === 'EDIT' && targetId) {
-            nextMerged = mergedData.map(r => r.id === targetId ? recordData : r);
-          } else {
-            nextMerged = [recordData, ...mergedData];
-          }
+          if (type === 'EDIT' && targetId) { nextMerged = mergedData.map(r => r.id === targetId ? recordData : r); } 
+          else { nextMerged = [recordData, ...mergedData]; }
           setMergedData(nextMerged);
         } else if (category === 'CONTACT') {
-          if (type === 'EDIT' && targetId) {
-            nextContact = contactData.map(r => r.id === targetId ? recordData : r);
-          } else {
-            nextContact = [recordData, ...contactData];
-          }
+          if (type === 'EDIT' && targetId) { nextContact = contactData.map(r => r.id === targetId ? recordData : r); } 
+          else { nextContact = [recordData, ...contactData]; }
           setContactData(nextContact);
         } else if (category === 'REVIEW') {
-          if (type === 'EDIT' && targetId) {
-            nextReview = reviewData.map(r => r.id === targetId ? recordData : r);
-          } else {
-            nextReview = [recordData, ...reviewData];
-          }
+          if (type === 'EDIT' && targetId) { nextReview = reviewData.map(r => r.id === targetId ? recordData : r); } 
+          else { nextReview = [recordData, ...reviewData]; }
           setReviewData(nextReview);
         }
 
@@ -1405,7 +1406,8 @@ function App() {
           contactData: nextContact,
           reviewData: nextReview,
           phankhuData: nextPhanKhu,
-          pendingDataChanges: nextPending
+          pendingDataChanges: nextPending,
+          activityLogs: nextLogs
         });
 
         showNotification('🎉 Đã phê duyệt và cập nhật chính thức dữ liệu lên hệ thống web!');
