@@ -2646,9 +2646,31 @@ function App() {
             <button onClick={handleGenerateSmartReport} disabled={reportProgress>0 && reportProgress<100} className={`w-full py-3 rounded-lg text-white font-bold flex items-center justify-center gap-2 ${reportProgress>0 && reportProgress<100 ? 'bg-slate-400 cursor-not-allowed' : (reportModal.type==='CHUNG'?'bg-emerald-600':'bg-purple-600')}`}>{reportProgress>0&&reportProgress<100 ? <RefreshCcw className="w-5 h-5 animate-spin" /> : <ClipboardCheck className="w-5 h-5" />}{reportProgress===0 ? 'Tạo báo cáo' : 'Đang xử lý...'}</button></div></div></div>
           )}
 
-        {showGeneratedReport && (
+        {showGeneratedReport && (() => {
+            const totalQHC = (data || []).length;
+            const approvedQHC = (data || []).filter(d => d.qdPheDuyet && d.qdPheDuyet !== 'Đang cập nhật').length;
+            const pendingQHC = totalQHC - approvedQHC;
+            const congBoQHC = (data || []).filter(d => (d.congBo || '').toLowerCase().includes('đã')).length;
+            const camMocQHC = (data || []).filter(d => (d.camMoc || '').toLowerCase().includes('đã')).length;
+            const guiSXDQHC = (data || []).filter(d => (d.tinhHinhGuiHoSo || '').toLowerCase().includes('đã')).length;
+
+            const totalQHPK = (phankhuData || []).length;
+            const approvedQHPK = (phankhuData || []).filter(d => d.qdPheDuyet && d.qdPheDuyet !== 'Đang cập nhật').length;
+            const pendingQHPK = totalQHPK - approvedQHPK;
+            const congBoQHPK = (phankhuData || []).filter(d => (d.congBo || '').toLowerCase().includes('đã')).length;
+            const camMocQHPK = (phankhuData || []).filter(d => (d.camMoc || '').toLowerCase().includes('đã')).length;
+            const guiSXDQHPK = (phankhuData || []).filter(d => (d.tinhHinhGuiHoSo || '').toLowerCase().includes('đã')).length;
+
+            const totalQHCT = (detailData || []).length;
+            const approvedQHCT = (detailData || []).filter(d => d.qdPheDuyet && d.qdPheDuyet !== 'Đang cập nhật').length;
+            const pendingQHCT = totalQHCT - approvedQHCT;
+            const congBoQHCT = (detailData || []).filter(d => (d.congBo || '').toLowerCase().includes('đã')).length;
+            const camMocQHCT = (detailData || []).filter(d => (d.camMoc || '').toLowerCase().includes('đã')).length;
+            const guiSXDQHCT = (detailData || []).filter(d => (d.tinhHinhGuiHoSo || '').toLowerCase().includes('đã')).length;
+
+            return (
             <div className="fixed inset-0 bg-slate-200 flex flex-col z-[99999]">
-              {/* THANH CÔNG CỤ ĐIỀU HƯỚNG PHÍA TRÊN (ĐÃ RÚT GỌN CÒN 2 NÚT CHUẨN) */}
+              {/* THANH CÔNG CỤ ĐIỀU HƯỚNG PHÍA TRÊN */}
               <div className="bg-white px-6 py-3 border-b shadow-sm flex justify-between items-center shrink-0">
                 <h2 className="font-bold text-slate-800">Bản xem trước Báo cáo (Chuẩn Form Mẫu & Thể thức Hành chính)</h2>
                 <div className="flex gap-3">
@@ -2765,7 +2787,7 @@ function App() {
                       <li>- Đang hoàn thiện, chưa gửi Sở Xây dựng: <b>{totalQHC - guiSXDQHC}</b> quy hoạch.</li>
                     </ul>
 
-                    {/* II. QUY HOẠCH PHÂN KHU (ĐÃ ĐẦY ĐỦ CÁC MỤC THEO MẪU) */}
+                    {/* II. QUY HOẠCH PHÂN KHU */}
                     <p style={{ fontWeight: 'bold', textTransform: 'uppercase', margin: '15px 0 5px 0' }}>II. TÌNH HÌNH TRIỂN KHAI QUY HOẠCH PHÂN KHU (QHPK)</p>
                     <p style={{ fontWeight: 'bold', margin: '5px 0 2px 0' }}>1. Tình hình lập, thẩm định và phê duyệt:</p>
                     <ul style={{ margin: '0 0 8px 0', paddingLeft: '25px', listStyleType: 'none' }}>
@@ -2784,7 +2806,7 @@ function App() {
                       <li>- Đang hoàn thiện, chưa gửi Sở Xây dựng: <b>{totalQHPK - guiSXDQHPK}</b> quy hoạch.</li>
                     </ul>
 
-                    {/* III. QUY HOẠCH CHI TIẾT (ĐÃ ĐẦY ĐỦ CÁC MỤC THEO MẪU) */}
+                    {/* III. QUY HOẠCH CHI TIẾT */}
                     <p style={{ fontWeight: 'bold', textTransform: 'uppercase', margin: '15px 0 5px 0' }}>III. TÌNH HÌNH TRIỂN KHAI QUY HOẠCH CHI TIẾT (QHCT)</p>
                     <p style={{ fontWeight: 'bold', margin: '5px 0 2px 0' }}>1. Tình hình lập, thẩm định và phê duyệt:</p>
                     <ul style={{ margin: '0 0 8px 0', paddingLeft: '25px', listStyleType: 'none' }}>
@@ -2862,7 +2884,8 @@ function App() {
                 </div>
               </div>
             </div>
-          )}
+            );
+          })()}
           {/* MODAL QUẢN LÝ THÀNH VIÊN */}
           {showMemberMgmtModal && (
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-[99999]">
