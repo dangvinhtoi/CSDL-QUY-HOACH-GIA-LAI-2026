@@ -1365,9 +1365,8 @@ function App() {
           showNotification('Đã đổi mật khẩu Admin thành công & đồng bộ Đám mây!');
         } 
         else if (userRole === 'MEMBER') {
-          // Thành viên chỉ cần nhập đúng Email/Zalo là được đổi mật khẩu, không cần nhập mật khẩu cũ
           if (changePassForm.verifyEmail.trim() !== currentUser.email) return setChangePassError('Thông tin Email/Zalo không khớp với lúc đăng ký!');
-          
+          if (changePassForm.current !== currentUser.password) return setChangePassError('Mật khẩu hiện tại không đúng!');
           if (changePassForm.newPass.length < 6) return setChangePassError('Mật khẩu mới phải từ 6 ký tự!');
           if (changePassForm.newPass !== changePassForm.confirm) return setChangePassError('Xác nhận mật khẩu mới không khớp!');
 
@@ -2363,10 +2362,7 @@ function App() {
                   <input type="text" value={changePassForm.verifyEmail || ''} onChange={e=>setChangePassForm(p=>({...p, verifyEmail: e.target.value}))} className="w-full border px-3 py-2 rounded focus:ring-2 focus:ring-amber-500 outline-none" placeholder="Nhập đúng Email/Zalo..." required />
                 </div>
               )}
-              {userRole === 'ADMIN' && (
-                <div><label className="block text-sm font-semibold mb-1">Mật khẩu hiện tại</label><input type="password" value={changePassForm.current} onChange={e=>setChangePassForm(p=>({...p, current: e.target.value}))} className="w-full border px-3 py-2 rounded focus:ring-2 focus:ring-amber-500 outline-none" placeholder="Nhập mật khẩu cũ..." required /></div>
-              )}
-              <div><label className="block text-sm font-semibold mb-1">Mật khẩu mới</label><input type="password" value={changePassForm.newPass} onChange={e=>setChangePassForm(p=>({...p, newPass: e.target.value}))} className="w-full border px-3 py-2 rounded focus:ring-2 focus:ring-amber-500 outline-none" placeholder="Nhập mật khẩu mới..." required /></div><div><label className="block text-sm font-semibold mb-1">Xác nhận mật khẩu mới</label><input type="password" value={changePassForm.confirm} onChange={e=>setChangePassForm(p=>({...p, confirm: e.target.value}))} className="w-full border px-3 py-2 rounded focus:ring-2 focus:ring-amber-500 outline-none" placeholder="Nhập lại mật khẩu mới..." required /></div><button type="submit" className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded shadow-sm transition-colors mt-2">Lưu thay đổi</button></form></div></div>
+              <div><label className="block text-sm font-semibold mb-1">Mật khẩu hiện tại</label><input type="password" value={changePassForm.current} onChange={e=>setChangePassForm(p=>({...p, current: e.target.value}))} className="w-full border px-3 py-2 rounded focus:ring-2 focus:ring-amber-500 outline-none" placeholder="Nhập mật khẩu cũ..." required /></div><div><label className="block text-sm font-semibold mb-1">Mật khẩu mới</label><input type="password" value={changePassForm.newPass} onChange={e=>setChangePassForm(p=>({...p, newPass: e.target.value}))} className="w-full border px-3 py-2 rounded focus:ring-2 focus:ring-amber-500 outline-none" placeholder="Nhập mật khẩu mới..." required /></div><div><label className="block text-sm font-semibold mb-1">Xác nhận mật khẩu mới</label><input type="password" value={changePassForm.confirm} onChange={e=>setChangePassForm(p=>({...p, confirm: e.target.value}))} className="w-full border px-3 py-2 rounded focus:ring-2 focus:ring-amber-500 outline-none" placeholder="Nhập lại mật khẩu mới..." required /></div><button type="submit" className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded shadow-sm transition-colors mt-2">Lưu thay đổi</button></form></div></div>
           )}
 
           {showDbModal && (
