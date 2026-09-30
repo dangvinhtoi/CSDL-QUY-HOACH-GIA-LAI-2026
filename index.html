@@ -912,6 +912,9 @@ function App() {
       const [detailFilterCongBo, setDetailFilterCongBo] = useState('');
       const [detailFilterCamMoc, setDetailFilterCamMoc] = useState('');
       const [detailFilterGuiSXD, setDetailFilterGuiSXD] = useState('');
+      // BỘ LỌC BỔ SUNG CHO QH CHI TIẾT
+      const [detailFilterLoaiQh, setDetailFilterLoaiQh] = useState('');
+      const [detailFilterTinhChat, setDetailFilterTinhChat] = useState('');
       // BỘ LỌC QH PHÂN KHU
       const [phankhuSearchTerm, setPhankhuSearchTerm] = useState('');
       const [phankhuFilterHuyen, setPhankhuFilterHuyen] = useState('');
@@ -1151,10 +1154,43 @@ function App() {
           const isGuiSXD = (item.tinhHinhGuiHoSo||'').toLowerCase().includes('đã');
           const matchGuiSXD = detailFilterGuiSXD === '' ? true : detailFilterGuiSXD === 'Đã gửi' ? isGuiSXD : !isGuiSXD;
 
-          return matchSearch && matchHuyen && matchXa && matchTinhTrang && matchCongBo && matchCamMoc && matchGuiSXD;
-        });
-      }, [detailData, detailSearchTerm, detailFilterHuyen, detailFilterXa, detailFilterTinhTrang, detailFilterCongBo, detailFilterCamMoc, detailFilterGuiSXD]);
+          // 🟢 1. LỌC THEO LOẠI QUY HOẠCH (QHCT & QH TMB)
+          const tenQhLower = (item.tenQh || '').toLowerCase();
+          const isTMB = tenQhLower.includes('tổng mặt bằng') || tenQhLower.includes('tmb');
+          const matchLoaiQh = detailFilterLoaiQh === '' ? true : 
+                              detailFilterLoaiQh === 'QH TMB' ? isTMB : !isTMB;
 
+          // 🟢 2. LỌC THEO TÍNH CHẤT QUY HOẠCH & ĐỊA ĐIỂM (XÃ/PHƯỜNG)
+          let matchTinhChat = true;
+          if (detailFilterTinhChat !== '') {
+            const xaLower = (item.xa || '').toLowerCase();
+            const isPhuong = xaLower.includes('p.') || xaLower.includes('phường');
+            const isXa = xaLower.includes('xã');
+
+            if (detailFilterTinhChat === 'Khu đô thị') {
+              matchTinhChat = tenQhLower.includes('đô thị') && isPhuong;
+            } else if (detailFilterTinhChat === 'Khu dân cư') {
+              matchTinhChat = tenQhLower.includes('dân cư') && isXa;
+            } else if (detailFilterTinhChat === 'Khu tái định cư') {
+              matchTinhChat = tenQhLower.includes('tái định cư');
+            } else if (detailFilterTinhChat === 'HTKT, HTXH') {
+              const keywords = ['nghĩa địa', 'nghĩa trang', 'cải táng', 'mai táng', 'bãi chôn lấp', 'y tế', 'giáo dục', 'chợ', 'văn hóa', 'thể dục thể thao', 'hạ tầng kỹ thuật', 'hạ tầng xã hội'];
+              matchTinhChat = keywords.some(k => tenQhLower.includes(k));
+            } else if (detailFilterTinhChat === 'Khu du lịch') {
+              matchTinhChat = tenQhLower.includes('du lịch') || tenQhLower.includes('nghỉ dưỡng') || tenQhLower.includes('sinh thái');
+            } else if (detailFilterTinhChat === 'Khu thương mại') {
+              matchTinhChat = tenQhLower.includes('thương mại') || tenQhLower.includes('dịch vụ');
+            } else if (detailFilterTinhChat === 'Công nghiệp') {
+              const keywords = ['công nghiệp', 'cụm công nghiệp', 'nhà máy', 'sản xuất', 'chế biến', 'xử lý', 'tái chế'];
+              matchTinhChat = keywords.some(k => tenQhLower.includes(k));
+            } else if (detailFilterTinhChat === 'Sản xuất nông nghiệp') {
+              const keywords = ['trang trại', 'chăn nuôi', 'trồng cây', 'nông nghiệp ứng dụng công nghệ cao', 'nông nghiệp'];
+              matchTinhChat = keywords.some(k => tenQhLower.includes(k));
+            }
+          }
+          return matchSearch && matchHuyen && matchXa && matchTinhTrang && matchCongBo && matchCamMoc && matchGuiSXD && matchLoaiQh && matchTinhChat;
+        });
+      }, [detailData, detailSearchTerm, detailFilterHuyen, detailFilterXa, detailFilterTinhTrang, detailFilterCongBo, detailFilterCamMoc, detailFilterGuiSXD, detailFilterLoaiQh, detailFilterTinhChat]);
       const filteredMergeData = useMemo(() => {
         return (mergedData || []).filter(item => {
           return (mergeFilterHuyen === '' || item.huyen === mergeFilterHuyen) && (mergeFilterXa === '' || item.xaMoi === mergeFilterXa);
