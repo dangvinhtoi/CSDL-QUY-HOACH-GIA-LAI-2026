@@ -2198,6 +2198,24 @@ function App() {
                       <select className="w-full md:w-36 py-2 px-3 border rounded-lg text-sm font-medium" value={detailFilterCongBo} onChange={(e) => setDetailFilterCongBo(e.target.value)}><option value="">- Tình trạng công bố -</option><option value="Đã công bố">Đã công bố</option><option value="Chưa công bố">Chưa công bố</option></select>
                       <select className="w-full md:w-36 py-2 px-3 border rounded-lg text-sm font-medium" value={detailFilterCamMoc} onChange={(e) => setDetailFilterCamMoc(e.target.value)}><option value="">- Tình trạng cắm mốc -</option><option value="Đã cắm mốc">Đã cắm mốc</option><option value="Chưa cắm mốc">Chưa cắm mốc</option></select>
                       <select className="w-full md:w-36 py-2 px-3 border rounded-lg text-sm font-medium" value={detailFilterGuiSXD} onChange={(e) => setDetailFilterGuiSXD(e.target.value)}><option value="">- Gửi hồ sơ về SXD -</option><option value="Đã gửi">Đã gửi Sở XD</option><option value="Chưa gửi">Chưa gửi Sở XD</option></select>
+                    {/* Bổ sung 2 bộ lọc mới */}
+                      <select className="w-full md:w-36 py-2 px-3 border rounded-lg text-sm font-medium bg-indigo-50 text-indigo-900 border-indigo-200" value={detailFilterLoaiQh} onChange={(e) => setDetailFilterLoaiQh(e.target.value)}>
+                        <option value="">- Loại quy hoạch -</option>
+                        <option value="QHCT">QHCT</option>
+                        <option value="QH TMB">QH TMB</option>
+                      </select>
+
+                      <select className="w-full md:w-48 py-2 px-3 border rounded-lg text-sm font-medium bg-indigo-50 text-indigo-900 border-indigo-200" value={detailFilterTinhChat} onChange={(e) => setDetailFilterTinhChat(e.target.value)}>
+                        <option value="">- Tính chất quy hoạch -</option>
+                        <option value="Khu đô thị">Dự án khu đô thị</option>
+                        <option value="Khu dân cư">Dự án khu dân cư</option>
+                        <option value="Khu tái định cư">Dự án Khu tái định cư</option>
+                        <option value="HTKT, HTXH">Dự án HTKT, HTXH</option>
+                        <option value="Khu du lịch">Dự án khu du lịch</option>
+                        <option value="Khu thương mại">Dự án khu thương mại</option>
+                        <option value="Công nghiệp">Dự án công nghiệp</option>
+                        <option value="Sản xuất nông nghiệp">Dự án sản xuất nông nghiệp</option>
+                      </select>
                     </div>
                     {isLoggedIn && (
   <div className="flex gap-2 shrink-0">
