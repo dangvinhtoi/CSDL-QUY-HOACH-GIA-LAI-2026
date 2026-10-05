@@ -521,31 +521,32 @@ function App() {
             if (docSnap.exists) {
               const cloudData = docSnap.data();
               if (cloudData && typeof cloudData === 'object') {
-                if (Array.isArray(cloudData.qhChung)) setData(cloudData.qhChung);
-                if (Array.isArray(cloudData.qhChiTiet)) setDetailData(cloudData.qhChiTiet);
+                // Chỉ cập nhật từ Cloud khi trên Cloud thực sự có dữ liệu và nhiều hơn hoặc bằng dữ liệu hiện tại
+                if (Array.isArray(cloudData.qhChung) && cloudData.qhChung.length > 0) {
+                  setData(prev => (cloudData.qhChung.length >= prev.length ? cloudData.qhChung : prev));
+                }
+                if (Array.isArray(cloudData.qhChiTiet) && cloudData.qhChiTiet.length > 0) {
+                  setDetailData(prev => (cloudData.qhChiTiet.length >= prev.length ? cloudData.qhChiTiet : prev));
+                }
                 if (Array.isArray(cloudData.qhSapNhap)) setMergedData(cloudData.qhSapNhap);
                 if (Array.isArray(cloudData.qhLienHe)) setContactData(cloudData.qhLienHe);
                 if (Array.isArray(cloudData.qhRaSoat)) setReviewData(cloudData.qhRaSoat);
-                if (Array.isArray(cloudData.qhPhanKhu)) setPhankhuData(cloudData.qhPhanKhu);
+                if (Array.isArray(cloudData.qhPhanKhu) && cloudData.qhPhanKhu.length > 0) {
+                  setPhankhuData(prev => (cloudData.qhPhanKhu.length >= prev.length ? cloudData.qhPhanKhu : prev));
+                }
                 if (cloudData.adminPassword) {
                   setAdminPassword(cloudData.adminPassword);
                   localStorage.setItem('gialai_admin_pass', cloudData.adminPassword);
                 }
-                if (Array.isArray(cloudData.membersList)) {
-                  setMembersList(cloudData.membersList);
-                  localStorage.setItem('gialai_members_list', JSON.stringify(cloudData.membersList));
-                }
-                if (Array.isArray(cloudData.pendingDataChanges)) {
-                  setPendingDataChanges(cloudData.pendingDataChanges);
-                  localStorage.setItem('gialai_pending_changes', JSON.stringify(cloudData.pendingDataChanges));
-                }
-                console.log('⚡ Firebase Firestore: Đã tự động cập nhật dữ liệu Realtime từ Cloud!');
+                if (Array.isArray(cloudData.membersList)) setMembersList(cloudData.membersList);
+                if (Array.isArray(cloudData.pendingDataChanges)) setPendingDataChanges(cloudData.pendingDataChanges);
+                console.log('⚡ Firebase Firestore: Đã đồng bộ dữ liệu an toàn!');
               }
             } else {
-              console.log('⚡ Firestore Document data chưa tồn tại. Tự động khởi tạo dữ liệu ban đầu lên Cloud...');
-              syncToCloud();
+              // TUYỆT ĐỐI KHÔNG TỰ ĐỘNG GHI ĐÈ KHI CLOUD TRỐNG MÀ GIỮ NGUYÊN DỮ LIỆU HIỆN TẠI TRÊN MÁY
+              console.log('⚡ Firestore Document chưa có dữ liệu trên mây.');
             }
-          }, err => console.warn('Lỗi Firestore listener config/data:', err));
+          }, err => console.warn('Lỗi Firestore listener:', err));
 
         return () => {
           if (unsubFull) unsubFull();
@@ -781,7 +782,6 @@ function App() {
       };
 
       const syncToCloud = (overrides = {}) => {
-        const cloudUrl = getCloudUrl();
         const payload = {
           qhChung: overrides.data || data,
           qhChiTiet: overrides.detailData || detailData,
@@ -795,36 +795,15 @@ function App() {
           activityLogs: overrides.activityLogs || activityLogs
         };
 
-        if (cloudUrl && !cloudUrl.includes('DÁN_LINK_GOOGLE')) {
-          fetch(cloudUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain' },
-            body: JSON.stringify(payload)
-          })
-          .then(res => res.text())
-          .then(resText => {
-            if (resText.includes('<!DOCTYPE') || resText.includes('<html')) {
-              console.warn('Google Apps Script returned Login HTML on POST.');
-            } else {
-              console.log('Synced successfully to Google Drive');
-            }
-          })
-          .catch(err => {
-            fetch(cloudUrl, {
-              method: 'POST',
-              mode: 'no-cors',
-              headers: { 'Content-Type': 'text/plain' },
-              body: JSON.stringify(payload)
-            }).catch(e => console.warn('Sync fallback error:', e));
-          });
-        }
-
         if (db) {
           try {
             const appIdKey = typeof __app_id !== 'undefined' ? __app_id : 'gialai-qh-default';
-            db.collection('artifacts').doc(appIdKey).collection('config').doc('data').set(payload)
+            db.collection('artifacts').doc(appIdKey).collection('config').doc('data').set(payload, { merge: true })
+              .then(() => console.log('✅ Đã lưu và hợp nhất dữ liệu lên Firebase thành công!'))
               .catch(err => console.warn('Lỗi lưu Firebase Cloud:', err));
-          } catch(e) {}
+          } catch(e) {
+            console.warn('Lỗi kết nối DB:', e);
+          }
         }
       };
 
