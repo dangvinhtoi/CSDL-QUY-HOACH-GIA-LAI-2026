@@ -596,7 +596,36 @@ function App() {
       };
 
       const handlePullCloudToLocal = () => {
-        fetchFromCloud(true);
+        if (!db) {
+          return showNotification('❌ Chưa kết nối được Firebase Firestore!');
+        }
+        showNotification('Đang tải dữ liệu mới nhất từ Firebase Cloud...');
+        const appIdKey = typeof __app_id !== 'undefined' ? __app_id : 'gialai-qh-default';
+        db.collection('artifacts').doc(appIdKey).collection('config').doc('data').get()
+          .then(docSnap => {
+            if (docSnap.exists) {
+              const cloudData = docSnap.data();
+              if (cloudData && typeof cloudData === 'object') {
+                if (Array.isArray(cloudData.qhChung) && cloudData.qhChung.length > 0) setData(cloudData.qhChung);
+                if (Array.isArray(cloudData.qhChiTiet) && cloudData.qhChiTiet.length > 0) setDetailData(cloudData.qhChiTiet);
+                if (Array.isArray(cloudData.qhSapNhap) && cloudData.qhSapNhap.length > 0) setMergedData(cloudData.qhSapNhap);
+                if (Array.isArray(cloudData.qhLienHe) && cloudData.qhLienHe.length > 0) setContactData(cloudData.qhLienHe);
+                if (Array.isArray(cloudData.qhRaSoat) && cloudData.qhRaSoat.length > 0) setReviewData(cloudData.qhRaSoat);
+                if (Array.isArray(cloudData.qhPhanKhu) && cloudData.qhPhanKhu.length > 0) setPhankhuData(cloudData.qhPhanKhu);
+                if (cloudData.adminPassword) {
+                  setAdminPassword(cloudData.adminPassword);
+                  localStorage.setItem('gialai_admin_pass', cloudData.adminPassword);
+                }
+                showNotification('✅ Tải dữ liệu từ Firebase Cloud về máy thành công!');
+              }
+            } else {
+              showNotification('⚠️ Trên Firebase Cloud chưa có dữ liệu.');
+            }
+          })
+          .catch(err => {
+            console.error(err);
+            showNotification('❌ Lỗi khi tải dữ liệu từ Firebase!');
+          });
       };
 
       const handleSaveFirebaseConfig = (e) => {
