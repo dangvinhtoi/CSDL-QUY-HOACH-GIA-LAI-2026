@@ -1223,7 +1223,11 @@ function App() {
 
       const filteredContactData = useMemo(() => {
         return (contactData || []).filter(item => {
-          const matchSearch = (item.hoTen||'').toLowerCase().includes(contactSearchTerm.toLowerCase()) || (item.dienThoai||'').includes(contactSearchTerm) || (item.chucDanh||'').toLowerCase().includes(contactSearchTerm.toLowerCase());
+          const matchSearch = (item.hoTen||'').toLowerCase().includes(contactSearchTerm.toLowerCase()) || 
+                              (item.dienThoai||'').includes(contactSearchTerm) || 
+                              (item.chucDanh||'').toLowerCase().includes(contactSearchTerm.toLowerCase()) ||
+                              (item.donVi||'').toLowerCase().includes(contactSearchTerm.toLowerCase()); // Bổ sung tìm kiếm theo tên đơn vị / xã phường
+          
           const matchHuyen = contactFilterHuyen === '' ? true : (item.donVi||'').includes(contactFilterHuyen);
           return matchSearch && matchHuyen;
         });
