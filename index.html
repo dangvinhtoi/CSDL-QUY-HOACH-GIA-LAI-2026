@@ -2234,7 +2234,7 @@ function App() {
   <input 
     type="text" 
     className="block w-full pl-9 pr-3 py-2 border rounded-lg text-sm bg-white" 
-    placeholder="Tìm xã, tên, SĐT, chức danh..." 
+    placeholder="Tìm xã, tên QHCT..." 
     value={contactSearchTerm} 
     onChange={(e) => setContactSearchTerm(e.target.value)} 
   />
@@ -2377,15 +2377,15 @@ function App() {
                 <div className="bg-white rounded-xl shadow-sm p-4 border shrink-0">
                   <div className="flex flex-col md:flex-row items-center gap-4">
                     <div className="relative w-full md:w-[350px] shrink-0">
-  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+  <div className="absolute inset-y-0 left-0 pl-3 flex items-center">
     <Search className="h-4 w-4 text-slate-400" />
   </div>
   <input 
     type="text" 
-    className="block w-full pl-9 pr-3 py-2 border rounded-lg text-sm" 
+    className="block w-full pl-9 pr-3 py-2 border rounded-lg text-sm bg-white" 
     placeholder="Tìm xã, tên, SĐT, chức danh..." 
     value={contactSearchTerm} 
-    onChange={(e) => setSearchTerm ? null : setContactSearchTerm(e.target.value)} 
+    onChange={(e) => setContactSearchTerm(e.target.value)} 
   />
 </div>
                     <select className="w-full md:w-64 py-2 px-3 border rounded-lg text-sm font-medium shrink-0" value={contactFilterHuyen} onChange={(e) => setContactFilterHuyen(e.target.value)}><option value="">- Tất cả Đơn vị/Địa phương -</option>{[...new Set(contactData.map(i => i.donVi))].map(h => <option key={h} value={h}>{h}</option>)}</select>
