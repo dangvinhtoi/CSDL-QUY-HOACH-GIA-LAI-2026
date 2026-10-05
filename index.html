@@ -589,10 +589,8 @@ function App() {
         syncToCloud({ data, detailData, mergedData, contactData, reviewData, phankhuData, adminPassword });
         if (db) {
           showNotification('⚡ ĐÃ ĐẨY DỮ LIỆU & MẬT KHẨU MỚI LÊN FIREBASE FIRESTORE THÀNH CÔNG!');
-        } else if (isGasConnected) {
-          showNotification('✅ ĐÃ ĐẨY DỮ LIỆU & MẬT KHẨU MỚI LÊN GOOGLE DRIVE THÀNH CÔNG!');
         } else {
-          showNotification('❌ Chưa cấu hình Firebase Firestore hoặc Google Apps Script! Vui lòng dán cấu hình ở dòng 12.');
+          showNotification('❌ Chưa cấu hình Firebase Firestore! Vui lòng kiểm tra lại kết nối.');
         }
       };
 
