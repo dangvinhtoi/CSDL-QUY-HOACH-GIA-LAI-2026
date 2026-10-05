@@ -1902,7 +1902,9 @@ function App() {
                   <div className="text-sm text-blue-200 mt-1 font-medium flex items-center justify-end gap-1.5"><Phone className="h-3.5 w-3.5"/> Thông tin liên hệ: Đặng Vĩnh Tới - SĐT 0385.118.757</div>
                 </div>
                 <div className="border-l border-blue-600 pl-5 flex items-center gap-2">
-                  <button onClick={() => fetchFromCloud(true)} className="text-xs bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm shrink-0" title="Bấm để làm mới & nạp dữ liệu mới nhất từ Google Drive"><RefreshCcw className="w-3.5 h-3.5"/> Làm mới Đám mây</button>
+                  {userRole === 'ADMIN' && (
+                    <button onClick={() => fetchFromCloud(true)} className="text-xs bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-3 py-2 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm shrink-0" title="Bấm để làm mới & nạp dữ liệu mới nhất từ Google Drive"><RefreshCcw className="w-3.5 h-3.5"/> Làm mới Đám mây</button>
+                  )}
                   {isLoggedIn ? (
                     <div className="flex flex-col items-center gap-1.5">
                       <span className="text-sm font-bold text-white flex items-center gap-1.5">
