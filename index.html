@@ -837,26 +837,50 @@ function App() {
       };
 
       const fetchFromCloud = (isManual = false) => {
-        const cloudUrl = getCloudUrl();
-        if (!cloudUrl || cloudUrl.trim() === '') {
-          if (isManual) showNotification('❌ Chưa cấu hình URL Đám mây! Hãy dán link Google Apps Script vào dòng 12.');
+        // Ưu tiên tải từ Firebase Firestore nếu đã kết nối
+        if (db) {
+          if (isManual) showNotification('Đang tải dữ liệu mới nhất từ Firebase Cloud...');
+          const appIdKey = typeof __app_id !== 'undefined' ? __app_id : 'gialai-qh-default';
+          db.collection('artifacts').doc(appIdKey).collection('config').doc('data').get()
+            .then(docSnap => {
+              if (docSnap.exists) {
+                const cloudData = docSnap.data();
+                if (cloudData && typeof cloudData === 'object') {
+                  if (Array.isArray(cloudData.qhChung) && cloudData.qhChung.length > 0) setData(cloudData.qhChung);
+                  if (Array.isArray(cloudData.qhChiTiet) && cloudData.qhChiTiet.length > 0) setDetailData(cloudData.qhChiTiet);
+                  if (Array.isArray(cloudData.qhSapNhap) && cloudData.qhSapNhap.length > 0) setMergedData(cloudData.qhSapNhap);
+                  if (Array.isArray(cloudData.qhLienHe) && cloudData.qhLienHe.length > 0) setContactData(cloudData.qhLienHe);
+                  if (Array.isArray(cloudData.qhRaSoat) && cloudData.qhRaSoat.length > 0) setReviewData(cloudData.qhRaSoat);
+                  if (Array.isArray(cloudData.qhPhanKhu) && cloudData.qhPhanKhu.length > 0) setPhankhuData(cloudData.qhPhanKhu);
+                  if (cloudData.adminPassword) {
+                    setAdminPassword(cloudData.adminPassword);
+                    localStorage.setItem('gialai_admin_pass', cloudData.adminPassword);
+                  }
+                  if (isManual) showNotification('✅ Tải dữ liệu từ Firebase Cloud về máy thành công!');
+                }
+              } else {
+                if (isManual) showNotification('⚠️ Trên Firebase Cloud chưa có dữ liệu.');
+              }
+            })
+            .catch(err => {
+              console.error(err);
+              if (isManual) showNotification('❌ Lỗi khi tải dữ liệu từ Firebase!');
+            });
           return;
         }
-        if (cloudUrl.includes('/dev')) {
-          showNotification('⚠️ CẢNH BÁO: URL của bạn có đuôi /dev (dùng thử)! Vui lòng lấy link chính thức kết thúc bằng /exec.');
+
+        // Dự phòng cho Google Apps Script nếu có cấu hình
+        const cloudUrl = getCloudUrl();
+        if (!cloudUrl || cloudUrl.trim() === '') {
+          if (isManual) showNotification('❌ Chưa cấu hình URL Đám mây!');
+          return;
         }
-        if (isManual) showNotification('Đang kết nối & tải dữ liệu mới nhất từ Google Drive...');
 
         const fetchUrl = cloudUrl + (cloudUrl.includes("?") ? "&" : "?") + "_t=" + Date.now();
         fetch(fetchUrl)
           .then(res => res.text())
           .then(textData => {
             let textTrimmed = (textData || '').trim();
-            if (textTrimmed.startsWith('<!DOCTYPE') || textTrimmed.startsWith('<html') || textTrimmed.includes('ServiceLogin')) {
-              showNotification('❌ LỖI PHÂN QUYỀN GOOGLE: Bạn cần mở Apps Script -> Deploy -> Đổi "Who has access" thành "Anyone" (Bất kỳ ai).');
-              console.error('Google Apps Script returned HTML Login page instead of JSON.');
-              return;
-            }
             let cloudData = null;
             try { cloudData = JSON.parse(textTrimmed); } catch(e) {}
 
@@ -868,19 +892,13 @@ function App() {
               if (Array.isArray(cloudData.qhLienHe) && cloudData.qhLienHe.length > 0) { setContactData(cloudData.qhLienHe); updated = true; }
               if (Array.isArray(cloudData.qhRaSoat) && cloudData.qhRaSoat.length > 0) { setReviewData(cloudData.qhRaSoat); updated = true; }
               if (Array.isArray(cloudData.qhPhanKhu) && cloudData.qhPhanKhu.length > 0) { setPhankhuData(cloudData.qhPhanKhu); updated = true; }
-              if (cloudData.adminPassword) {
-                setAdminPassword(cloudData.adminPassword);
-                localStorage.setItem('gialai_admin_pass', cloudData.adminPassword);
-                updated = true;
-              }
-              if (isManual || updated) showNotification(`✅ ĐỒNG BỘ THÀNH CÔNG TỪ GOOGLE DRIVE! (${(cloudData.qhChung||[]).length} hồ sơ, Mật khẩu đã cập nhật)`);
+              if (isManual || updated) showNotification(`✅ ĐỒNG BỘ THÀNH CÔNG!`);
             } else {
-              if (isManual) showNotification('⚠️ Tệp trên Google Drive chưa có dữ liệu mới. Hãy bấm "Đẩy dữ liệu" từ máy gốc.');
+              if (isManual) showNotification('⚠️ Dữ liệu trên mây chưa sẵn sàng.');
             }
           })
           .catch(err => {
-            console.warn('Lỗi kết nối Đám mây Google:', err);
-            if (isManual) showNotification('❌ Lỗi kết nối Google Drive! Kiểm tra lại đường truyền hoặc URL Web App.');
+            if (isManual) showNotification('❌ Lỗi kết nối Đám mây!');
           });
       };
 
