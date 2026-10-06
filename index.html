@@ -521,7 +521,6 @@ function App() {
             if (docSnap.exists) {
               const cloudData = docSnap.data();
               if (cloudData && typeof cloudData === 'object') {
-                // Chỉ cập nhật từ Cloud khi trên Cloud thực sự có dữ liệu và nhiều hơn hoặc bằng dữ liệu hiện tại
                 if (Array.isArray(cloudData.qhChung) && cloudData.qhChung.length > 0) {
                   setData(prev => (cloudData.qhChung.length >= prev.length ? cloudData.qhChung : prev));
                 }
@@ -543,7 +542,6 @@ function App() {
                 console.log('⚡ Firebase Firestore: Đã đồng bộ dữ liệu an toàn!');
               }
             } else {
-              // TUYỆT ĐỐI KHÔNG TỰ ĐỘNG GHI ĐÈ KHI CLOUD TRỐNG MÀ GIỮ NGUYÊN DỮ LIỆU HIỆN TẠI TRÊN MÁY
               console.log('⚡ Firestore Document chưa có dữ liệu trên mây.');
             }
           }, err => console.warn('Lỗi Firestore listener:', err));
@@ -828,7 +826,7 @@ function App() {
           try {
             const appIdKey = typeof __app_id !== 'undefined' ? __app_id : 'gialai-qh-default';
             db.collection('artifacts').doc(appIdKey).collection('config').doc('data').set(payload, { merge: true })
-              .then(() => console.log('✅ Đã lưu và hợp nhất dữ liệu lên Firebase thành công!'))
+              .then(() => console.log('✅ Đã lưu và đồng bộ dữ liệu lên Firebase thành công!'))
               .catch(err => console.warn('Lỗi lưu Firebase Cloud:', err));
           } catch(e) {
             console.warn('Lỗi kết nối DB:', e);
