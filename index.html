@@ -1590,7 +1590,7 @@ function App() {
   setIsModalOpen(true);
 };
 
-      const handleSave = (e) => {
+     const handleSave = (e) => {
         e.preventDefault();
         const targetType = editingRecord?._targetType || 'CHUNG';
         const newRecord = { ...formData };
@@ -1607,56 +1607,63 @@ function App() {
 
         let oldRecord = null;
         let nextLogs = activityLogs;
+        let nextDetail = detailData;
+        let nextPhanKhu = phankhuData;
+        let nextData = data;
 
         if (targetType === 'CHITIET') {
           oldRecord = (detailData || []).find(r => r.id === recordId);
-          const nextDetail = oldRecord ? detailData.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(detailData || [])];
+          nextDetail = oldRecord ? detailData.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(detailData || [])];
           setDetailData(nextDetail);
           nextLogs = recordActivityLog(oldRecord ? 'EDIT' : 'ADD', 'CHITIET', recordId, oldRecord, newRecord);
           syncToCloud({ detailData: nextDetail, activityLogs: nextLogs });
         } else if (targetType === 'PHANKHU') {
           oldRecord = (phankhuData || []).find(r => r.id === recordId);
-          const nextPhanKhu = oldRecord ? phankhuData.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(phankhuData || [])];
+          nextPhanKhu = oldRecord ? phankhuData.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(phankhuData || [])];
           setPhankhuData(nextPhanKhu);
           localStorage.setItem('gialai_qh_phankhu', JSON.stringify(nextPhanKhu));
           nextLogs = recordActivityLog(oldRecord ? 'EDIT' : 'ADD', 'PHANKHU', recordId, oldRecord, newRecord);
           syncToCloud({ phankhuData: nextPhanKhu, activityLogs: nextLogs });
         } else {
           oldRecord = (data || []).find(r => r.id === recordId);
-          const nextData = oldRecord ? data.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(data || [])];
+          nextData = oldRecord ? data.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(data || [])];
           setData(nextData);
           nextLogs = recordActivityLog(oldRecord ? 'EDIT' : 'ADD', 'CHUNG', recordId, oldRecord, newRecord);
           syncToCloud({ data: nextData, activityLogs: nextLogs });
         }
         setIsModalOpen(false);
-        showNotification('Đã lưu hồ sơ thành công & Ghi nhật ký!');
+        showNotification('Đã lưu hồ sơ thành công & đồng bộ Đám mây!');
       };
       const handleDelete = (id, targetType = 'CHUNG') => {
         if (!isLoggedIn) return;
         openConfirm('Xác nhận xóa', 'Bạn có chắc chắn muốn xóa hồ sơ này?', () => {
           closeConfirm();
           let nextLogs = activityLogs;
+          let nextDetail = detailData;
+          let nextPhanKhu = phankhuData;
+          let nextData = data;
+
           if (targetType === 'CHITIET') {
             const oldRecord = (detailData || []).find(r => r.id === id);
-            const nextDetail = (detailData || []).filter(r => r.id !== id);
+            nextDetail = (detailData || []).filter(r => r.id !== id);
             setDetailData(nextDetail);
             nextLogs = recordActivityLog('DELETE', 'CHITIET', id, oldRecord, null);
             syncToCloud({ detailData: nextDetail, activityLogs: nextLogs });
           } else if (targetType === 'PHANKHU') {
             const oldRecord = (phankhuData || []).find(r => r.id === id);
-            const nextPhanKhu = (phankhuData || []).filter(r => r.id !== id);
+            nextPhanKhu = (phankhuData || []).filter(r => r.id !== id);
             setPhankhuData(nextPhanKhu);
             localStorage.setItem('gialai_qh_phankhu', JSON.stringify(nextPhanKhu));
             nextLogs = recordActivityLog('DELETE', 'PHANKHU', id, oldRecord, null);
             syncToCloud({ phankhuData: nextPhanKhu, activityLogs: nextLogs });
           } else {
             const oldRecord = (data || []).find(r => r.id === id);
-            const nextData = (data || []).filter(r => r.id !== id);
+            nextData = (data || []).filter(r => r.id !== id);
             setData(nextData);
             nextLogs = recordActivityLog('DELETE', 'CHUNG', id, oldRecord, null);
             syncToCloud({ data: nextData, activityLogs: nextLogs });
           }
-          showNotification('Đã xóa hồ sơ và lưu vào Nhật ký!');
+          showNotification('Đã xóa hồ sơ và đồng bộ Đám mây!');
         });
       };
 
