@@ -809,7 +809,20 @@ function App() {
       };
 
       const syncToCloud = (overrides = {}) => {
-        const payload = {
+        // Hàm làm sạch dữ liệu, loại bỏ giá trị undefined để tránh lỗi Firebase
+        const cleanData = (obj) => {
+          if (Array.isArray(obj)) {
+            return obj.map(item => cleanData(item));
+          } else if (obj !== null && typeof obj === 'object') {
+            return Object.keys(obj).reduce((acc, key) => {
+              acc[key] = obj[key] === undefined ? '' : cleanData(obj[key]);
+              return acc;
+            }, {});
+          }
+          return obj === undefined ? '' : obj;
+        };
+
+        const payload = cleanData({
           qhChung: overrides.data || data,
           qhChiTiet: overrides.detailData || detailData,
           qhSapNhap: overrides.mergedData || mergedData,
@@ -820,13 +833,13 @@ function App() {
           membersList: overrides.membersList || membersList,
           pendingDataChanges: overrides.pendingDataChanges || pendingDataChanges,
           activityLogs: overrides.activityLogs || activityLogs
-        };
+        });
 
         if (db) {
           try {
             const appIdKey = typeof __app_id !== 'undefined' ? __app_id : 'gialai-qh-default';
             db.collection('artifacts').doc(appIdKey).collection('config').doc('data').set(payload, { merge: true })
-              .then(() => console.log('✅ Đã lưu và đồng bộ dữ liệu lên Firebase thành công!'))
+              .then(() => console.log('✅ Đã đồng bộ thành công lên Firebase Cloud!'))
               .catch(err => console.warn('Lỗi lưu Firebase Cloud:', err));
           } catch(e) {
             console.warn('Lỗi kết nối DB:', e);
