@@ -1310,7 +1310,7 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
     reader.readAsText(file, "UTF-8");
   };
 
-  // 2. Hàm toán học tính diện tích đa giác (Shoelace Formula) - Yêu cầu tối thiểu từ 3 điểm trở lên
+  // Hàm toán học tính diện tích đa giác (Shoelace Formula) - Đã tối ưu đọc chuẩn định dạng X=... Y=... Z=...
   const tinhDienTichTuToaDo = (inputStr) => {
     try {
       if (!inputStr || typeof inputStr !== 'string' || inputStr.trim() === '') {
@@ -1321,35 +1321,33 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
       const points = [];
 
       lines.forEach(line => {
-        if (line.toUpperCase().includes('X') && line.toUpperCase().includes('Y')) {
-          const matches = line.match(/-?\d+(\.\d+)?/g);
-          if (matches && matches.length >= 2) {
-            const x = parseFloat(matches[matches.length - 2]);
-            const y = parseFloat(matches[matches.length - 1]);
-            if (!isNaN(x) && !isNaN(y)) {
-              points.push({ x, y });
-              return;
-            }
+        let x = null;
+        let y = null;
+
+        const upperLine = line.toUpperCase();
+        if (upperLine.includes('X') && upperLine.includes('Y')) {
+          const partsX = line.split(/X[\s=:]+/i);
+          if (partsX.length > 1) {
+            const valXStr = partsX[1].trim().split(/[\s,]+/)[0];
+            x = parseFloat(valXStr);
+          }
+          const partsY = line.split(/Y[\s=:]+/i);
+          if (partsY.length > 1) {
+            const valYStr = partsY[1].trim().split(/[\s,]+/)[0];
+            y = parseFloat(valYStr);
           }
         }
 
-        const numMatches = line.match(/-?\d{4,}(\.\d+)?/g);
-        if (numMatches && numMatches.length >= 2) {
-          const x = parseFloat(numMatches[0]);
-          const y = parseFloat(numMatches[1]);
-          if (!isNaN(x) && !isNaN(y)) {
-            points.push({ x, y });
-            return;
+        if (isNaN(x) || isNaN(y) || x === null || y === null) {
+          const allNums = line.match(/-?\d+(\.\d+)?/g);
+          if (allNums && allNums.length >= 2) {
+            x = parseFloat(allNums[0]);
+            y = parseFloat(allNums[1]);
           }
         }
 
-        const generalMatches = line.match(/-?\d+(\.\d+)?/g);
-        if (generalMatches && generalMatches.length >= 2) {
-          const x = parseFloat(generalMatches[generalMatches.length - 2]);
-          const y = parseFloat(generalMatches[generalMatches.length - 1]);
-          if (!isNaN(x) && !isNaN(y) && Math.abs(x) > 100 && Math.abs(y) > 100) {
-            points.push({ x, y });
-          }
+        if (!isNaN(x) && !isNaN(y) && x !== null && y !== null) {
+          points.push({ x, y });
         }
       });
 
@@ -1380,7 +1378,6 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
       return "";
     }
   };
-
   // 3. Hàm xử lý kiểm tra quy hoạch chính (Bắt buộc nhập tọa độ hoặc file, tính diện tích động và đối chiếu)
   const handleThucHienKiemTra = (e) => {
     e.preventDefault();
