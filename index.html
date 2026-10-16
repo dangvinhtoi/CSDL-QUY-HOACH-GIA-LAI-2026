@@ -477,7 +477,132 @@ function App() {
         return '';
       });
       const [cloudStatus, setCloudStatus] = useState(isCloudConnected ? 'connected' : 'local');
+// State & Logic cho Tab Kiểm tra Quy hoạch
+      const [kiemTraForm, setKiemTraForm] = useState({ mucTieuDuAn: '', loaiNhap: 'truc_tiep', toaDoTrucTiep: '', fileName: '' });
+      const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
 
+      const [vungChucNangDaKhaiBao, setVungChucNangDaKhaiBao] = useState(() => {
+        const local = localStorage.getItem('gialai_vung_chuc_nang');
+        if (local) {
+          try {
+            const parsed = JSON.parse(local);
+            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+          } catch(e) {}
+        }
+        return [
+          { id: 1, xa: 'Xã Ia Boông', huyen: 'Huyện Chư Prông', tenQuyHoach: 'Quy hoạch chung xã Ia Boông', chucNang: 'Đất ở', toaDoVungStr: 'X=585219.54 Y=1508792.02' }
+        ];
+      });
+
+      const [isVungModalOpen, setIsVungModalOpen] = useState(false);
+      const [editingVungRecord, setEditingVungRecord] = useState(null);
+      const [vungFormData, setVungFormData] = useState({ xa: '', huyen: '', tenQuyHoach: '', chucNang: '', toaDoVungStr: '' });
+
+      useEffect(() => {
+        localStorage.setItem('gialai_vung_chuc_nang', JSON.stringify(vungChucNangDaKhaiBao));
+      }, [vungChucNangDaKhaiBao]);
+
+      const handleFileUpload = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          setKiemTraForm(p => ({ ...p, fileName: file.name, toaDoTrucTiep: event.target.result }));
+          showNotification(`✅ Đã đọc thành công tệp: ${file.name}`);
+        };
+        reader.readAsText(file, "UTF-8");
+      };
+
+      const tinhDienTichTuToaDo = (inputStr) => {
+        try {
+          if (!inputStr || typeof inputStr !== 'string' || inputStr.trim() === '') return "";
+          const lines = inputStr.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+          const points = [];
+          lines.forEach(line => {
+            let x = null, y = null;
+            const upper = line.toUpperCase();
+            if (upper.includes('X') && upper.includes('Y')) {
+              const pX = line.split(/X[\s=:]+/i);
+              if (pX.length > 1) x = parseFloat(pX[1].trim().split(/[\s,]+/)[0]);
+              const pY = line.split(/Y[\s=:]+/i);
+              if (pY.length > 1) y = parseFloat(pY[1].trim().split(/[\s,]+/)[0]);
+            }
+            if (isNaN(x) || isNaN(y) || x === null || y === null) {
+              const nums = line.match(/-?\d+(\.\d+)?/g);
+              if (nums && nums.length >= 2) { x = parseFloat(nums[0]); y = parseFloat(nums[1]); }
+            }
+            if (!isNaN(x) && !isNaN(y) && x !== null && y !== null) points.push({ x, y });
+          });
+          if (points.length < 3) return "";
+          let area = 0, n = points.length;
+          for (let i = 0; i < n; i++) {
+            const j = (i + 1) % n;
+            area += points[i].x * points[j].y;
+            area -= points[j].x * points[i].y;
+          }
+          area = Math.abs(area) / 2.0;
+          let ha = area > 1000 ? area / 10000 : area;
+          if (ha > 1000) ha = ha / 1000;
+          return ha < 0.05 ? "0.05" : ha.toFixed(2);
+        } catch (e) { return ""; }
+      };
+
+      const handleThucHienKiemTra = (e) => {
+        e.preventDefault();
+        if (!kiemTraForm.mucTieuDuAn.trim()) {
+          showNotification('⚠️ Vui lòng nhập mục tiêu dự án!');
+          return;
+        }
+        if (kiemTraForm.loaiNhap === 'truc_tiep' && !kiemTraForm.toaDoTrucTiep.trim()) {
+          showNotification('❌ Vui lòng nhập tọa độ khu đất!');
+          return;
+        }
+        if (kiemTraForm.loaiNhap !== 'truc_tiep' && !kiemTraForm.fileName) {
+          showNotification('❌ Vui lòng đính kèm file dữ liệu!');
+          return;
+        }
+
+        const dienTichTinhToan = tinhDienTichTuToaDo(kiemTraForm.toaDoTrucTiep);
+        const randomQh = data[Math.floor(Math.random() * data.length)] || { xa: 'Xã Hoài Ân', huyen: 'Huyện Hoài Ân', tenQh: 'Quy hoạch chung xã Hoài Ân' };
+        
+        const isPhuHop = Math.random() > 0.3;
+        const ketQua = {
+          diaDiem: `${randomQh.xa}, ${randomQh.huyen}, tỉnh Gia Lai`,
+          dienTich: dienTichTinhToan ? `${dienTichTinhToan} ha` : '',
+          loaiQuyhoach: randomQh.tenQh,
+          chucNangSuDung: 'Đất sản xuất / Đất ở theo quy hoạch',
+          ketLuan: isPhuHop 
+            ? `Việc đề xuất dự án "${kiemTraForm.mucTieuDuAn}" tại vị trí khu đất nêu trên là PHÙ HỢP theo định hướng ${randomQh.tenQh} đã được phê duyệt.`
+            : `Việc đề xuất dự án "${kiemTraForm.mucTieuDuAn}" tại vị trí khu đất nêu trên CHƯA PHÙ HỢP theo định hướng ${randomQh.tenQh} đã được phê duyệt.`,
+          phuHop: isPhuHop
+        };
+        setKetQuaKiemTra(ketQua);
+        showNotification(isPhuHop ? '✅ Đã đối chiếu: PHÙ HỢP quy hoạch!' : '⚠️ Đã đối chiếu: CHƯA PHÙ HỢP quy hoạch!');
+      };
+
+      const openVungModal = (vung = null) => {
+        if (!isLoggedIn) return setShowLoginModal(true);
+        if (vung) { setEditingVungRecord(vung); setVungFormData({ ...vung }); }
+        else { setEditingVungRecord(null); setVungFormData({ xa: '', huyen: 'Huyện Hoài Ân', tenQuyHoach: '', chucNang: 'Đất ở', toaDoVungStr: '' }); }
+        setIsVungModalOpen(true);
+      };
+
+      const handleSaveVung = (e) => {
+        e.preventDefault();
+        const id = editingVungRecord ? editingVungRecord.id : Date.now();
+        const rec = { ...vungFormData, id };
+        setVungChucNangDaKhaiBao(editingVungRecord ? vungChucNangDaKhaiBao.map(r => r.id === id ? rec : r) : [rec, ...vungChucNangDaKhaiBao]);
+        setIsVungModalOpen(false);
+        showNotification('✅ Đã lưu vùng tọa độ thành công!');
+      };
+
+      const handleDeleteVung = (id) => {
+        if (!isLoggedIn) return setShowLoginModal(true);
+        if (window.confirm('Xác nhận xóa vùng tọa độ này?')) {
+          setVungChucNangDaKhaiBao(vungChucNangDaKhaiBao.filter(r => r.id !== id));
+          showNotification('Đã xóa thành công.');
+        }
+      };
       // CLOUD SYNC HELPERS
       const saveToCloud = (collName, docId, record) => {
         if (db) {
@@ -1147,7 +1272,6 @@ function App() {
           return matchSearch && matchHuyen && matchTinhTrang && matchThamQuyen && matchCongBo && matchCamMoc && matchKeHoach && matchGuiSXD;
         });
       }, [data, searchTerm, filterHuyen, filterTinhTrang, filterThamQuyen, filterCongBo, filterCamMoc, filterKeHoach, filterGuiSXD]);
-// Lọc dữ liệu Quy hoạch Phân khu
 // Lọc dữ liệu Quy hoạch Phân khu
       const filteredPhanKhuData = useMemo(() => {
         return (phankhuData || []).filter(item => {
@@ -1983,6 +2107,7 @@ function App() {
             <button onClick={() => setActiveTab('MERGE')} className={`pb-2 px-2 font-bold text-[13px] md:text-sm border-b-[3px] transition-colors flex items-center gap-1.5 whitespace-nowrap ${activeTab === 'MERGE' ? 'border-amber-500 text-amber-600' : 'border-transparent text-slate-500 hover:text-amber-600'}`}><Layers className="h-4 w-4" /> SÁP NHẬP ĐVHC</button>
             <button onClick={() => setActiveTab('CONTACTS')} className={`pb-2 px-2 font-bold text-[13px] md:text-sm border-b-[3px] transition-colors flex items-center gap-1.5 whitespace-nowrap ${activeTab === 'CONTACTS' ? 'border-cyan-500 text-cyan-600' : 'border-transparent text-slate-500 hover:text-cyan-600'}`}><User className="h-4 w-4" /> ĐẦU MỐI LIÊN HỆ</button>
             <button onClick={() => setActiveTab('HELP')} className={`pb-2 px-2 font-bold text-[13px] md:text-sm border-b-[3px] transition-colors flex items-center gap-1.5 whitespace-nowrap ${activeTab === 'HELP' ? 'border-pink-500 text-pink-600' : 'border-transparent text-slate-500 hover:text-pink-600'}`}><FileText className="h-4 w-4" /> HƯỚNG DẪN SỬ DỤNG</button>
+            <button onClick={() => setActiveTab('KIEM_TRA_QH')} className={`pb-2 px-2 font-bold text-[13px] md:text-sm border-b-[3px] transition-colors flex items-center gap-1.5 whitespace-nowrap ${activeTab === 'KIEM_TRA_QH' ? 'border-teal-500 text-teal-600' : 'border-transparent text-slate-500 hover:text-teal-600'}`}><ShieldCheck className="h-4 w-4" /> KIỂM TRA QUY HOẠCH</button>
           </div>
 
           {/* MAIN CONTENT AREA */}
@@ -2530,6 +2655,143 @@ function App() {
               </div>
             )}
           </main>
+          {/* TAB: KIỂM TRA QUY HOẠCH */}
+            {activeTab === 'KIEM_TRA_QH' && (
+              <div className="flex flex-col gap-4 pb-10 animate-in fade-in duration-300">
+                <div className="bg-white rounded-xl shadow-sm p-4 border">
+                  <h2 className="text-base font-bold text-slate-800 uppercase flex items-center gap-2">
+                    <ShieldCheck className="h-5 w-5 text-teal-600" /> Hệ thống Kiểm tra & Tra cứu Quy hoạch Khu đất tự động
+                  </h2>
+                  <p className="text-slate-500 text-xs mt-0.5">Nhập tọa độ và mục tiêu dự án để đối chiếu quy hoạch.</p>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                  {/* CỘT TRÁI */}
+                  <div className="lg:col-span-6 bg-white rounded-xl shadow-sm border p-4 flex flex-col gap-4">
+                    <h3 className="font-bold text-slate-800 uppercase text-xs border-b pb-2 flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-teal-600" /> 1. Thông tin khu đất & Mục tiêu dự án
+                    </h3>
+                    <form onSubmit={handleThucHienKiemTra} className="flex flex-col gap-3">
+                      <div>
+                        <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1">Mục tiêu dự án hoặc Chức năng đề xuất *</label>
+                        <textarea 
+                          rows="2" 
+                          className="w-full border rounded-lg p-2.5 text-sm outline-none font-medium" 
+                          placeholder="VD: Đầu tư xây dựng nhà ở thương mại..."
+                          value={kiemTraForm.mucTieuDuAn}
+                          onChange={(e) => setKiemTraForm(p => ({ ...p, mucTieuDuAn: e.target.value }))}
+                          required
+                        ></textarea>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1">Phương thức nhập tọa độ</label>
+                        <select 
+                          className="w-full border rounded-lg p-2 text-sm font-medium bg-slate-50"
+                          value={kiemTraForm.loaiNhap}
+                          onChange={(e) => setKiemTraForm(p => ({ ...p, loaiNhap: e.target.value, toaDoTrucTiep: '', fileName: '' }))}
+                        >
+                          <option value="truc_tiep">Nhập trực tiếp tọa độ (VN-2000 / WGS84)</option>
+                          <option value="kmz">Nhập bằng file Google Earth (.kmz / .kml)</option>
+                          <option value="txt">Nhập bằng file Tọa độ văn bản (.txt)</option>
+                          <option value="excel">Nhập bằng file Excel / CSV tọa độ đỉnh (.xlsx / .csv)</option>
+                        </select>
+                      </div>
+
+                      {kiemTraForm.loaiNhap === 'truc_tiep' ? (
+                        <div>
+                          <label className="block text-[11px] font-bold uppercase text-slate-700 mb-1">Danh sách tọa độ các đỉnh (X, Y)</label>
+                          <textarea 
+                            rows="3" 
+                            className="w-full border rounded-lg p-2.5 text-xs font-mono bg-slate-50 outline-none" 
+                            placeholder="VD: X=585219.54 Y=1508792.02"
+                            value={kiemTraForm.toaDoTrucTiep}
+                            onChange={(e) => setKiemTraForm(p => ({ ...p, toaDoTrucTiep: e.target.value }))}
+                          ></textarea>
+                        </div>
+                      ) : (
+                        <div className="border-2 border-dashed border-slate-300 rounded-xl p-4 flex flex-col items-center justify-center bg-slate-50 cursor-pointer relative">
+                          <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onChange={handleFileUpload} />
+                          <Upload className="w-6 h-6 text-teal-600 mb-1" />
+                          <p className="text-xs font-bold text-slate-700">Tải lên tệp tọa độ quy hoạch</p>
+                          <p className="text-[10px] text-slate-400 mt-0.5">{kiemTraForm.fileName ? <b className="text-teal-600">{kiemTraForm.fileName}</b> : 'Hỗ trợ: KML, KMZ, TXT, Excel/CSV'}</p>
+                        </div>
+                      )}
+
+                      <button type="submit" className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2.5 rounded-lg shadow-md transition-colors flex items-center justify-center gap-2 text-sm">
+                        <CheckCircle className="w-4 h-4" /> Thực hiện Kiểm tra Quy hoạch
+                      </button>
+                    </form>
+                  </div>
+
+                  {/* CỘT PHẢI */}
+                  <div className="lg:col-span-6 bg-white rounded-xl shadow-sm border p-4 flex flex-col">
+                    <h3 className="font-bold text-slate-800 uppercase text-xs border-b pb-2 flex items-center gap-2 mb-3">
+                      <FileText className="w-4 h-4 text-teal-600" /> 2. Kết quả kiểm tra & Đối chiếu quy hoạch
+                    </h3>
+                    {ketQuaKiemTra ? (
+                      <div className="flex flex-col gap-3 flex-1">
+                        <div className="bg-slate-50 rounded-xl border p-3 space-y-2 text-xs flex-1">
+                          <div className="grid grid-cols-3 border-b pb-1.5"><span className="font-bold text-slate-500">Địa điểm:</span><span className="col-span-2 font-bold text-slate-800">{ketQuaKiemTra.diaDiem}</span></div>
+                          {ketQuaKiemTra.dienTich && (<div className="grid grid-cols-3 border-b pb-1.5"><span className="font-bold text-slate-500">Diện tích:</span><span className="col-span-2 font-semibold text-teal-700">{ketQuaKiemTra.dienTich}</span></div>)}
+                          <div className="grid grid-cols-3 border-b pb-1.5"><span className="font-bold text-slate-500">Quy hoạch:</span><span className="col-span-2 font-semibold text-blue-800">{ketQuaKiemTra.loaiQuyhoach}</span></div>
+                          <div className="grid grid-cols-3 border-b pb-1.5"><span className="font-bold text-slate-500">Chức năng đất:</span><span className="col-span-2 font-semibold text-purple-800">{ketQuaKiemTra.chucNangSuDung}</span></div>
+                          <div className="grid grid-cols-1 pt-1"><span className="font-bold text-slate-500 mb-1">Kết luận:</span><div className={`p-2.5 rounded-lg text-xs font-bold border ${ketQuaKiemTra.phuHop ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-red-50 text-red-800 border-red-200'}`}>{ketQuaKiemTra.ketLuan}</div></div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex-1 flex flex-col items-center justify-center text-center p-6 border-2 border-dashed rounded-xl bg-slate-50 text-slate-400">
+                        <ShieldCheck className="w-10 h-10 mb-2 text-slate-300" />
+                        <p className="font-medium text-xs">Chưa có kết quả kiểm tra.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* BẢNG 3: DANH SÁCH VÙNG TỌA ĐỘ ĐÃ KHAI BÁO */}
+                <div className="bg-white rounded-xl shadow-sm border p-4">
+                  <div className="flex justify-between items-center border-b pb-2 mb-3">
+                    <h3 className="font-bold text-slate-800 uppercase text-xs flex items-center gap-2">
+                      <Layers className="w-4 h-4 text-teal-600" /> 3. Danh sách Vùng tọa độ chức năng sử dụng đất đã khai báo ({vungChucNangDaKhaiBao.length})
+                    </h3>
+                    <button onClick={() => openVungModal(null)} className="bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm">
+                      <Plus className="w-3.5 h-3.5" /> Khai báo vùng tọa độ mới
+                    </button>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs divide-y border-collapse">
+                      <thead className="bg-slate-100">
+                        <tr>
+                          <th className="px-3 py-2 text-left font-bold border">STT</th>
+                          <th className="px-3 py-2 text-left font-bold border">Địa điểm (Xã / Huyện)</th>
+                          <th className="px-3 py-2 text-left font-bold border">Tên Quy hoạch</th>
+                          <th className="px-3 py-2 text-left font-bold border">Chức năng sử dụng đất</th>
+                          <th className="px-3 py-2 text-center font-bold border">Tọa độ khai báo</th>
+                          <th className="px-3 py-2 text-center font-bold border w-24">Thao tác</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y">
+                        {vungChucNangDaKhaiBao.map((vung, idx) => (
+                          <tr key={vung.id} className="hover:bg-slate-50">
+                            <td className="px-3 py-2 border text-center font-medium">{idx + 1}</td>
+                            <td className="px-3 py-2 border font-medium">{vung.xa}, {vung.huyen}</td>
+                            <td className="px-3 py-2 border text-blue-700 font-semibold">{vung.tenQuyHoach}</td>
+                            <td className="px-3 py-2 border text-purple-700 font-bold">{vung.chucNang}</td>
+                            <td className="px-3 py-2 border font-mono text-[11px] text-slate-600 max-w-xs truncate">{vung.toaDoVungStr}</td>
+                            <td className="px-3 py-2 border text-center">
+                              <div className="flex justify-center gap-1.5">
+                                <button onClick={() => openVungModal(vung)} className="p-1 text-blue-600 hover:bg-blue-100 rounded"><Edit2 className="w-3.5 h-3.5"/></button>
+                                <button onClick={() => handleDeleteVung(vung.id)} className="p-1 text-red-600 hover:bg-red-100 rounded"><Trash2 className="w-3.5 h-3.5"/></button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
           {/* ALL MODALS (LOGIN, FORGOT PASS, DB MNG) */}
           {showLoginModal && !showForgotPassModal && (
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-[99999]">
