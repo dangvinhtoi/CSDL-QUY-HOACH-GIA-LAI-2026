@@ -1380,35 +1380,38 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
       return "";
     }
   };
-  // Danh sách các vùng chức năng sử dụng đất đã khai báo trước đó
-  const [vungChucNangDaKhaiBao, setVungChucNangDaKhaiBao] = useState([
-    {
-      id: 1,
-      xa: 'Xã la Boông',
-      huyen: 'Huyện Chư Prông',
-      tenQuyHoach: 'Quy hoạch chung xã la Boông',
-      chucNang: 'Đất ở (Đất ở đô thị / Đất ở nông thôn)',
-      // Lưu tâm điểm hoặc tọa độ mẫu của vùng (Ví dụ trích xuất từ tâm tọa độ VN-2000 mẫu của anh)
-      toaDoVung: [
-        { x: 585219.54, y: 1508792.02 },
-        { x: 585274.24, y: 1508455.42 },
-        { x: 584928.51, y: 1508389.85 },
-        { x: 584764.39, y: 1508606.24 }
-      ]
-    },
-    {
-      id: 2,
-      xa: 'Xã Hoài Ân',
-      huyen: 'Huyện Hoài Ân',
-      tenQuyHoach: 'Quy hoạch chung xã Hoài Ân',
-      chucNang: 'Đất sản xuất công nghiệp',
-      toaDoVung: [
-        { x: 612300.00, y: 1550100.00 },
-        { x: 612500.00, y: 1550300.00 },
-        { x: 612100.00, y: 1550500.00 }
-      ]
-    }
-  ]);
+  // State quản lý danh sách vùng tọa độ chức năng đã khai báo (lưu trữ tự động vào localStorage)
+  const [vungChucNangDaKhaiBao, setVungChucNangDaKhaiBao] = useState(() => {
+    const local = localStorage.getItem('gialai_vung_chuc_nang');
+    return local ? JSON.parse(local) : [
+      {
+        id: 1,
+        xa: 'Xã la Boông',
+        huyen: 'Huyện Chư Prông',
+        tenQuyHoach: 'Quy hoạch chung xã la Boông',
+        chucNang: 'Đất ở (Đất ở đô thị / Đất ở nông thôn)',
+        toaDoVungStr: 'X=585219.54, Y=1508792.02\nX=585274.24, Y=1508455.42\nX=584928.51, Y=1508389.85'
+      },
+      {
+        id: 2,
+        xa: 'Xã Hoài Ân',
+        huyen: 'Huyện Hoài Ân',
+        tenQuyHoach: 'Quy hoạch chung xã Hoài Ân',
+        chucNang: 'Đất sản xuất công nghiệp',
+        toaDoVungStr: 'X=612300.00, Y=1550100.00\nX=612500.00, Y=1550300.00'
+      }
+    ];
+  });
+
+  // State điều khiển Modal thêm/sửa vùng tọa độ
+  const [isVungModalOpen, setIsVungModalOpen] = useState(false);
+  const [editingVungRecord, setEditingVungRecord] = useState(null);
+  const [vungFormData, setVungFormData] = useState({ xa: '', huyen: '', tenQuyHoach: '', chucNang: '', toaDoVungStr: '' });
+
+  // Tự động lưu vào localStorage khi danh sách thay đổi
+  useEffect(() => {
+    localStorage.setItem('gialai_vung_chuc_nang', JSON.stringify(vungChucNangDaKhaiBao));
+  }, [vungChucNangDaKhaiBao]);
   // 3. Hàm xử lý kiểm tra quy hoạch chính (Bắt buộc nhập tọa độ hoặc file, tính diện tích động và đối chiếu)
   const handleThucHienKiemTra = (e) => {
     e.preventDefault();
@@ -1494,6 +1497,50 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
     </table>
   </div>
 </div>
+  // Mở modal Thêm hoặc Sửa vùng tọa độ
+  const openVungModal = (vung = null) => {
+    if (!isLoggedIn) return setShowLoginModal(true);
+    if (vung) {
+      setEditingVungRecord(vung);
+      setVungFormData({ ...vung });
+    } else {
+      setEditingVungRecord(null);
+      setVungFormData({ 
+        xa: '', 
+        huyen: 'TP Pleiku', 
+        tenQuyHoach: '', 
+        chucNang: 'Đất ở (Đất ở đô thị / Đất ở nông thôn)', 
+        toaDoVungStr: '' 
+      });
+    }
+    setIsVungModalOpen(true);
+  };
+
+  // Lưu thông tin Thêm mới hoặc Cập nhật vùng tọa độ
+  const handleSaveVung = (e) => {
+    e.preventDefault();
+    const recordId = editingVungRecord?.id ? editingVungRecord.id : Date.now();
+    const newRecord = { ...vungFormData, id: recordId };
+
+    const nextList = editingVungRecord 
+      ? vungChucNangDaKhaiBao.map(r => r.id === recordId ? newRecord : r)
+      : [newRecord, ...vungChucNangDaKhaiBao];
+
+    setVungChucNangDaKhaiBao(nextList);
+    setIsVungModalOpen(false);
+    showNotification('✅ Đã lưu thông tin vùng tọa độ quy hoạch thành công!');
+  };
+
+  // Xóa vùng tọa độ đã khai báo
+  const handleDeleteVung = (id) => {
+    if (!isLoggedIn) return setShowLoginModal(true);
+    openConfirm('Xác nhận xóa', 'Bạn có chắc chắn muốn xóa vùng tọa độ chức năng này không?', () => {
+      closeConfirm();
+      const nextList = vungChucNangDaKhaiBao.filter(r => r.id !== id);
+      setVungChucNangDaKhaiBao(nextList);
+      showNotification('Đã xóa vùng tọa độ thành công.');
+    });
+  };
       // HANDLERS MODAL
       const handleLogin = (e) => {
         e.preventDefault();
@@ -2877,7 +2924,63 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
         )}
       </div>
     </div>
+{/* PHẦN HIỂN THỊ DANH SÁCH VÙNG TỌA ĐỘ ĐÃ KHAI BÁO */}
+    <div className="bg-white rounded-xl shadow-sm border p-4 mt-2">
+      <div className="flex justify-between items-center border-b pb-2 mb-3">
+        <h3 className="font-bold text-slate-800 uppercase text-xs flex items-center gap-2">
+          <Layers className="w-4 h-4 text-teal-600" /> 3. Danh sách Vùng tọa độ chức năng sử dụng đất đã khai báo ({vungChucNangDaKhaiBao.length})
+        </h3>
+        {isLoggedIn && (
+          <button 
+            onClick={() => openVungModal(null)} 
+            className="bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" /> Khai báo vùng tọa độ mới
+          </button>
+        )}
+      </div>
 
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs divide-y border-collapse">
+          <thead className="bg-slate-100">
+            <tr>
+              <th className="px-3 py-2 text-left font-bold text-slate-700 border">STT</th>
+              <th className="px-3 py-2 text-left font-bold text-slate-700 border">Địa điểm (Xã / Huyện)</th>
+              <th className="px-3 py-2 text-left font-bold text-slate-700 border">Tên Quy hoạch</th>
+              <th className="px-3 py-2 text-left font-bold text-slate-700 border">Chức năng sử dụng đất</th>
+              <th className="px-3 py-2 text-center font-bold text-slate-700 border">Tọa độ khai báo</th>
+              <th className="px-3 py-2 text-center font-bold text-slate-700 border w-24">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y">
+            {vungChucNangDaKhaiBao.map((vung, idx) => (
+              <tr key={vung.id} className="hover:bg-slate-50">
+                <td className="px-3 py-2 border text-center font-medium">{idx + 1}</td>
+                <td className="px-3 py-2 border font-medium">{vung.xa}, {vung.huyen}</td>
+                <td className="px-3 py-2 border text-blue-700 font-semibold">{vung.tenQuyHoach}</td>
+                <td className="px-3 py-2 border text-purple-700 font-bold">{vung.chucNang}</td>
+                <td className="px-3 py-2 border font-mono text-[11px] text-slate-600 whitespace-pre-line max-w-xs truncate" title={vung.toaDoVungStr}>
+                  {vung.toaDoVungStr || 'Chưa nhập tọa độ'}
+                </td>
+                <td className="px-3 py-2 border text-center">
+                  <div className="flex justify-center gap-1.5">
+                    {isLoggedIn && (
+                      <button onClick={() => openVungModal(vung)} className="p-1 text-blue-600 hover:bg-blue-100 rounded" title="Chỉnh sửa vùng tọa độ"><Edit2 className="w-3.5 h-3.5"/></button>
+                    )}
+                    {userRole === 'ADMIN' && (
+                      <button onClick={() => handleDeleteVung(vung.id)} className="p-1 text-red-600 hover:bg-red-100 rounded" title="Xóa vùng tọa độ"><Trash2 className="w-3.5 h-3.5"/></button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {vungChucNangDaKhaiBao.length === 0 && (
+              <tr><td colSpan="6" className="text-center py-6 text-slate-400 italic">Chưa có vùng tọa độ chức năng nào được khai báo.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
     {/* PHẦN HIỂN THỊ DANH SÁCH VÙNG TỌA ĐỘ ĐÃ KHAI BÁO */}
     <div className="bg-white rounded-xl shadow-sm border p-4 mt-2">
       <h3 className="font-bold text-slate-800 uppercase text-xs border-b pb-2 flex items-center gap-2 mb-3">
@@ -3108,7 +3211,58 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
             <div className="p-4 border-t bg-slate-100 flex justify-end gap-3 rounded-b-xl shrink-0"><button onClick={() => setIsModalOpen(false)} className="px-5 py-2 text-sm bg-white border rounded font-semibold">Hủy bỏ</button><button type="submit" form="qh-form" className={`px-6 py-2 text-sm text-white rounded font-semibold flex items-center gap-2 ${editingRecord?._isDetail ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-blue-600 hover:bg-blue-700'}`}><Plus className="h-4 w-4" /> {editingRecord?.id ? 'Lưu' : 'Thêm'}</button></div>
           </div></div>
           )}
+{/* MODAL KHAI BÁO / CHỈNH SỬA VÙNG TỌA ĐỘ CHỨC NĂNG */}
+{isVungModalOpen && (
+  <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-[99999]">
+    <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in">
+      <div className="flex justify-between items-center p-3 sm:p-4 border-b bg-teal-50 rounded-t-xl shrink-0">
+        <h3 className="font-bold text-teal-800 uppercase text-xs sm:text-sm md:text-base">
+          {editingVungRecord ? 'Cập nhật Vùng tọa độ chức năng' : 'Khai báo Vùng tọa độ chức năng mới'}
+        </h3>
+        <button onClick={() => setIsVungModalOpen(false)} className="text-slate-400 hover:text-slate-700 bg-white p-1.5 rounded-full shadow-sm"><X className="w-5 h-5" /></button>
+      </div>
 
+      <div className="overflow-y-auto p-4 sm:p-5 bg-slate-50/50 flex-1 custom-scrollbar">
+        <form id="vung-coord-form" onSubmit={handleSaveVung} className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white p-4 rounded-xl border shadow-sm">
+          <div>
+            <label className="block text-xs font-semibold mb-1">Huyện / Thị xã <span className="text-red-500">*</span></label>
+            <input type="text" value={vungFormData.huyen || ''} onChange={e => setVungFormData(p => ({...p, huyen: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm" required placeholder="VD: Huyện Hoài Ân" />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold mb-1">Xã / Phường <span className="text-red-500">*</span></label>
+            <input type="text" value={vungFormData.xa || ''} onChange={e => setVungFormData(p => ({...p, xa: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm" required placeholder="VD: Xã Hoài Ân" />
+          </div>
+          <div className="col-span-full">
+            <label className="block text-xs font-semibold mb-1">Tên Quy hoạch cụ thể <span className="text-red-500">*</span></label>
+            <input type="text" value={vungFormData.tenQuyHoach || ''} onChange={e => setVungFormData(p => ({...p, tenQuyHoach: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm font-semibold text-blue-800" required placeholder="VD: Quy hoạch chung xã Hoài Ân đến năm 2035" />
+          </div>
+          <div className="col-span-full">
+            <label className="block text-xs font-semibold mb-1">Chức năng sử dụng đất <span className="text-red-500">*</span></label>
+            <select value={vungFormData.chucNang || ''} onChange={e => setVungFormData(p => ({...p, chucNang: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm font-bold text-purple-800 bg-purple-50">
+              <option value="Đất ở (Đất ở đô thị / Đất ở nông thôn)">Đất ở (Đất ở đô thị / Đất ở nông thôn)</option>
+              <option value="Đất thương mại dịch vụ">Đất thương mại dịch vụ</option>
+              <option value="Đất công cộng (Y tế, Giáo dục, Văn hóa)">Đất công cộng (Y tế, Giáo dục, Văn hóa)</option>
+              <option value="Đất dịch vụ du lịch sinh thái">Đất dịch vụ du lịch sinh thái</option>
+              <option value="Đất sản xuất công nghiệp">Đất sản xuất công nghiệp</option>
+              <option value="Đất sản xuất nông nghiệp">Đất sản xuất nông nghiệp</option>
+            </select>
+          </div>
+          <div className="col-span-full">
+            <label className="block text-xs font-semibold mb-1">Danh sách tọa độ các đỉnh của vùng (X, Y hoặc X=... Y=...)</label>
+            <textarea rows="4" value={vungFormData.toaDoVungStr || ''} onChange={e => setVungFormData(p => ({...p, toaDoVungStr: e.target.value}))} className="w-full px-3 py-2 border rounded text-xs font-mono" placeholder="VD:&#10;X=612300.00 Y=1550100.00&#10;X=612500.00 Y=1550300.00"></textarea>
+          </div>
+        </form>
+      </div>
+
+      <div className="p-4 border-t bg-slate-100 flex justify-end gap-3 rounded-b-xl shrink-0">
+        <button type="button" onClick={() => setIsVungModalOpen(false)} className="px-5 py-2 text-sm bg-white border rounded font-semibold">Hủy bỏ</button>
+        <button type="submit" form="vung-coord-form" className="px-6 py-2 text-sm bg-teal-600 hover:bg-teal-700 text-white rounded font-semibold flex items-center gap-2">
+          <CheckCircle className="w-4 h-4" /> {editingVungRecord ? 'Lưu thay đổi' : 'Thêm mới vùng'}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
           {/* MODAL SÁP NHẬP */}
           {isMergeModalOpen && (
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-[99999]">
