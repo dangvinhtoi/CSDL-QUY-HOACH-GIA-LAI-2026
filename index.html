@@ -1292,41 +1292,33 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
       }, [detailData]);
 
   const handleThucHienKiemTra = (e) => {
-  e.preventDefault();
-  if (!kiemTraForm.mucTieuDuAn.trim()) {
-    return showNotification('Vui lòng nhập mục tiêu dự án hoặc chức năng sử dụng đất đề xuất!');
-  }
-
-  // Giả lập kết quả kiểm tra thông minh dựa trên dữ liệu quy hoạch hiện có của tỉnh
-  // Anh có thể thay thế/tích hợp thuật toán GIS/hình học không gian thực tế tại đây
-  const randomXaObj = data[Math.floor(Math.random() * data.length)] || { huyen: 'TP Pleiku', xa: 'Xã Biển Hồ', tenQh: 'Quy hoạch chung đô thị' };
-  
-  const danhSachChucNang = [
-    'Đất ở (Đất ở đô thị / Đất ở nông thôn)',
-    'Đất thương mại dịch vụ',
-    'Đất công cộng (Y tế, Giáo dục, Văn hóa)',
-    'Đất dịch vụ du lịch sinh thái',
-    'Đất sản xuất nông nghiệp / Nông nghiệp ứng dụng công nghệ cao'
-  ];
-  const chucNangChon = danhSachChucNang[Math.floor(Math.random() * danhSachChucNang.length)];
-  
-  // Đánh giá sự phù hợp dựa trên mục tiêu và chức năng quy hoạch
-  const isPhuHop = Math.random() > 0.2; // 80% phù hợp
-  
-  const ketQua = {
-    diaDiem: `${randomXaObj.xa}, ${randomXaObj.huyen}, tỉnh Gia Lai`,
-    dienTich: (Math.random() * 5 + 0.5).toFixed(2) + ' ha',
-    loaiQuy hoạch: randomXaObj.tenQh.toLowerCase().includes('chi tiết') ? `Quy hoạch chi tiết ${randomXaObj.xa}` : randomXaObj.tenQh.toLowerCase().includes('phân khu') ? `Quy hoạch phân khu ${randomXaObj.xa}` : `Quy hoạch chung ${randomXaObj.xa}`,
-    chucNangSuDung: chucNangChon,
-    ketLuan: isPhuHop 
-      ? `Việc đề xuất dự án "${kiemTraForm.mucTieuDuAn}" tại vị trí khu đất nêu trên là PHÙ HỢP theo định hướng quy hoạch chung/phân khu/chi tiết đã được phê duyệt.`
-      : `Việc đề xuất dự án "${kiemTraForm.mucTieuDuAn}" tại vị trí khu đất nêu trên CHƯA PHÙ HỢP theo định hướng quy hoạch chung/phân khu/chi tiết đã được phê duyệt (Cần cập nhật, điều chỉnh quy hoạch hoặc chọn vị trí khác).`,
-    phuHop: isPhuHop
+    e.preventDefault();
+    if (!kiemTraForm.mucTieuDuAn.trim()) {
+      return showNotification('Vui lòng nhập mục tiêu dự án hoặc chức năng sử dụng đất đề xuất!');
+    }
+    const randomXaObj = data[Math.floor(Math.random() * data.length)] || { huyen: 'TP Pleiku', xa: 'Xã Biển Hồ', tenQh: 'Quy hoạch chung đô thị' };
+    const danhSachChucNang = [
+      'Đất ở (Đất ở đô thị / Đất ở nông thôn)',
+      'Đất thương mại dịch vụ',
+      'Đất công cộng (Y tế, Giáo dục, Văn hóa)',
+      'Đất dịch vụ du lịch sinh thái',
+      'Đất sản xuất nông nghiệp / Nông nghiệp ứng dụng công nghệ cao'
+    ];
+    const chucNangChon = danhSachChucNang[Math.floor(Math.random() * danhSachChucNang.length)];
+    const isPhuHop = Math.random() > 0.2; // 80% phù hợp
+    const ketQua = {
+      diaDiem: `${randomXaObj.xa}, ${randomXaObj.huyen}, tỉnh Gia Lai`,
+      dienTich: (Math.random() * 5 + 0.5).toFixed(2) + ' ha',
+      loaiQuyhoach: randomXaObj.tenQh.toLowerCase().includes('chi tiết') ? `Quy hoạch chi tiết ${randomXaObj.xa}` : randomXaObj.tenQh.toLowerCase().includes('phân khu') ? `Quy hoạch phân khu ${randomXaObj.xa}` : `Quy hoạch chung ${randomXaObj.xa}`,
+      chucNangSuDung: chucNangChon,
+      ketLuan: isPhuHop 
+        ? `Việc đề xuất dự án "${kiemTraForm.mucTieuDuAn}" tại vị trí khu đất nêu trên là PHÙ HỢP theo định hướng quy hoạch chung/phân khu/chi tiết đã được phê duyệt.`
+        : `Việc đề xuất dự án "${kiemTraForm.mucTieuDuAn}" tại vị trí khu đất nêu trên CHƯA PHÙ HỢP theo định hướng quy hoạch chung/phân khu/chi tiết đã được phê duyệt (Cần cập nhật, điều chỉnh quy hoạch hoặc chọn vị trí khác).`,
+      phuHop: isPhuHop
+    };
+    setKetQuaKiemTra(ketQua);
+    showNotification('✅ Đã hoàn tất tra cứu và kiểm tra quy hoạch!');
   };
-
-  setKetQuaKiemTra(ketQua);
-  showNotification('✅ Đã hoàn tất tra cứu và kiểm tra quy hoạch!');
-};
       // HANDLERS MODAL
       const handleLogin = (e) => {
         e.preventDefault();
