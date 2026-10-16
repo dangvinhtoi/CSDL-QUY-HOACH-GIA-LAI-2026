@@ -1353,14 +1353,26 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
     }
   };
 
-  // 2. Hàm xử lý kiểm tra quy hoạch chính
+  // Hàm xử lý kiểm tra quy hoạch chính (Đã thêm điều kiện bắt buộc nhập tọa độ hoặc file)
   const handleThucHienKiemTra = (e) => {
     e.preventDefault();
+    
+    // 1. Kiểm tra mục tiêu dự án
     if (!kiemTraForm.mucTieuDuAn.trim()) {
-      return showNotification('Vui lòng nhập mục tiêu dự án hoặc chức năng sử dụng đất đề xuất!');
+      return showNotification('⚠️ Vui lòng nhập mục tiêu dự án hoặc chức năng sử dụng đất đề xuất!');
     }
 
-    // Tự động tính toán diện tích động
+    // 2. KIỂM TRA BẮT BUỘC: Nếu chọn nhập trực tiếp mà để trống ô tọa độ HOẶC chọn file mà chưa có file/tên file
+    const isNhapTrucTiepTrang = kiemTraForm.loaiNhap === 'truc_tiep' && (!kiemTraForm.toaDoTrucTiep || kiemTraForm.toaDoTrucTiep.trim() === '');
+    const isChuaChonFile = kiemTraForm.loaiNhap !== 'truc_tiep' && (!kiemTraForm.fileName || kiemTraForm.fileName.trim() === '');
+
+    if (isNhapTrucTiepTrang || isChuaChonFile) {
+      // Hiển thị thông báo yêu cầu rõ ràng và dừng lại, không trả kết quả
+      showNotification('❌ Vui lòng nhập tọa độ khu đất hoặc đính kèm file dữ liệu để thực hiện kiểm tra!');
+      return;
+    }
+
+    // Tự động tính toán diện tích động từ dữ liệu đầu vào hợp lệ
     const dienTichTinhToan = tinhDienTichTuToaDo(kiemTraForm.toaDoTrucTiep, kiemTraForm.loaiNhap);
 
     // Lấy thông tin quy hoạch cụ thể của địa phương
@@ -1395,7 +1407,7 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
 
     setKetQuaKiemTra(ketQua);
     
-    const hinhThucText = kiemTraForm.loaiNhap === 'truc_tiep' ? 'tọa độ nhập trực tiếp' : kiemTraForm.loaiNhap === 'cad' ? 'file CAD' : 'file dữ liệu';
+    const hinhThucText = kiemTraForm.loaiNhap === 'truc_tiep' ? 'tọa độ nhập trực tiếp' : 'file dữ liệu';
     showNotification(isPhuHop ? `✅ Đã đối chiếu: PHÙ HỢP theo ${tenQuyHoachCuThe}!` : `⚠️ Đã đối chiếu: CHƯA PHÙ HỢP theo ${tenQuyHoachCuThe}!`);
   };
       // HANDLERS MODAL
