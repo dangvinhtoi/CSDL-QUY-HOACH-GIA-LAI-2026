@@ -582,26 +582,35 @@ function App() {
 
       const openVungModal = (vung = null) => {
         if (!isLoggedIn) return setShowLoginModal(true);
-        if (vung) { setEditingVungRecord(vung); setVungFormData({ ...vung }); }
-        else { setEditingVungRecord(null); setVungFormData({ xa: '', huyen: 'Huyện Hoài Ân', tenQuyHoach: '', chucNang: 'Đất ở', toaDoVungStr: '' }); }
+        if (vung) {
+          setEditingVungRecord(vung);
+          setVungFormData({ ...vung });
+        } else {
+          setEditingVungRecord(null);
+          setVungFormData({ xa: '', huyen: 'TP Pleiku', tenQuyHoach: '', chucNang: 'Đất ở (Đất ở đô thị / Đất ở nông thôn)', toaDoVungStr: '' });
+        }
         setIsVungModalOpen(true);
       };
 
       const handleSaveVung = (e) => {
         e.preventDefault();
-        const id = editingVungRecord ? editingVungRecord.id : Date.now();
-        const rec = { ...vungFormData, id };
-        setVungChucNangDaKhaiBao(editingVungRecord ? vungChucNangDaKhaiBao.map(r => r.id === id ? rec : r) : [rec, ...vungChucNangDaKhaiBao]);
+        const recordId = editingVungRecord?.id ? editingVungRecord.id : Date.now();
+        const newRecord = { ...vungFormData, id: recordId };
+        const nextList = editingVungRecord 
+          ? vungChucNangDaKhaiBao.map(r => r.id === recordId ? newRecord : r)
+          : [newRecord, ...vungChucNangDaKhaiBao];
+        setVungChucNangDaKhaiBao(nextList);
         setIsVungModalOpen(false);
         showNotification('✅ Đã lưu vùng tọa độ thành công!');
       };
 
       const handleDeleteVung = (id) => {
         if (!isLoggedIn) return setShowLoginModal(true);
-        if (window.confirm('Xác nhận xóa vùng tọa độ này?')) {
+        openConfirm('Xác nhận xóa', 'Bạn có chắc chắn muốn xóa vùng tọa độ này không?', () => {
+          closeConfirm();
           setVungChucNangDaKhaiBao(vungChucNangDaKhaiBao.filter(r => r.id !== id));
           showNotification('Đã xóa thành công.');
-        }
+        });
       };
       // CLOUD SYNC HELPERS
       const saveToCloud = (collName, docId, record) => {
