@@ -1297,33 +1297,36 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
       return showNotification('Vui lòng nhập mục tiêu dự án hoặc chức năng sử dụng đất đề xuất!');
     }
 
+    // Lấy ngẫu nhiên một bản ghi quy hoạch từ CSDL hiện có của tỉnh để làm đối chiếu
     const randomXaObj = data[Math.floor(Math.random() * data.length)] || { huyen: 'TP Pleiku', xa: 'Xã Biển Hồ', tenQh: 'Quy hoạch chung đô thị' };
     
-    // Danh sách các loại chức năng sử dụng đất chuẩn theo quy hoạch
+    // Xác định tên đồ án quy hoạch cụ thể theo đúng định dạng dữ liệu
+    const tenQuyHoachCuThe = randomXaObj.tenQh || `Quy hoạch chung ${randomXaObj.xa}`;
+    
+    // Danh sách các nhóm chức năng sử dụng đất và từ khóa nhận diện
     const danhSachChucNang = [
-      { ten: 'Đất ở (Đất ở đô thị / Đất ở nông thôn)', keywords: ['nhà ở', 'đất ở', 'khu dân cư', 'đô thị', 'nhà ở thương mại'] },
-      { ten: 'Đất thương mại dịch vụ', keywords: ['thương mại', 'dịch vụ', 'siêu thị', 'trung tâm thương mại', 'cửa hàng'] },
-      { ten: 'Đất công cộng (Y tế, Giáo dục, Văn hóa)', keywords: ['trường học', 'y tế', 'bệnh viện', 'văn hóa', 'công cộng', 'giáo dục'] },
-      { ten: 'Đất dịch vụ du lịch sinh thái', keywords: ['du lịch', 'nghỉ dưỡng', 'sinh thái', 'khách sạn', 'resort'] },
+      { ten: 'Đất ở (Đất ở đô thị / Đất ở nông thôn)', keywords: ['nhà ở', 'đất ở', 'khu dân cư', 'đô thị', 'nhà ở thương mại', 'chung cư'] },
+      { ten: 'Đất thương mại dịch vụ', keywords: ['thương mại', 'dịch vụ', 'siêu thị', 'trung tâm thương mại', 'cửa hàng', 'khách sạn'] },
+      { ten: 'Đất công cộng (Y tế, Giáo dục, Văn hóa)', keywords: ['trường học', 'y tế', 'bệnh viện', 'văn hóa', 'công cộng', 'giáo dục', 'thể thao'] },
+      { ten: 'Đất dịch vụ du lịch sinh thái', keywords: ['du lịch', 'nghỉ dưỡng', 'sinh thái', 'resort', 'nghỉ dưỡng'] },
       { ten: 'Đất sản xuất công nghiệp', keywords: ['công nghiệp', 'nhà máy', 'xưởng', 'sản xuất', 'chế biến', 'cụm công nghiệp'] },
-      { ten: 'Đất sản xuất nông nghiệp', keywords: ['nông nghiệp', 'trang trại', 'chăn nuôi', 'trồng trọt', 'lâm nghiệp'] }
+      { ten: 'Đất sản xuất nông nghiệp', keywords: ['nông nghiệp', 'trang trại', 'chăn nuôi', 'trồng trọt', 'lâm nghiệp', 'nông lâm'] }
     ];
 
-    // Chọn ngẫu nhiên một chức năng quy hoạch cho khu đất
     const qhChucNangChon = danhSachChucNang[Math.floor(Math.random() * danhSachChucNang.length)];
     
-    // Kiểm tra xem mục tiêu dự án của người dùng có chứa từ khóa phù hợp với chức năng quy hoạch hay không
+    // Đối chiếu mục tiêu dự án với chức năng sử dụng đất quy hoạch
     const mucTieuLower = kiemTraForm.mucTieuDuAn.toLowerCase();
     const isPhuHop = qhChucNangChon.keywords.some(keyword => mucTieuLower.includes(keyword));
     
     const ketQua = {
       diaDiem: `${randomXaObj.xa}, ${randomXaObj.huyen}, tỉnh Gia Lai`,
       dienTich: (Math.random() * 5 + 0.5).toFixed(2) + ' ha',
-      loaiQuyhoach: randomXaObj.tenQh.toLowerCase().includes('chi tiết') ? `Quy hoạch chi tiết ${randomXaObj.xa}` : randomXaObj.tenQh.toLowerCase().includes('phân khu') ? `Quy hoạch phân khu ${randomXaObj.xa}` : `Quy hoạch chung ${randomXaObj.xa}`,
+      loaiQuyhoach: tenQuyHoachCuThe,
       chucNangSuDung: qhChucNangChon.ten,
       ketLuan: isPhuHop 
-        ? `Việc đề xuất dự án "${kiemTraForm.mucTieuDuAn}" tại vị trí khu đất nêu trên là PHÙ HỢP theo định hướng quy hoạch chung/phân khu/chi tiết đã được phê duyệt.`
-        : `Việc đề xuất dự án "${kiemTraForm.mucTieuDuAn}" tại vị trí khu đất nêu trên CHƯA PHÙ HỢP theo định hướng quy hoạch chung/phân khu/chi tiết đã được phê duyệt (Chức năng quy hoạch hiện trạng là "${qhChucNangChon.ten}", không trùng khớp với mục tiêu dự án đề xuất).`,
+        ? `Việc đề xuất dự án "${kiemTraForm.mucTieuDuAn}" tại vị trí khu đất nêu trên là PHÙ HỢP theo định hướng ${tenQuyHoachCuThe} đã được phê duyệt.`
+        : `Việc đề xuất dự án "${kiemTraForm.mucTieuDuAn}" tại vị trí khu đất nêu trên CHƯA PHÙ HỢP theo định hướng ${tenQuyHoachCuThe} đã được phê duyệt (Chức năng quy hoạch hiện tại là "${qhChucNangChon.ten}", không phù hợp với mục tiêu dự án đề xuất).`,
       phuHop: isPhuHop
     };
 
