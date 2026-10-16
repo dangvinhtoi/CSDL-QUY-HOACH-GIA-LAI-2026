@@ -1296,28 +1296,39 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
     if (!kiemTraForm.mucTieuDuAn.trim()) {
       return showNotification('Vui lòng nhập mục tiêu dự án hoặc chức năng sử dụng đất đề xuất!');
     }
+
     const randomXaObj = data[Math.floor(Math.random() * data.length)] || { huyen: 'TP Pleiku', xa: 'Xã Biển Hồ', tenQh: 'Quy hoạch chung đô thị' };
+    
+    // Danh sách các loại chức năng sử dụng đất chuẩn theo quy hoạch
     const danhSachChucNang = [
-      'Đất ở (Đất ở đô thị / Đất ở nông thôn)',
-      'Đất thương mại dịch vụ',
-      'Đất công cộng (Y tế, Giáo dục, Văn hóa)',
-      'Đất dịch vụ du lịch sinh thái',
-      'Đất sản xuất nông nghiệp / Nông nghiệp ứng dụng công nghệ cao'
+      { ten: 'Đất ở (Đất ở đô thị / Đất ở nông thôn)', keywords: ['nhà ở', 'đất ở', 'khu dân cư', 'đô thị', 'nhà ở thương mại'] },
+      { ten: 'Đất thương mại dịch vụ', keywords: ['thương mại', 'dịch vụ', 'siêu thị', 'trung tâm thương mại', 'cửa hàng'] },
+      { ten: 'Đất công cộng (Y tế, Giáo dục, Văn hóa)', keywords: ['trường học', 'y tế', 'bệnh viện', 'văn hóa', 'công cộng', 'giáo dục'] },
+      { ten: 'Đất dịch vụ du lịch sinh thái', keywords: ['du lịch', 'nghỉ dưỡng', 'sinh thái', 'khách sạn', 'resort'] },
+      { ten: 'Đất sản xuất công nghiệp', keywords: ['công nghiệp', 'nhà máy', 'xưởng', 'sản xuất', 'chế biến', 'cụm công nghiệp'] },
+      { ten: 'Đất sản xuất nông nghiệp', keywords: ['nông nghiệp', 'trang trại', 'chăn nuôi', 'trồng trọt', 'lâm nghiệp'] }
     ];
-    const chucNangChon = danhSachChucNang[Math.floor(Math.random() * danhSachChucNang.length)];
-    const isPhuHop = Math.random() > 0.2; // 80% phù hợp
+
+    // Chọn ngẫu nhiên một chức năng quy hoạch cho khu đất
+    const qhChucNangChon = danhSachChucNang[Math.floor(Math.random() * danhSachChucNang.length)];
+    
+    // Kiểm tra xem mục tiêu dự án của người dùng có chứa từ khóa phù hợp với chức năng quy hoạch hay không
+    const mucTieuLower = kiemTraForm.mucTieuDuAn.toLowerCase();
+    const isPhuHop = qhChucNangChon.keywords.some(keyword => mucTieuLower.includes(keyword));
+    
     const ketQua = {
       diaDiem: `${randomXaObj.xa}, ${randomXaObj.huyen}, tỉnh Gia Lai`,
       dienTich: (Math.random() * 5 + 0.5).toFixed(2) + ' ha',
       loaiQuyhoach: randomXaObj.tenQh.toLowerCase().includes('chi tiết') ? `Quy hoạch chi tiết ${randomXaObj.xa}` : randomXaObj.tenQh.toLowerCase().includes('phân khu') ? `Quy hoạch phân khu ${randomXaObj.xa}` : `Quy hoạch chung ${randomXaObj.xa}`,
-      chucNangSuDung: chucNangChon,
+      chucNangSuDung: qhChucNangChon.ten,
       ketLuan: isPhuHop 
         ? `Việc đề xuất dự án "${kiemTraForm.mucTieuDuAn}" tại vị trí khu đất nêu trên là PHÙ HỢP theo định hướng quy hoạch chung/phân khu/chi tiết đã được phê duyệt.`
-        : `Việc đề xuất dự án "${kiemTraForm.mucTieuDuAn}" tại vị trí khu đất nêu trên CHƯA PHÙ HỢP theo định hướng quy hoạch chung/phân khu/chi tiết đã được phê duyệt (Cần cập nhật, điều chỉnh quy hoạch hoặc chọn vị trí khác).`,
+        : `Việc đề xuất dự án "${kiemTraForm.mucTieuDuAn}" tại vị trí khu đất nêu trên CHƯA PHÙ HỢP theo định hướng quy hoạch chung/phân khu/chi tiết đã được phê duyệt (Chức năng quy hoạch hiện trạng là "${qhChucNangChon.ten}", không trùng khớp với mục tiêu dự án đề xuất).`,
       phuHop: isPhuHop
     };
+
     setKetQuaKiemTra(ketQua);
-    showNotification('✅ Đã hoàn tất tra cứu và kiểm tra quy hoạch!');
+    showNotification(isPhuHop ? '✅ Đã đối chiếu: Hồ sơ PHÙ HỢP quy hoạch!' : '⚠️ Đã đối chiếu: Hồ sơ CHƯA PHÙ HỢP quy hoạch!');
   };
       // HANDLERS MODAL
       const handleLogin = (e) => {
