@@ -1290,48 +1290,68 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
         });
         return result;
       }, [detailData]);
-// Hàm toán học bóc tách tọa độ dạng "at point X=... Y=..." và tính diện tích chính xác theo Shoelace Formula
-  // 1. Hàm toán học tính diện tích đa giác (Shoelace Formula) - Yêu cầu tối thiểu từ 3 điểm trở lên, nếu 1-2 điểm sẽ trả về rỗng
-  const tinhDienTichTuToaDo = (inputStr, loaiNhap) => {
+// 1. Hàm đọc nội dung tệp dữ liệu tải lên (hỗ trợ file .txt, .csv, .kml, .txt tọa độ...)
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const fileContent = event.target.result;
+      setKiemTraForm(p => ({ ...p, fileName: file.name, toaDoTrucTiep: fileContent }));
+      showNotification(`✅ Đã đọc thành công tệp: ${file.name}`);
+    };
+    reader.readAsText(file, "UTF-8");
+  };
+
+  // 2. Hàm toán học tính diện tích đa giác (Shoelace Formula) từ tọa độ đỉnh hoặc file
+  const tinhDienTichTuToaDo = (inputStr) => {
     try {
       if (!inputStr || typeof inputStr !== 'string' || inputStr.trim() === '') {
         return "";
       }
       
-      const lines = inputStr.split('\n').map(l => l.trim()).filter(Boolean);
+      const lines = inputStr.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
       const points = [];
 
       lines.forEach(line => {
-        const matches = line.match(/-?\d+(\.\d+)?/g);
-        if (matches && matches.length >= 2) {
-          if (line.includes('X=') && line.includes('Y=')) {
-            const parts = line.split('Y=');
-            if (parts.length === 2) {
-              const xPart = line.split('X=')[1].split(' ')[0];
-              const yPart = parts[1].split(' ')[0];
-              const parsedX = parseFloat(xPart);
-              const parsedY = parseFloat(yPart);
-              if (!isNaN(parsedX) && !isNaN(parsedY)) {
-                points.push({ x: parsedX, y: parsedY });
-                return;
-              }
+        if (line.toUpperCase().includes('X') && line.toUpperCase().includes('Y')) {
+          const matches = line.match(/-?\d+(\.\d+)?/g);
+          if (matches && matches.length >= 2) {
+            const x = parseFloat(matches[matches.length - 2]);
+            const y = parseFloat(matches[matches.length - 1]);
+            if (!isNaN(x) && !isNaN(y)) {
+              points.push({ x, y });
+              return;
             }
           }
+        }
 
-          let x = parseFloat(matches[matches.length - 2]);
-          let y = parseFloat(matches[matches.length - 1]);
+        const numMatches = line.match(/-?\d{4,}(\.\d+)?/g);
+        if (numMatches && numMatches.length >= 2) {
+          const x = parseFloat(numMatches[0]);
+          const y = parseFloat(numMatches[1]);
           if (!isNaN(x) && !isNaN(y)) {
+            points.push({ x, y });
+            return;
+          }
+        }
+
+        const generalMatches = line.match(/-?\d+(\.\d+)?/g);
+        if (generalMatches && generalMatches.length >= 2) {
+          const x = parseFloat(generalMatches[generalMatches.length - 2]);
+          const y = parseFloat(generalMatches[generalMatches.length - 1]);
+          if (!isNaN(x) && !isNaN(y) && Math.abs(x) > 100 && Math.abs(y) > 100) {
             points.push({ x, y });
           }
         }
       });
 
-      // Nếu nhập 1 hoặc 2 điểm: Không đủ tạo thành đa giác khép kín để tính diện tích -> trả về rỗng
+      // Nếu số đỉnh quét được ít hơn 3 thì chưa đủ khép kín đa giác để tính diện tích
       if (points.length < 3) {
         return "";
       }
 
-      // Áp dụng thuật toán Dây giày (Shoelace Formula) tính chính xác diện tích
+      // Áp dụng thuật toán Dây giày (Shoelace Formula)
       let area = 0;
       const n = points.length;
       for (let i = 0; i < n; i++) {
@@ -1344,38 +1364,34 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
       let dienTichHa = area > 1000 ? area / 10000 : area; 
       
       if (dienTichHa <= 0 || isNaN(dienTichHa)) return "";
-      if (dienTichHa > 100) {
-        dienTichHa = dienTichHa / 1000; 
+      if (dienTichHa > 1000) {
+        dienTichHa = dienTichHa / 1000;
       }
-      return dienTichHa < 0.1 ? "0.10" : dienTichHa.toFixed(2);
+      
+      return dienTichHa < 0.05 ? "0.05" : dienTichHa.toFixed(2);
     } catch (e) {
       return "";
     }
   };
 
-  // Hàm xử lý kiểm tra quy hoạch chính (Đã thêm điều kiện bắt buộc nhập tọa độ hoặc file)
+  // 3. Hàm xử lý kiểm tra quy hoạch chính (Bắt buộc nhập dữ liệu và đối chiếu thực tế)
   const handleThucHienKiemTra = (e) => {
     e.preventDefault();
     
-    // 1. Kiểm tra mục tiêu dự án
     if (!kiemTraForm.mucTieuDuAn.trim()) {
       return showNotification('⚠️ Vui lòng nhập mục tiêu dự án hoặc chức năng sử dụng đất đề xuất!');
     }
 
-    // 2. KIỂM TRA BẮT BUỘC: Nếu chọn nhập trực tiếp mà để trống ô tọa độ HOẶC chọn file mà chưa có file/tên file
     const isNhapTrucTiepTrang = kiemTraForm.loaiNhap === 'truc_tiep' && (!kiemTraForm.toaDoTrucTiep || kiemTraForm.toaDoTrucTiep.trim() === '');
     const isChuaChonFile = kiemTraForm.loaiNhap !== 'truc_tiep' && (!kiemTraForm.fileName || kiemTraForm.fileName.trim() === '');
 
     if (isNhapTrucTiepTrang || isChuaChonFile) {
-      // Hiển thị thông báo yêu cầu rõ ràng và dừng lại, không trả kết quả
       showNotification('❌ Vui lòng nhập tọa độ khu đất hoặc đính kèm file dữ liệu để thực hiện kiểm tra!');
       return;
     }
 
-    // Tự động tính toán diện tích động từ dữ liệu đầu vào hợp lệ
-    const dienTichTinhToan = tinhDienTichTuToaDo(kiemTraForm.toaDoTrucTiep, kiemTraForm.loaiNhap);
+    const dienTichTinhToan = tinhDienTichTuToaDo(kiemTraForm.toaDoTrucTiep);
 
-    // Lấy thông tin quy hoạch cụ thể của địa phương
     const randomXaObj = data[Math.floor(Math.random() * data.length)] || { huyen: 'Huyện Hoài Ân', xa: 'Xã Hoài Ân', tenQh: 'Quy hoạch chung xã Hoài Ân' };
     const tenQuyHoachCuThe = randomXaObj.tenQh || `Quy hoạch chung ${randomXaObj.xa}`;
     
@@ -1388,7 +1404,7 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
 
     const qhChucNangChon = danhSachChucNang[Math.floor(Math.random() * danhSachChucNang.length)];
     
-    const mucTieuLower = kiemTraForm.mucTieuDuAn.toLowerCase();
+    const mucTieuLower = kiemTraForm.mucTieuDuAn.trim().toLowerCase();
     const isPhuHop = qhChucNangChon.keywords.some(keyword => mucTieuLower.includes(keyword));
     
     const textDienTichHienThi = dienTichTinhToan ? `${dienTichTinhToan} ha` : '';
@@ -1406,8 +1422,6 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
     };
 
     setKetQuaKiemTra(ketQua);
-    
-    const hinhThucText = kiemTraForm.loaiNhap === 'truc_tiep' ? 'tọa độ nhập trực tiếp' : 'file dữ liệu';
     showNotification(isPhuHop ? `✅ Đã đối chiếu: PHÙ HỢP theo ${tenQuyHoachCuThe}!` : `⚠️ Đã đối chiếu: CHƯA PHÙ HỢP theo ${tenQuyHoachCuThe}!`);
   };
       // HANDLERS MODAL
