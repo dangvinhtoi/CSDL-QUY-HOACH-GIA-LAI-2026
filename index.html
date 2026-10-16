@@ -1310,7 +1310,7 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
     reader.readAsText(file, "UTF-8");
   };
 
-  // Hàm toán học tính diện tích đa giác (Shoelace Formula) - Đã tối ưu đọc chuẩn định dạng X=... Y=... Z=...
+  // Hàm toán học tính diện tích đa giác (Shoelace Formula) - Đã tối ưu quét chuẩn định dạng "at point X=... Y=..."
   const tinhDienTichTuToaDo = (inputStr) => {
     try {
       if (!inputStr || typeof inputStr !== 'string' || inputStr.trim() === '') {
@@ -1324,6 +1324,7 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
         let x = null;
         let y = null;
 
+        // Xử lý đặc thù cho định dạng "at point X=... Y=..." hoặc có chứa X=, Y=
         const upperLine = line.toUpperCase();
         if (upperLine.includes('X') && upperLine.includes('Y')) {
           const partsX = line.split(/X[\s=:]+/i);
@@ -1338,6 +1339,7 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
           }
         }
 
+        // Dự phòng quét các số thông thường nếu không theo cấu trúc trên
         if (isNaN(x) || isNaN(y) || x === null || y === null) {
           const allNums = line.match(/-?\d+(\.\d+)?/g);
           if (allNums && allNums.length >= 2) {
@@ -1351,12 +1353,12 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
         }
       });
 
-      // Nếu nhập ít hơn 3 điểm: Chưa đủ khép kín đa giác để tính diện tích -> trả về rỗng
+      // Nếu số đỉnh quét được ít hơn 3 thì chưa đủ khép kín đa giác để tính diện tích
       if (points.length < 3) {
         return "";
       }
 
-      // Áp dụng thuật toán Dây giày (Shoelace Formula)
+      // Áp dụng thuật toán Dây giày (Shoelace Formula) tính diện tích
       let area = 0;
       const n = points.length;
       for (let i = 0; i < n; i++) {
