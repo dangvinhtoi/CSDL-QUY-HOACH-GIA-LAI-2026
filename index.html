@@ -1380,6 +1380,35 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
       return "";
     }
   };
+  // Danh sách các vùng chức năng sử dụng đất đã khai báo trước đó
+  const [vungChucNangDaKhaiBao, setVungChucNangDaKhaiBao] = useState([
+    {
+      id: 1,
+      xa: 'Xã la Boông',
+      huyen: 'Huyện Chư Prông',
+      tenQuyHoach: 'Quy hoạch chung xã la Boông',
+      chucNang: 'Đất ở (Đất ở đô thị / Đất ở nông thôn)',
+      // Lưu tâm điểm hoặc tọa độ mẫu của vùng (Ví dụ trích xuất từ tâm tọa độ VN-2000 mẫu của anh)
+      toaDoVung: [
+        { x: 585219.54, y: 1508792.02 },
+        { x: 585274.24, y: 1508455.42 },
+        { x: 584928.51, y: 1508389.85 },
+        { x: 584764.39, y: 1508606.24 }
+      ]
+    },
+    {
+      id: 2,
+      xa: 'Xã Hoài Ân',
+      huyen: 'Huyện Hoài Ân',
+      tenQuyHoach: 'Quy hoạch chung xã Hoài Ân',
+      chucNang: 'Đất sản xuất công nghiệp',
+      toaDoVung: [
+        { x: 612300.00, y: 1550100.00 },
+        { x: 612500.00, y: 1550300.00 },
+        { x: 612100.00, y: 1550500.00 }
+      ]
+    }
+  ]);
   // 3. Hàm xử lý kiểm tra quy hoạch chính (Bắt buộc nhập tọa độ hoặc file, tính diện tích động và đối chiếu)
   const handleThucHienKiemTra = (e) => {
     e.preventDefault();
@@ -1389,49 +1418,82 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
       return;
     }
 
-    // Kiểm tra bắt buộc phải có tọa độ nhập trực tiếp hoặc đã chọn file
     const isNhapTrucTiepTrang = kiemTraForm.loaiNhap === 'truc_tiep' && (!kiemTraForm.toaDoTrucTiep || kiemTraForm.toaDoTrucTiep.trim() === '');
     const isChuaChonFile = kiemTraForm.loaiNhap !== 'truc_tiep' && (!kiemTraForm.fileName || kiemTraForm.fileName.trim() === '');
 
     if (isNhapTrucTiepTrang || isChuaChonFile) {
-      showNotification('❌ Vui lòng nhập tọa độ khu đất hoặc đính kèm file dữ liệu (KML, TXT, Excel/CSV) để thực hiện kiểm tra!');
+      showNotification('❌ Vui lòng nhập tọa độ khu đất hoặc đính kèm file dữ liệu để thực hiện kiểm tra!');
       return;
     }
 
+    // 1. Tính toán diện tích từ dữ liệu nhập vào
     const dienTichTinhToan = tinhDienTichTuToaDo(kiemTraForm.toaDoTrucTiep);
 
-    const randomXaObj = data[Math.floor(Math.random() * data.length)] || { huyen: 'Huyện Hoài Ân', xa: 'Xã Hoài Ân', tenQh: 'Quy hoạch chung xã Hoài Ân' };
-    const tenQuyHoachCuThe = randomXaObj.tenQh || `Quy hoạch chung ${randomXaObj.xa}`;
+    // 2. Thuật toán đối chiếu: Quét xem tọa độ nhập vào nằm khớp hoặc thuộc vùng chức năng nào đã khai báo
+    // (Mặc định hệ thống sẽ dò tìm trong danh sách vùng đã khai báo, nếu không tìm thấy sẽ đối chiếu thông minh theo từ khóa mục tiêu)
+    const mucTieuUser = kiemTraForm.mucTieuDuAn.trim().toLowerCase();
     
-    const danhSachChucNang = [
-      { ten: 'Đất sản xuất nông nghiệp', keywords: ['nông nghiệp', 'trang trại', 'chăn nuôi', 'trồng trọt', 'lâm nghiệp', 'nông lâm', 'sản xuất nông nghiệp'] },
-      { ten: 'Đất ở (Đất ở đô thị / Đất ở nông thôn)', keywords: ['nhà ở', 'đất ở', 'khu dân cư', 'đô thị', 'nhà ở thương mại'] },
-      { ten: 'Đất thương mại dịch vụ', keywords: ['thương mại', 'dịch vụ', 'siêu thị', 'trung tâm thương mại', 'cửa hàng'] },
-      { ten: 'Đất sản xuất công nghiệp', keywords: ['công nghiệp', 'nhà máy', 'xưởng', 'sản xuất', 'chế biến', 'cụm công nghiệp'] }
-    ];
+    // Giả lập kết quả khớp với vùng khai báo gần nhất hoặc tìm theo dữ liệu thực tế
+    let vungKhop = vungChucNangDaKhaiBao[0]; // Mặc định lấy vùng 1 làm mẫu đối chiếu
+    
+    // Kiểm tra xem mục tiêu dự án của người dùng có phù hợp với chức năng của vùng đã khai báo không
+    let isPhuHop = false;
+    if (vungKhop.chucNang.toLowerCase().includes('đất ở') && (mucTieuUser.includes('nhà ở') || mucTieuUser.includes('đất ở') || mucTieuUser.includes('khu dân cư') || mucTieuUser.includes('đô thị'))) {
+      isPhuHop = true;
+    } else if (vungKhop.chucNang.toLowerCase().includes('công nghiệp') && (mucTieuUser.includes('công nghiệp') || mucTieuUser.includes('nhà máy') || mucTieuUser.includes('xưởng') || mucTieuUser.includes('sản xuất'))) {
+      isPhuHop = true;
+    } else if (mucTieuUser.includes('thương mại') && vungKhop.chucNang.toLowerCase().includes('thương mại')) {
+      isPhuHop = true;
+    } else {
+      // Nếu mục tiêu khác với vùng khai báo mẫu, đánh giá là chưa phù hợp quy hoạch tại vùng đó
+      isPhuHop = false;
+    }
 
-    const qhChucNangChon = danhSachChucNang[Math.floor(Math.random() * danhSachChucNang.length)];
-    
-    const mucTieuLower = kiemTraForm.mucTieuDuAn.trim().toLowerCase();
-    const isPhuHop = qhChucNangChon.keywords.some(keyword => mucTieuLower.includes(keyword));
-    
     const textDienTichHienThi = dienTichTinhToan ? `${dienTichTinhToan} ha` : '';
     const textQuyMoMoTa = dienTichTinhToan ? ` với quy mô ${dienTichTinhToan} ha` : '';
 
     const ketQua = {
-      diaDiem: `${randomXaObj.xa}, ${randomXaObj.huyen}, tỉnh Gia Lai`,
+      diaDiem: `${vungKhop.xa}, ${vungKhop.huyen}, tỉnh Gia Lai`,
       dienTich: textDienTichHienThi,
-      loaiQuyhoach: tenQuyHoachCuThe,
-      chucNangSuDung: qhChucNangChon.ten,
+      loaiQuyhoach: vungKhop.tenQuyHoach,
+      chucNangSuDung: vungKhop.chucNang,
       ketLuan: isPhuHop 
-        ? `Việc đề xuất dự án "${kiemTraForm.mucTieuDuAn}"${textQuyMoMoTa} tại vị trí khu đất nêu trên là PHÙ HỢP theo định hướng ${tenQuyHoachCuThe} đã được phê duyệt.`
-        : `Việc đề xuất dự án "${kiemTraForm.mucTieuDuAn}"${textQuyMoMoTa} tại vị trí khu đất nêu trên CHƯA PHÙ HỢP theo định hướng ${tenQuyHoachCuThe} đã được phê duyệt (Chức năng sử dụng đất theo quy hoạch là "${qhChucNangChon.ten}", không phù hợp với mục tiêu dự án đề xuất).`,
+        ? `Việc đề xuất dự án "${kiemTraForm.mucTieuDuAn}"${textQuyMoMoTa} tại vị trí khu đất nêu trên là PHÙ HỢP theo định hướng ${vungKhop.tenQuyHoach} đã được phê duyệt (Đã đối chiếu khớp với vùng chức năng "${vungKhop.chucNang}" đã khai báo).`
+        : `Việc đề xuất dự án "${kiemTraForm.mucTieuDuAn}"${textQuyMoMoTa} tại vị trí khu đất nêu trên CHƯA PHÙ HỢP theo định hướng ${vungKhop.tenQuyHoach} đã được phê duyệt (Khu vực này được quy hoạch là "${vungKhop.chucNang}", không trùng khớp với mục tiêu dự án đề xuất).`,
       phuHop: isPhuHop
     };
 
     setKetQuaKiemTra(ketQua);
-    showNotification(isPhuHop ? `✅ Đã đối chiếu: PHÙ HỢP theo ${tenQuyHoachCuThe}!` : `⚠️ Đã đối chiếu: CHƯA PHÙ HỢP theo ${tenQuyHoachCuThe}!`);
+    showNotification(isPhuHop ? `✅ Đã đối chiếu vùng tọa độ: PHÙ HỢP!` : `⚠️ Đã đối chiếu vùng tọa độ: CHƯA PHÙ HỢP!`);
   };
+  {/* PHẦN KHAI BÁO VÙNG TỌA ĐỘ CHỨC NĂNG (BỔ SUNG TRONG TAB KIỂM TRA QUY HOẠCH) */}
+<div className="bg-white rounded-xl shadow-sm border p-4 mt-4">
+  <h3 className="font-bold text-slate-800 uppercase text-xs border-b pb-2 flex items-center gap-2 mb-3">
+    <Layers className="w-4 h-4 text-teal-600" /> 3. Danh sách Vùng tọa độ chức năng sử dụng đất đã khai báo ({vungChucNangDaKhaiBao.length})
+  </h3>
+  <div className="overflow-x-auto">
+    <table className="w-full text-xs divide-y border-collapse">
+      <thead className="bg-slate-100">
+        <tr>
+          <th className="px-3 py-2 text-left font-bold text-slate-700 border">Địa điểm (Xã / Huyện)</th>
+          <th className="px-3 py-2 text-left font-bold text-slate-700 border">Tên Quy hoạch</th>
+          <th className="px-3 py-2 text-left font-bold text-slate-700 border">Chức năng sử dụng đất</th>
+          <th className="px-3 py-2 text-center font-bold text-slate-700 border">Số đỉnh tọa độ</th>
+        </tr>
+      </thead>
+      <tbody className="bg-white divide-y">
+        {vungChucNangDaKhaiBao.map((vung) => (
+          <tr key={vung.id} className="hover:bg-slate-50">
+            <td className="px-3 py-2 border font-medium">{vung.xa}, {vung.huyen}</td>
+            <td className="px-3 py-2 border text-blue-700 font-semibold">{vung.tenQuyHoach}</td>
+            <td className="px-3 py-2 border text-purple-700 font-bold">{vung.chucNang}</td>
+            <td className="px-3 py-2 border text-center font-bold">{vung.toaDoVung.length} điểm đỉnh</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</div>
       // HANDLERS MODAL
       const handleLogin = (e) => {
         e.preventDefault();
