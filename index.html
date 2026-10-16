@@ -2568,14 +2568,13 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
           </main>
           {/* TAB: KIỂM TRA QUY HOẠCH */}
 {activeTab === 'KIEM_TRA_QH' && (
-  <div className="flex flex-col flex-1 min-h-0 gap-4 animate-in fade-in duration-300 overflow-y-auto custom-scrollbar pr-2 pb-6">
+  <div className="flex flex-col flex-1 h-full gap-4 p-4 animate-in fade-in duration-300 overflow-y-auto custom-scrollbar">
     <div className="bg-white rounded-xl shadow-sm p-5 border shrink-0">
       <h2 className="text-xl font-bold text-slate-800 uppercase flex items-center gap-2">
         <ShieldCheck className="h-6 w-6 text-teal-600" /> Hệ thống Kiểm tra & Tra cứu Quy hoạch Khu đất tự động
       </h2>
       <p className="text-slate-500 text-sm mt-1">Nhập thông tin tọa độ khu đất và mục tiêu dự án để hệ thống đối chiếu với CSDL Quy hoạch tỉnh Gia Lai.</p>
     </div>
-
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
       {/* CỘT TRÁI: FORM NHẬP LIỆU */}
       <div className="lg:col-span-6 bg-white rounded-xl shadow-sm border p-6 flex flex-col gap-5">
