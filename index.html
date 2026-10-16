@@ -2685,10 +2685,11 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
   <div className="absolute inset-x-3 top-[155px] bottom-3 flex flex-col gap-3 p-3 bg-slate-100 rounded-xl overflow-y-auto custom-scrollbar z-20">
     <div className="bg-white rounded-xl shadow-sm p-3 border shrink-0">
       <h2 className="text-base font-bold text-slate-800 uppercase flex items-center gap-2">
-        <ShieldCheck className="h-5 w-5 text-teal-600" /> Hệ thống Kiểm tra & Tra cứu Quy hoạch Khu đất tự động
+        <ShieldCheck className="h-5 v-5 text-teal-600" /> Hệ thống Kiểm tra & Tra cứu Quy hoạch Khu đất tự động
       </h2>
       <p className="text-slate-500 text-xs mt-0.5">Nhập thông tin tọa độ khu đất và mục tiêu dự án để hệ thống đối chiếu với CSDL Quy hoạch tỉnh Gia Lai.</p>
     </div>
+
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
       {/* CỘT TRÁI: FORM NHẬP LIỆU */}
       <div className="lg:col-span-6 bg-white rounded-xl shadow-sm border p-4 flex flex-col gap-4">
@@ -2716,13 +2717,12 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
             <select 
               className="w-full border rounded-lg p-2 text-sm font-medium bg-slate-50"
               value={kiemTraForm.loaiNhap}
-              onChange={(e) => setKiemTraForm(p => ({ ...p, loaiNhap: e.target.value }))}
+              onChange={(e) => setKiemTraForm(p => ({ ...p, loaiNhap: e.target.value, toaDoTrucTiep: '', fileName: '' }))}
             >
               <option value="truc_tiep">Nhập trực tiếp tọa độ (VN-2000 / WGS84)</option>
-              <option value="cad">Nhập bằng file CAD (.dwg / .dxf)</option>
               <option value="kmz">Nhập bằng file Google Earth (.kmz / .kml)</option>
               <option value="txt">Nhập bằng file Tọa độ văn bản (.txt)</option>
-              <option value="excel">Nhập bằng file Excel tọa độ đỉnh (.xlsx / .csv)</option>
+              <option value="excel">Nhập bằng file Excel / CSV tọa độ đỉnh (.xlsx / .csv)</option>
             </select>
           </div>
 
@@ -2742,12 +2742,12 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
               <input 
                 type="file" 
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
-                onChange={(e) => setKiemTraForm(p => ({ ...p, fileName: e.target.files[0]?.name || '' }))}
+                onChange={handleFileUpload}
               />
               <Upload className="w-6 h-6 text-teal-600 mb-1" />
               <p className="text-xs font-bold text-slate-700">Tải lên tệp tọa độ quy hoạch</p>
               <p className="text-[10px] text-slate-400 mt-0.5">
-                {kiemTraForm.fileName ? <b className="text-teal-600">{kiemTraForm.fileName}</b> : `Hỗ trợ: ${kiemTraForm.loaiNhap.toUpperCase()}`}
+                {kiemTraForm.fileName ? <b className="text-teal-600">{kiemTraForm.fileName}</b> : `Hỗ trợ: KML, KMZ, TXT, Excel/CSV`}
               </p>
             </div>
           )}
@@ -2774,10 +2774,14 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
                 <span className="font-bold text-slate-500">Địa điểm khu đất:</span>
                 <span className="col-span-2 font-bold text-slate-800">{ketQuaKiemTra.diaDiem}</span>
               </div>
-              <div className="grid grid-cols-3 border-b pb-1.5">
-                <span className="font-bold text-slate-500">Diện tích khu đất:</span>
-                <span className="col-span-2 font-semibold text-teal-700">{ketQuaKiemTra.dienTich}</span>
-              </div>
+
+              {ketQuaKiemTra.dienTich && (
+                <div className="grid grid-cols-3 border-b pb-1.5">
+                  <span className="font-bold text-slate-500">Diện tích khu đất:</span>
+                  <span className="col-span-2 font-semibold text-teal-700">{ketQuaKiemTra.dienTich}</span>
+                </div>
+              )}
+
               <div className="grid grid-cols-3 border-b pb-1.5">
                 <span className="font-bold text-slate-500">Thuộc quy hoạch:</span>
                 <span className="col-span-2 font-semibold text-blue-800">{ketQuaKiemTra.loaiQuyhoach}</span>
