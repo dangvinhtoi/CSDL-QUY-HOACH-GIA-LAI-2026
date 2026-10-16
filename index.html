@@ -1380,7 +1380,7 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
       return "";
     }
   };
-  // State quản lý danh sách vùng tọa độ chức năng đã khai báo (lưu trữ tự động vào localStorage)
+  // State quản lý danh sách vùng tọa độ chức năng đã khai báo (an toàn tuyệt đối không bị lỗi undefined)
   const [vungChucNangDaKhaiBao, setVungChucNangDaKhaiBao] = useState(() => {
     const local = localStorage.getItem('gialai_vung_chuc_nang');
     return local ? JSON.parse(local) : [
@@ -1390,7 +1390,12 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
         huyen: 'Huyện Chư Prông',
         tenQuyHoach: 'Quy hoạch chung xã la Boông',
         chucNang: 'Đất ở (Đất ở đô thị / Đất ở nông thôn)',
-        toaDoVungStr: 'X=585219.54, Y=1508792.02\nX=585274.24, Y=1508455.42\nX=584928.51, Y=1508389.85'
+        toaDoVungStr: 'X=585219.54, Y=1508792.02\nX=585274.24, Y=1508455.42\nX=584928.51, Y=1508389.85',
+        toaDoVung: [
+          { x: 585219.54, y: 1508792.02 },
+          { x: 585274.24, y: 1508455.42 },
+          { x: 584928.51, y: 1508389.85 }
+        ]
       },
       {
         id: 2,
@@ -1398,7 +1403,11 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
         huyen: 'Huyện Hoài Ân',
         tenQuyHoach: 'Quy hoạch chung xã Hoài Ân',
         chucNang: 'Đất sản xuất công nghiệp',
-        toaDoVungStr: 'X=612300.00, Y=1550100.00\nX=612500.00, Y=1550300.00'
+        toaDoVungStr: 'X=612300.00, Y=1550100.00\nX=612500.00, Y=1550300.00',
+        toaDoVung: [
+          { x: 612300.00, y: 1550100.00 },
+          { x: 612500.00, y: 1550300.00 }
+        ]
       }
     ];
   });
@@ -1490,7 +1499,9 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
             <td className="px-3 py-2 border font-medium">{vung.xa}, {vung.huyen}</td>
             <td className="px-3 py-2 border text-blue-700 font-semibold">{vung.tenQuyHoach}</td>
             <td className="px-3 py-2 border text-purple-700 font-bold">{vung.chucNang}</td>
-            <td className="px-3 py-2 border text-center font-bold">{vung.toaDoVung.length} điểm đỉnh</td>
+            <td className="px-3 py-2 border text-center font-bold">
+  {Array.isArray(vung.toaDoVung) ? vung.toaDoVung.length : (vung.toaDoVungStr ? vung.toaDoVungStr.split('\n').length : 0)} điểm đỉnh
+</td>
           </tr>
         ))}
       </tbody>
