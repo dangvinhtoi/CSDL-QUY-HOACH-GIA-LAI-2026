@@ -2746,7 +2746,7 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
   <div className="absolute inset-x-3 top-[155px] bottom-3 flex flex-col gap-3 p-3 bg-slate-100 rounded-xl overflow-y-auto custom-scrollbar z-20">
     <div className="bg-white rounded-xl shadow-sm p-3 border shrink-0">
       <h2 className="text-base font-bold text-slate-800 uppercase flex items-center gap-2">
-        <ShieldCheck className="h-5 v-5 text-teal-600" /> Hệ thống Kiểm tra & Tra cứu Quy hoạch Khu đất tự động
+        <ShieldCheck className="h-5 w-5 text-teal-600" /> Hệ thống Kiểm tra & Tra cứu Quy hoạch Khu đất tự động
       </h2>
       <p className="text-slate-500 text-xs mt-0.5">Nhập thông tin tọa độ khu đất và mục tiêu dự án để hệ thống đối chiếu với CSDL Quy hoạch tỉnh Gia Lai.</p>
     </div>
@@ -2875,6 +2875,35 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
             <p className="text-[10px] mt-0.5">Vui lòng nhập thông tin tọa độ và mục tiêu dự án ở bảng bên trái rồi bấm nút <b>Thực hiện Kiểm tra Quy hoạch</b>.</p>
           </div>
         )}
+      </div>
+    </div>
+
+    {/* PHẦN HIỂN THỊ DANH SÁCH VÙNG TỌA ĐỘ ĐÃ KHAI BÁO */}
+    <div className="bg-white rounded-xl shadow-sm border p-4 mt-2">
+      <h3 className="font-bold text-slate-800 uppercase text-xs border-b pb-2 flex items-center gap-2 mb-3">
+        <Layers className="w-4 h-4 text-teal-600" /> 3. Danh sách Vùng tọa độ chức năng sử dụng đất đã khai báo ({vungChucNangDaKhaiBao.length})
+      </h3>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs divide-y border-collapse">
+          <thead className="bg-slate-100">
+            <tr>
+              <th className="px-3 py-2 text-left font-bold text-slate-700 border">Địa điểm (Xã / Huyện)</th>
+              <th className="px-3 py-2 text-left font-bold text-slate-700 border">Tên Quy hoạch</th>
+              <th className="px-3 py-2 text-left font-bold text-slate-700 border">Chức năng sử dụng đất</th>
+              <th className="px-3 py-2 text-center font-bold text-slate-700 border">Số đỉnh tọa độ</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y">
+            {vungChucNangDaKhaiBao.map((vung) => (
+              <tr key={vung.id} className="hover:bg-slate-50">
+                <td className="px-3 py-2 border font-medium">{vung.xa}, {vung.huyen}</td>
+                <td className="px-3 py-2 border text-blue-700 font-semibold">{vung.tenQuyHoach}</td>
+                <td className="px-3 py-2 border text-purple-700 font-bold">{vung.chucNang}</td>
+                <td className="px-3 py-2 border text-center font-bold">{vung.toaDoVung.length} điểm đỉnh</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
