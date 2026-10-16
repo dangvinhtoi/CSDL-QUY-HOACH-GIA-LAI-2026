@@ -3050,14 +3050,34 @@ function App() {
               <div className="col-span-full"><label className="block text-xs font-semibold mb-1">Ghi chú</label><textarea rows="2" value={reviewFormData.ghiChu || ''} onChange={e => setReviewFormData(prev => ({...prev, ghiChu: e.target.value}))} className="w-full px-3 py-2 border rounded focus:ring-rose-500 text-sm"></textarea></div>
             </form></div><div className="p-4 border-t bg-slate-100 flex justify-end gap-3 rounded-b-xl shrink-0"><button type="button" onClick={() => setIsReviewModalOpen(false)} className="px-5 py-2 text-sm bg-white border rounded font-semibold">Hủy bỏ</button><button type="submit" form="review-form" className="px-6 py-2 text-sm bg-rose-600 text-white rounded font-semibold flex items-center gap-2"><Plus className="h-4 w-4" /> {editingReviewRecord ? 'Lưu' : 'Thêm'}</button></div></div></div>
           )}
-
+          {/* MODAL KHAI BÁO VÙNG TỌA ĐỘ */}
+          {isVungModalOpen && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[99999]">
+              <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl flex flex-col overflow-hidden">
+                <div className="flex justify-between items-center p-4 border-b bg-teal-50">
+                  <h3 className="font-bold text-teal-800 uppercase text-sm">{editingVungRecord ? 'Cập nhật Vùng tọa độ' : 'Khai báo Vùng tọa độ mới'}</h3>
+                  <button onClick={() => setIsVungModalOpen(false)}><X className="w-5 h-5" /></button>
+                </div>
+                <form onSubmit={handleSaveVung} className="p-4 flex flex-col gap-3">
+                  <div><label className="block text-xs font-semibold mb-1">Huyện / Thị xã *</label><input type="text" value={vungFormData.huyen || ''} onChange={e=>setVungFormData(p=>({...p, huyen: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm" required /></div>
+                  <div><label className="block text-xs font-semibold mb-1">Xã / Phường *</label><input type="text" value={vungFormData.xa || ''} onChange={e=>setVungFormData(p=>({...p, xa: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm" required /></div>
+                  <div><label className="block text-xs font-semibold mb-1">Tên Quy hoạch *</label><input type="text" value={vungFormData.tenQuyHoach || ''} onChange={e=>setVungFormData(p=>({...p, tenQuyHoach: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm" required /></div>
+                  <div><label className="block text-xs font-semibold mb-1">Chức năng sử dụng đất *</label><input type="text" value={vungFormData.chucNang || ''} onChange={e=>setVungFormData(p=>({...p, chucNang: e.target.value}))} className="w-full px-3 py-2 border rounded text-sm" required /></div>
+                  <div><label className="block text-xs font-semibold mb-1">Tọa độ các đỉnh (X, Y)</label><textarea rows="3" value={vungFormData.toaDoVungStr || ''} onChange={e=>setVungFormData(p=>({...p, toaDoVungStr: e.target.value}))} className="w-full px-3 py-2 border rounded text-xs font-mono"></textarea></div>
+                  <div className="flex justify-end gap-2 pt-2 border-t">
+                    <button type="button" onClick={() => setIsVungModalOpen(false)} className="px-4 py-2 bg-slate-100 rounded text-sm font-semibold">Hủy</button>
+                    <button type="submit" className="px-5 py-2 bg-teal-600 text-white rounded text-sm font-bold">Lưu lại</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
           {/* BÁO CÁO THÔNG MINH MODAL & PREVIEW */}
           {reportModal.isOpen && !showGeneratedReport && (
             <div className="fixed inset-0 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-[99999]"><div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in"><div className={`p-3 sm:p-4 flex justify-between items-center text-white shrink-0 ${reportModal.type === 'CHUNG' ? 'bg-emerald-600' : 'bg-purple-600'}`}><h3 className="font-bold flex items-center gap-2"><FileText className="w-5 h-5"/> Báo cáo tự động</h3><button onClick={() => setReportModal({isOpen:false,type:''})} className="hover:bg-black/20 p-1.5 rounded-full"><X className="w-5 h-5"/></button></div><div className="p-4 sm:p-6 overflow-y-auto flex-1 custom-scrollbar flex flex-col gap-4"><div className="bg-slate-50 p-4 rounded-lg border text-sm text-slate-600"><p>Hệ thống tự động điền số liệu vào <b>File đề cương mẫu (PDF/DOCX)</b> của bạn.</p></div><div className="flex flex-col gap-2 mb-6"><label className="text-sm font-bold text-slate-700">Tải đề cương (PDF/DOCX)</label><div className="border-2 border-dashed border-slate-300 rounded-xl p-8 flex flex-col items-center justify-center bg-slate-50 cursor-pointer relative"><input type="file" accept=".pdf,.doc,.docx" className="absolute inset-0 w-full h-full opacity-0 z-10" onChange={(e) => setReportFile(e.target.files[0])} /><Upload className="w-10 h-10 text-slate-400 mb-3" />{reportFile ? (<div className="text-center"><p className="text-sm font-bold text-blue-600">{reportFile.name}</p></div>) : (<div className="text-center"><p className="text-sm font-bold text-slate-600">Kéo thả hoặc nhấn chọn file</p></div>)}</div></div>
             {reportProgress > 0 && (<div className="mb-4"><div className="flex justify-between text-xs font-bold text-slate-600 mb-1"><span>{reportStatus}</span><span>{reportProgress}%</span></div><div className="w-full bg-slate-200 rounded-full h-2.5"><div className={`h-2.5 rounded-full ${reportModal.type === 'CHUNG' ? 'bg-emerald-500' : 'bg-purple-500'}`} style={{ width: `${reportProgress}%` }}></div></div></div>)}
             <button onClick={handleGenerateSmartReport} disabled={reportProgress>0 && reportProgress<100} className={`w-full py-3 rounded-lg text-white font-bold flex items-center justify-center gap-2 ${reportProgress>0 && reportProgress<100 ? 'bg-slate-400 cursor-not-allowed' : (reportModal.type==='CHUNG'?'bg-emerald-600':'bg-purple-600')}`}>{reportProgress>0&&reportProgress<100 ? <RefreshCcw className="w-5 h-5 animate-spin" /> : <ClipboardCheck className="w-5 h-5" />}{reportProgress===0 ? 'Tạo báo cáo' : 'Đang xử lý...'}</button></div></div></div>
           )}
-
         {showGeneratedReport && (() => {
             const totalQHC = (data || []).length;
             const approvedQHC = (data || []).filter(d => d.qdPheDuyet && d.qdPheDuyet !== 'Đang cập nhật').length;
