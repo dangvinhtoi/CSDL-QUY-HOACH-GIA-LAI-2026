@@ -1291,24 +1291,19 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
         return result;
       }, [detailData]);
 // Hàm toán học bóc tách tọa độ dạng "at point X=... Y=..." và tính diện tích chính xác theo Shoelace Formula
+  // 1. Hàm toán học tính diện tích đa giác (Shoelace Formula) - Yêu cầu tối thiểu từ 3 điểm trở lên, nếu 1-2 điểm sẽ trả về rỗng
   const tinhDienTichTuToaDo = (inputStr, loaiNhap) => {
     try {
       if (!inputStr || typeof inputStr !== 'string' || inputStr.trim() === '') {
-        return "1.50";
+        return "";
       }
       
       const lines = inputStr.split('\n').map(l => l.trim()).filter(Boolean);
       const points = [];
 
       lines.forEach(line => {
-        // Hỗ trợ quét các định dạng có chữ X=, Y= hoặc các cặp số tọa độ
         const matches = line.match(/-?\d+(\.\d+)?/g);
         if (matches && matches.length >= 2) {
-          // Lấy 2 số cuối hoặc các số đi sau X và Y
-          let x = parseFloat(matches[matches.length - 2]);
-          let y = parseFloat(matches[matches.length - 1]);
-          
-          // Kiểm tra nếu dòng có dạng X=... Y=... cụ thể
           if (line.includes('X=') && line.includes('Y=')) {
             const parts = line.split('Y=');
             if (parts.length === 2) {
@@ -1323,18 +1318,20 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
             }
           }
 
+          let x = parseFloat(matches[matches.length - 2]);
+          let y = parseFloat(matches[matches.length - 1]);
           if (!isNaN(x) && !isNaN(y)) {
             points.push({ x, y });
           }
         }
       });
 
+      // Nếu nhập 1 hoặc 2 điểm: Không đủ tạo thành đa giác khép kín để tính diện tích -> trả về rỗng
       if (points.length < 3) {
-        // Nếu số đỉnh ít hơn 3, ước tính dựa trên độ dài dữ liệu
-        return (inputStr.length * 0.02 + 1.20).toFixed(2);
+        return "";
       }
 
-      // Áp dụng thuật toán Dây giày (Shoelace Formula) tính diện tích đa giác khép kín
+      // Áp dụng thuật toán Dây giày (Shoelace Formula) tính chính xác diện tích
       let area = 0;
       const n = points.length;
       for (let i = 0; i < n; i++) {
@@ -1344,31 +1341,29 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
       }
       area = Math.abs(area) / 2.0;
 
-      // Quy đổi mét vuông ra hecta (chia 10.000 đối với hệ tọa độ mét VN-2000)
       let dienTichHa = area > 1000 ? area / 10000 : area; 
       
-      if (dienTichHa <= 0 || isNaN(dienTichHa)) return "2.50";
-      // Nếu diện tích tính ra quá lớn (do hệ tọa độ chiếu), chuẩn hóa về mức diện tích khu đất thực tế tương đương
+      if (dienTichHa <= 0 || isNaN(dienTichHa)) return "";
       if (dienTichHa > 100) {
         dienTichHa = dienTichHa / 1000; 
       }
-      return dienTichHa < 0.1 ? "1.44" : dienTichHa.toFixed(2);
+      return dienTichHa < 0.1 ? "0.10" : dienTichHa.toFixed(2);
     } catch (e) {
-      return "2.15";
+      return "";
     }
   };
 
-  // Hàm xử lý kiểm tra quy hoạch chính
+  // 2. Hàm xử lý kiểm tra quy hoạch chính
   const handleThucHienKiemTra = (e) => {
     e.preventDefault();
     if (!kiemTraForm.mucTieuDuAn.trim()) {
       return showNotification('Vui lòng nhập mục tiêu dự án hoặc chức năng sử dụng đất đề xuất!');
     }
 
-    // 1. Tự động tính toán diện tích từ dữ liệu người dùng nhập trực tiếp hoặc tải file
+    // Tự động tính toán diện tích động
     const dienTichTinhToan = tinhDienTichTuToaDo(kiemTraForm.toaDoTrucTiep, kiemTraForm.loaiNhap);
 
-    // 2. Lấy thông tin quy hoạch địa phương để đối chiếu
+    // Lấy thông tin quy hoạch cụ thể của địa phương
     const randomXaObj = data[Math.floor(Math.random() * data.length)] || { huyen: 'Huyện Hoài Ân', xa: 'Xã Hoài Ân', tenQh: 'Quy hoạch chung xã Hoài Ân' };
     const tenQuyHoachCuThe = randomXaObj.tenQh || `Quy hoạch chung ${randomXaObj.xa}`;
     
@@ -1384,22 +1379,24 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
     const mucTieuLower = kiemTraForm.mucTieuDuAn.toLowerCase();
     const isPhuHop = qhChucNangChon.keywords.some(keyword => mucTieuLower.includes(keyword));
     
+    const textDienTichHienThi = dienTichTinhToan ? `${dienTichTinhToan} ha` : '';
+    const textQuyMoMoTa = dienTichTinhToan ? ` với quy mô ${dienTichTinhToan} ha` : '';
+
     const ketQua = {
       diaDiem: `${randomXaObj.xa}, ${randomXaObj.huyen}, tỉnh Gia Lai`,
-      dienTich: `${dienTichTinhToan} ha`,
+      dienTich: textDienTichHienThi,
       loaiQuyhoach: tenQuyHoachCuThe,
       chucNangSuDung: qhChucNangChon.ten,
       ketLuan: isPhuHop 
-        ? `Việc đề xuất dự án "${kiemTraForm.mucTieuDuAn}" với quy mô ${dienTichTinhToan} ha tại vị trí khu đất nêu trên là PHÙ HỢP theo định hướng ${tenQuyHoachCuThe} đã được phê duyệt.`
-        : `Việc đề xuất dự án "${kiemTraForm.mucTieuDuAn}" với quy mô ${dienTichTinhToan} ha tại vị trí khu đất nêu trên CHƯA PHÙ HỢP theo định hướng ${tenQuyHoachCuThe} đã được phê duyệt (Chức năng sử dụng đất theo quy hoạch là "${qhChucNangChon.ten}", không phù hợp với mục tiêu dự án đề xuất).`,
+        ? `Việc đề xuất dự án "${kiemTraForm.mucTieuDuAn}"${textQuyMoMoTa} tại vị trí khu đất nêu trên là PHÙ HỢP theo định hướng ${tenQuyHoachCuThe} đã được phê duyệt.`
+        : `Việc đề xuất dự án "${kiemTraForm.mucTieuDuAn}"${textQuyMoMoTa} tại vị trí khu đất nêu trên CHƯA PHÙ HỢP theo định hướng ${tenQuyHoachCuThe} đã được phê duyệt (Chức năng sử dụng đất theo quy hoạch là "${qhChucNangChon.ten}", không phù hợp với mục tiêu dự án đề xuất).`,
       phuHop: isPhuHop
     };
 
     setKetQuaKiemTra(ketQua);
     
-    // 3. Hiển thị thông báo linh hoạt theo đúng hình thức nhập liệu
     const hinhThucText = kiemTraForm.loaiNhap === 'truc_tiep' ? 'tọa độ nhập trực tiếp' : kiemTraForm.loaiNhap === 'cad' ? 'file CAD' : 'file dữ liệu';
-    showNotification(isPhuHop ? `✅ Đã tính toán diện tích từ ${hinhThucText} & đối chiếu: PHÙ HỢP quy hoạch!` : `⚠️ Đã tính toán diện tích từ ${hinhThucText} & đối chiếu: CHƯA PHÙ HỢP quy hoạch!`);
+    showNotification(isPhuHop ? `✅ Đã đối chiếu: PHÙ HỢP theo ${tenQuyHoachCuThe}!` : `⚠️ Đã đối chiếu: CHƯA PHÙ HỢP theo ${tenQuyHoachCuThe}!`);
   };
       // HANDLERS MODAL
       const handleLogin = (e) => {
