@@ -2958,38 +2958,7 @@ const [ketQuaKiemTra, setKetQuaKiemTra] = useState(null);
         </table>
       </div>
     </div>
-    {/* PHẦN HIỂN THỊ DANH SÁCH VÙNG TỌA ĐỘ ĐÃ KHAI BÁO */}
-    <div className="bg-white rounded-xl shadow-sm border p-4 mt-2">
-      <h3 className="font-bold text-slate-800 uppercase text-xs border-b pb-2 flex items-center gap-2 mb-3">
-        <Layers className="w-4 h-4 text-teal-600" /> 3. Danh sách Vùng tọa độ chức năng sử dụng đất đã khai báo ({vungChucNangDaKhaiBao.length})
-      </h3>
-      <div className="overflow-x-auto">
-        <table className="w-full text-xs divide-y border-collapse">
-          <thead className="bg-slate-100">
-            <tr>
-              <th className="px-3 py-2 text-left font-bold text-slate-700 border">Địa điểm (Xã / Huyện)</th>
-              <th className="px-3 py-2 text-left font-bold text-slate-700 border">Tên Quy hoạch</th>
-              <th className="px-3 py-2 text-left font-bold text-slate-700 border">Chức năng sử dụng đất</th>
-              <th className="px-3 py-2 text-center font-bold text-slate-700 border">Số đỉnh tọa độ</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y">
-            {vungChucNangDaKhaiBao.map((vung) => (
-              <tr key={vung.id} className="hover:bg-slate-50">
-                <td className="px-3 py-2 border font-medium">{vung.xa}, {vung.huyen}</td>
-                <td className="px-3 py-2 border text-blue-700 font-semibold">{vung.tenQuyHoach}</td>
-                <td className="px-3 py-2 border text-purple-700 font-bold">{vung.chucNang}</td>
-                <td className="px-3 py-2 border text-center font-bold">
-  {Array.isArray(vung.toaDoVung) ? vung.toaDoVung.length : (vung.toaDoVungStr ? vung.toaDoVungStr.split(/\r?\n/).filter(Boolean).length : 0)} điểm đỉnh
-</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-)}
+    
           {/* ALL MODALS (LOGIN, FORGOT PASS, DB MNG) */}
           {showLoginModal && !showForgotPassModal && (
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-[99999]">
