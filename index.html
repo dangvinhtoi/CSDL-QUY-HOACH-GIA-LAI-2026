@@ -891,7 +891,10 @@ function App() {
       };
 
       const openVungModal = (vung = null) => {
-        if (!isLoggedIn) return setShowLoginModal(true);
+        if (userRole !== 'ADMIN') {
+          showNotification('⚠️ Chỉ Quản trị viên (Admin) mới có quyền thêm mới hoặc chỉnh sửa vùng tọa độ!');
+          return setShowLoginModal(true);
+        }
         if (vung) {
           setEditingVungRecord(vung);
           setVungFormData({ ...vung });
@@ -906,7 +909,6 @@ function App() {
         }
         setIsVungModalOpen(true);
       };
-
       const handleAddChucNangRow = () => {
         setVungFormData(p => ({
           ...p,
