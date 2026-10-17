@@ -982,13 +982,33 @@ function App() {
         const mucTieuLower = kiemTraForm.mucTieuDuAn.toLowerCase();
         const chucNangLower = matchedChucNangName.toLowerCase();
         
-        // Kiểm tra xem mục tiêu dự án có phù hợp với chức năng đất được khai báo không
+        // ĐỐI CHÍNH XÁC MỤC TIÊU DỰ ÁN VỚI CHỨC NĂNG ĐẤT ĐÃ KHAI BÁO
         let isPhuHop = true;
-        if (chucNangLower.includes('công nghiệp') && mucTieuLower.includes('nhà ở') && !mucTieuLower.includes('công nhân')) {
+        let lyDoKhongPhuHop = "";
+
+        const isMucTieuCongNghiep = mucTieuLower.includes('công nghiệp') || mucTieuLower.includes('sản xuất công nghiệp') || mucTieuLower.includes('nhà máy') || mucTieuLower.includes('xưởng');
+        const isQuyHoachNongNghiep = chucNangLower.includes('nông nghiệp') || chucNangLower.includes('sản xuất nông nghiệp') || chucNangLower.includes('trồng cây') || chucNangLower.includes('lúa');
+
+        // Nếu mục tiêu là Công nghiệp / Sản xuất công nghiệp mà quy hoạch là Nông nghiệp / Sản xuất nông nghiệp -> BẮT BUỘC CHƯA PHÙ HỢP
+        if (isMucTieuCongNghiep && isQuyHoachNongNghiep) {
           isPhuHop = false;
-        } else if (chucNangLower.includes('nông nghiệp') && (mucTieuLower.includes('khu đô thị') || mucTieuLower.includes('chung cư'))) {
+          lyDoKhongPhuHop = `Mục tiêu dự án ("${kiemTraForm.mucTieuDuAn}") yêu cầu quỹ đất cho sản xuất công nghiệp, nhưng vị trí khu đất theo quy hoạch được phê duyệt là "${matchedChucNangName}".`;
+        } 
+        else if ((mucTieuLower.includes('khu đô thị') || mucTieuLower.includes('nhà ở')) && (chucNangLower.includes('nông nghiệp') || chucNangLower.includes('công nghiệp'))) {
           isPhuHop = false;
+          lyDoKhongPhuHop = `Mục tiêu dự án không phù hợp với chức năng quy hoạch hiện trạng là "${matchedChucNangName}".`;
         }
+
+        const ketQua = {
+          diaDiem: `${matchedZone.xa}, ${matchedZone.huyen}, tỉnh Gia Lai`,
+          dienTich: dienTichTinhToan ? `${dienTichTinhToan} ha` : '',
+          loaiQuyhoach: matchedZone.tenQuyHoach,
+          chucNangSuDung: matchedChucNangName,
+          ketLuan: isPhuHop 
+            ? `Việc đề xuất dự án "${kiemTraForm.mucTieuDuAn}" tại vị trí khu đất nêu trên là PHÙ HỢP theo định hướng chức năng "${matchedChucNangName}" thuộc ${matchedZone.tenQuyHoach}.`
+            : `⚠️ CHƯA PHÙ HỢP QUY HOẠCH: Việc đề xuất dự án "${kiemTraForm.mucTieuDuAn}" tại vị trí khu đất nêu trên không phù hợp. ${lyDoKhongPhuHop}`,
+          phuHop: isPhuHop
+        };
 
         const ketQua = {
           diaDiem: `${matchedZone.xa}, ${matchedZone.huyen}, tỉnh Gia Lai`,
