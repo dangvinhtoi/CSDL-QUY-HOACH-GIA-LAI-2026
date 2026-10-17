@@ -3127,59 +3127,59 @@ function App() {
                   </div>
                 </div>
 
-                {/* BẢNG 3: DANH SÁCH ĐỒ ÁN VÀ ĐA CHỨC NĂNG - ĐA VÙNG TỌA ĐỘ */}
-                <div className="bg-white rounded-xl shadow-sm border p-4">
-                  <div className="flex justify-between items-center border-b pb-2 mb-3">
-                    <h3 className="font-bold text-slate-800 uppercase text-xs flex items-center gap-2">
-                      <Layers className="w-4 h-4 text-teal-600" /> 3. Danh sách Đồ án quy hoạch, Đa chức năng & Đa vùng tọa độ khoanh vùng ({vungChucNangDaKhaiBao.length})
-                    </h3>
-                    <button onClick={() => openVungModal(null)} className="bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm">
-                      <Plus className="w-3.5 h-3.5" /> Khai báo đồ án mới
-                    </button>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs divide-y border-collapse">
-                      <thead className="bg-slate-100">
-                        <tr>
-                          <th className="px-3 py-2 text-left font-bold border w-12">STT</th>
-                          <th className="px-3 py-2 text-left font-bold border w-36">Địa điểm (Xã / Huyện)</th>
-                          <th className="px-3 py-2 text-left font-bold border w-48">Tên Quy hoạch</th>
-                          <th className="px-3 py-2 text-left font-bold border">Các Chức năng sử dụng đất & Tọa độ các vùng riêng biệt</th>
-                          <th className="px-3 py-2 text-center font-bold border w-24">Thao tác</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y">
-                        {vungChucNangDaKhaiBao.map((vung, idx) => (
-                          <tr key={vung.id} className="hover:bg-slate-50">
-                            <td className="px-3 py-2 border text-center font-medium">{idx + 1}</td>
-                            <td className="px-3 py-2 border font-medium">{vung.xa}, {vung.huyen}</td>
-                            <td className="px-3 py-2 border text-blue-700 font-semibold">{vung.tenQuyHoach}</td>
-                            <td className="px-3 py-2 border p-0">
-                              <table className="w-full text-xs divide-y bg-slate-50/50">
-                                <tbody>
-                                  {Array.isArray(vung.danhSachChucNang) && vung.danhSachChucNang.map((cn, i) => (
-                                    <tr key={cn.id || i} className="border-b last:border-b-0">
-                                      <td className="px-3 py-2 font-bold text-purple-700 w-1/3 border-r align-top">{cn.tenChucNang}</td>
-                                      <td className="px-3 py-2 font-mono text-[11px] text-slate-700 whitespace-pre-line align-top">{cn.toaDoVung}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </td>
-                            <td className="px-3 py-2 border text-center align-middle">
-                              <div className="flex justify-center gap-1.5">
-                                <button onClick={() => openVungModal(vung)} className="p-1 text-blue-600 hover:bg-blue-100 rounded" title="Sửa"><Edit2 className="w-3.5 h-3.5"/></button>
-                                <button onClick={() => handleDeleteVung(vung.id)} className="p-1 text-red-600 hover:bg-red-100 rounded" title="Xóa"><Trash2 className="w-3.5 h-3.5"/></button>
-                              </div>
-                            </td>
+                {/* BẢNG 3: DANH SÁCH ĐỒ ÁN VÀ ĐA CHỨC NĂNG - ĐA VÙNG TỌA ĐỘ (CHỈ ADMIN MỚI THẤY VÀ QUẢN LÝ) */}
+                {userRole === 'ADMIN' && (
+                  <div className="bg-white rounded-xl shadow-sm border p-4">
+                    <div className="flex justify-between items-center border-b pb-2 mb-3">
+                      <h3 className="font-bold text-slate-800 uppercase text-xs flex items-center gap-2">
+                        <Layers className="w-4 h-4 text-teal-600" /> 3. Danh sách Đồ án quy hoạch, Đa chức năng & Đa vùng tọa độ khoanh vùng ({vungChucNangDaKhaiBao.length})
+                      </h3>
+                      <button onClick={() => openVungModal(null)} className="bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm">
+                        <Plus className="w-3.5 h-3.5" /> Khai báo đồ án mới
+                      </button>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs divide-y border-collapse">
+                        <thead className="bg-slate-100">
+                          <tr>
+                            <th className="px-3 py-2 text-left font-bold border w-12">STT</th>
+                            <th className="px-3 py-2 text-left font-bold border w-36">Địa điểm (Xã / Huyện)</th>
+                            <th className="px-3 py-2 text-left font-bold border w-48">Tên Quy hoạch</th>
+                            <th className="px-3 py-2 text-left font-bold border">Các Chức năng sử dụng đất & Tọa độ các vùng riêng biệt</th>
+                            <th className="px-3 py-2 text-center font-bold border w-24">Thao tác</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody className="bg-white divide-y">
+                          {vungChucNangDaKhaiBao.map((vung, idx) => (
+                            <tr key={vung.id} className="hover:bg-slate-50">
+                              <td className="px-3 py-2 border text-center font-medium">{idx + 1}</td>
+                              <td className="px-3 py-2 border font-medium">{vung.xa}, {vung.huyen}</td>
+                              <td className="px-3 py-2 border text-blue-700 font-semibold">{vung.tenQuyHoach}</td>
+                              <td className="px-3 py-2 border p-0">
+                                <table className="w-full text-xs divide-y bg-slate-50/50">
+                                  <tbody>
+                                    {Array.isArray(vung.danhSachChucNang) && vung.danhSachChucNang.map((cn, i) => (
+                                      <tr key={cn.id || i} className="border-b last:border-b-0">
+                                        <td className="px-3 py-2 font-bold text-purple-700 w-1/3 border-r align-top">{cn.tenChucNang}</td>
+                                        <td className="px-3 py-2 font-mono text-[11px] text-slate-700 whitespace-pre-line align-top">{cn.toaDoVung}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </td>
+                              <td className="px-3 py-2 border text-center align-middle">
+                                <div className="flex justify-center gap-1.5">
+                                  <button onClick={() => openVungModal(vung)} className="p-1 text-blue-600 hover:bg-blue-100 rounded" title="Sửa"><Edit2 className="w-3.5 h-3.5"/></button>
+                                  <button onClick={() => handleDeleteVung(vung.id)} className="p-1 text-red-600 hover:bg-red-100 rounded" title="Xóa"><Trash2 className="w-3.5 h-3.5"/></button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                </div>
-              </div>
-            )}
+                )}
           
           {/* BÁO CÁO THÔNG MINH MODAL & PREVIEW */}
           {reportModal.isOpen && !showGeneratedReport && (
