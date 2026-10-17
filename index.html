@@ -1010,17 +1010,6 @@ function App() {
           phuHop: isPhuHop
         };
 
-        const ketQua = {
-          diaDiem: `${matchedZone.xa}, ${matchedZone.huyen}, tỉnh Gia Lai`,
-          dienTich: dienTichTinhToan ? `${dienTichTinhToan} ha` : '',
-          loaiQuyhoach: matchedZone.tenQuyHoach,
-          chucNangSuDung: matchedChucNangName,
-          ketLuan: isPhuHop 
-            ? `Việc đề xuất dự án "${kiemTraForm.mucTieuDuAn}" tại vị trí khu đất nêu trên là PHÙ HỢP theo định hướng chức năng "${matchedChucNangName}" thuộc ${matchedZone.tenQuyHoach}.`
-            : `Việc đề xuất dự án "${kiemTraForm.mucTieuDuAn}" tại vị trí khu đất nêu trên CHƯA PHÙ HỢP với chức năng quy hoạch hiện trạng là "${matchedChucNangName}" (${matchedZone.tenQuyHoach}).`,
-          phuHop: isPhuHop
-        };
-
         setKetQuaKiemTra(ketQua);
         showNotification(isPhuHop ? '✅ Đã đối chiếu: PHÙ HỢP quy hoạch vùng khai báo!' : '⚠️ Đã đối chiếu: CHƯA PHÙ HỢP quy hoạch vùng khai báo!');
       };
