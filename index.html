@@ -2730,104 +2730,111 @@ function App() {
                 </div>
               </div>
             )}
-          {/* TAB: HƯỚNG DẪN SỬ DỤNG CHI TIẾT & CẬP NHẬT TỰ ĐỘNG */}
+          {/* TAB: HƯỚNG DẪN SỬ DỤNG TOÀN DIỆN HỆ THỐNG */}
             {activeTab === 'HELP' && (
               <div className="flex flex-col flex-1 min-h-0 gap-4 animate-in fade-in duration-300">
                 <div className="bg-white rounded-xl shadow-sm p-6 md:p-10 border flex-1 overflow-y-auto custom-scrollbar">
                   <div className="max-w-4xl mx-auto">
                     <div className="text-center mb-10 border-b pb-6">
-                      <h2 className="text-2xl md:text-3xl font-bold text-blue-900 mb-2 uppercase">Tài liệu Hướng dẫn Sử dụng Hệ thống</h2>
-                      <p className="text-slate-500 text-sm">Hệ thống Quản lý Cơ sở dữ liệu Quy hoạch & Tra cứu thông tin tỉnh Gia Lai </p>
-                      <span className="inline-block mt-3 bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1 rounded-full">✨ Đã cập nhật đầy đủ các tính năng mới nhất </span>
+                      <h2 className="text-2xl md:text-3xl font-bold text-blue-900 mb-2 uppercase">Cẩm nang Hướng dẫn Sử dụng Hệ thống CSDL Quy hoạch</h2>
+                      <p className="text-slate-500 text-sm">Hệ thống Quản lý Cơ sở dữ liệu Quy hoạch & Sáp nhập ĐVHC tỉnh Gia Lai (Giai đoạn 2025 - 2045)</p>
+                      <span className="inline-block mt-3 bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1 rounded-full">✨ Cập nhật đầy đủ hướng dẫn chi tiết cho toàn bộ các Tab & Tính năng</span>
                     </div>
 
                     <div className="space-y-10 text-slate-700">
                       
-                      {/* PHẦN I: HƯỚNG DẪN CHUNG */}
+                      {/* PHẦN I: TỔNG QUAN & PHÂN QUYỀN */}
                       <section>
                         <h3 className="text-lg font-bold text-slate-800 border-b-2 border-blue-200 pb-2 mb-4 uppercase flex items-center gap-2">
-                          <User className="w-5 h-5 text-blue-600"/> I. Hướng dẫn chung & Phân quyền hệ thống
+                          <User className="w-5 h-5 text-blue-600"/> I. Tổng quan hệ thống & Phân quyền bảo mật
                         </h3>
                         <div className="space-y-3 text-sm">
-                          <p>Hệ thống được thiết kế theo mô hình phân quyền bảo mật 3 cấp độ nhằm đảm bảo an toàn dữ liệu chuyên ngành:</p>
+                          <p>Hệ thống được xây dựng nhằm phục vụ công tác quản lý nhà nước về quy hoạch xây dựng và sáp nhập đơn vị hành chính trên địa bàn tỉnh Gia Lai, phân định rõ 3 cấp độ người dùng:</p>
                           <ul className="list-disc pl-6 space-y-2">
-                            <li><b>Khách vãng lai (Chưa đăng nhập):</b> Chỉ có thể xem các bảng thống kê và dữ liệu công khai. Toàn bộ các tài liệu đính kèm và tab tính năng chuyên sâu đều ở trạng thái khóa.</li>
-                            <li><b>Thành viên (Đã đăng nhập):</b> Được cấp quyền tra cứu toàn bộ các lớp dữ liệu, sử dụng tính năng tra cứu quy hoạch, tải tài liệu đính kèm, xuất file Excel và xuất báo cáo thông minh. Có quyền gửi đề xuất thêm mới/chỉnh sửa (cần Admin phê duyệt).</li>
-                            <li><b>Quản trị viên (Admin):</b> Nắm toàn quyền hệ thống. Chỉ tài khoản Admin mới thấy và quản lý được Bảng 3 (Khai báo vùng tọa độ quy hoạch), thêm/sửa/xóa trực tiếp dữ liệu, xét duyệt tài khoản thành viên và cấu hình đồng bộ đám mây.</li>
+                            <li><b>Khách vãng lai:</b> Truy cập xem các biểu đồ thống kê tổng quan và danh mục dữ liệu; toàn bộ tính năng chỉnh sửa, tài liệu đính kèm và tab kiểm tra quy hoạch chuyên sâu ở trạng thái <span className="text-slate-400 font-semibold">Khóa</span>.</li>
+                            <li><b>Thành viên (Cán bộ địa phương):</b> Tra cứu toàn diện các bảng dữ liệu, sử dụng tính năng kiểm tra quy hoạch tự động, xuất file Excel, xuất báo cáo thông minh và gửi đề xuất cập nhật dữ liệu (chờ Admin phê duyệt).</li>
+                            <li><b>Quản trị viên (Admin):</b> Toàn quyền quản trị: Thêm/Sửa/Xóa dữ liệu trực tiếp, khai báo vùng tọa độ đồ án (Bảng 3), xét duyệt tài khoản thành viên, duyệt dữ liệu đóng góp, xem nhật ký chỉnh sửa và cấu hình đồng bộ đám mây đa thiết bị.</li>
                           </ul>
                         </div>
                       </section>
 
-                      {/* PHẦN II: HƯỚNG DẪN CHI TIẾT TỪNG CHỨC NĂNG */}
+                      {/* PHẦN II: HƯỚNG DẪN CHI TIẾT TỪNG TAB VÀ TÍNH NĂNG */}
                       <section>
                         <h3 className="text-lg font-bold text-slate-800 border-b-2 border-teal-200 pb-2 mb-4 uppercase flex items-center gap-2">
-                          <Layers className="w-5 h-5 text-teal-600"/> II. Hướng dẫn chi tiết sử dụng từng chức năng
+                          <Layers className="w-5 h-5 text-teal-600"/> II. Hướng dẫn chi tiết sử dụng theo từng Tab chức năng
                         </h3>
 
                         <div className="space-y-6">
                           
-                          {/* Chức năng 1 */}
+                          {/* Tab 1 */}
                           <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
                             <h4 className="font-bold text-teal-800 text-base mb-2 flex items-center gap-2">
                               <span className="bg-teal-600 text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-xs">1</span> 
-                              Chức năng Kiểm tra & Đối chiếu Quy hoạch Tự động
+                              Tab Thống kê Quy hoạch Chung & Chi tiết
                             </h4>
-                            <ol className="list-decimal pl-5 space-y-1.5 text-sm">
-                              <li><b>Truy cập:</b> Chọn tab <b>KIỂM TRA QUY HOẠCH</b> trên thanh menu (yêu cầu đăng nhập tài khoản Thành viên hoặc Admin).</li>
-                              <li><b>Khai báo thông tin:</b> Nhập mục tiêu dự án (VD: <i>Đất sản xuất công nghiệp</i>, <i>Đất ở nông thôn</i>...).</li>
-                              <li><b>Nhập tọa độ ranh giới:</b> 
-                                <ul className="list-disc pl-5 mt-1 text-xs text-slate-600 space-y-1">
-                                  <li><i>Cách 1:</i> Dán trực tiếp danh sách tọa độ các đỉnh (X, Y hoặc VN-2000) vào ô nhập liệu.</li>
-                                  <li><i>Cách 2:</i> Tải lên tệp chứa tọa độ (.txt, .csv, .kml, .kmz).</li>
-                                </ul>
-                              </li>
-                              <li><b>Xem kết quả đối chiếu:</b> Nhấn nút <b>Thực hiện Kiểm tra Quy hoạch</b>. Hệ thống sẽ tự động tính diện tích, quét không gian và trả về kết quả:
-                                <ul className="list-disc pl-5 mt-1 text-xs space-y-1">
-                                  <li><b className="text-emerald-700">Phù hợp:</b> Nếu mục tiêu dự án trùng khớp với chức năng quy hoạch của vùng.</li>
-                                  <li><b className="text-red-600">Chưa phù hợp:</b> Cảnh báo màu đỏ nếu mục tiêu dự án trái với định hướng quy hoạch (VD: Đặt nhà máy công nghiệp trên đất nông nghiệp).</li>
-                                  <li><b className="text-amber-600">Ngoài vùng dữ liệu:</b> Cảnh báo nếu tọa độ khu đất nằm ngoài phạm vi các đồ án đã khai báo.</li>
-                                </ul>
-                              </li>
-                            </ol>
-                          </div>
-
-                          {/* Chức năng 2 */}
-                          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                            <h4 className="font-bold text-teal-800 text-base mb-2 flex items-center gap-2">
-                              <span className="bg-teal-600 text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-xs">2</span> 
-                              Quản lý Đa chức năng & Đa vùng tọa độ (Dành cho Admin)
-                            </h4>
-                            <ol className="list-decimal pl-5 space-y-1.5 text-sm">
-                              <li>Tại tab Kiểm tra quy hoạch, kéo xuống <b>Mục 3 (Danh sách quy hoạch & Khai báo vùng tọa độ)</b> — khu vực này chỉ hiển thị khi đăng nhập tài khoản Admin.</li>
-                              <li>Nhấn nút <b>Khai báo đồ án mới</b> hoặc nhấn biểu tượng <b>Sửa</b> ở từng dòng đồ án.</li>
-                              <li>Trong bảng Modal khai báo, anh có thể cấu hình tên đồ án, xã/huyện, đồng thời nhấn nút <b>Thêm chức năng khác</b> để phân tách thành nhiều nhóm chức năng sử dụng đất độc lập (VD: Chức năng 1: Đất ở, Chức năng 2: Đất công cộng) kèm theo tọa độ các vùng riêng biệt cho từng chức năng.</li>
-                            </ol>
-                          </div>
-
-                          {/* Chức năng 3 */}
-                          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                            <h4 className="font-bold text-teal-800 text-base mb-2 flex items-center gap-2">
-                              <span className="bg-teal-600 text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-xs">3</span> 
-                              Quản lý Dữ liệu Quy hoạch Chung, Phân khu & Chi tiết
-                            </h4>
-                            <ul className="list-disc pl-5 space-y-1.5 text-sm">
-                              <li>Sử dụng các bộ lọc thông minh phía trên mỗi bảng để tra cứu nhanh theo Huyện, Xã, tình trạng phê duyệt, công bố hoặc cắm mốc.</li>
-                              <li>Cột <b>Tên quy hoạch</b> được cố định thanh cuộn ngang thông minh giúp dễ dàng quan sát trên màn hình nhỏ.</li>
-                              <li>Nhấn <b>Xuất Excel</b> để kết xuất toàn bộ dữ liệu lọc ra file bảng tính chuẩn.</li>
+                            <p className="text-sm mb-2">Cung cấp biểu đồ trực quan tổng hợp tiến độ lập, thẩm định và phê duyệt các đồ án trên toàn tỉnh.</p>
+                            <ul className="list-disc pl-5 text-sm space-y-1">
+                              <li>Hiển thị tỷ lệ phần trăm (%) hoàn thành phê duyệt theo từng huyện/thị xã/thành phố.</li>
+                              <li><b>Tính năng Báo cáo thông minh:</b> Nhấn nút <b>Xuất Báo Cáo Thông Minh</b>, tải lên file đề cương mẫu (.docx). Hệ thống sẽ tự động tổng hợp số liệu thời gian thực, điền vào biểu mẫu hành chính và kết xuất file Word (.doc) hoặc In/Lưu PDF chuẩn thể thức.</li>
                             </ul>
                           </div>
 
-                          {/* Chức năng 4 */}
+                          {/* Tab 2 */}
+                          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                            <h4 className="font-bold text-teal-800 text-base mb-2 flex items-center gap-2">
+                              <span className="bg-teal-600 text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-xs">2</span> 
+                              Tab Dữ liệu Quy hoạch Chung, Phân khu & Chi tiết
+                            </h4>
+                            <ul className="list-disc pl-5 text-sm space-y-1.5">
+                              <li><b>Tra cứu & Lọc dữ liệu:</b> Sử dụng thanh tìm kiếm theo tên xã/đồ án kết hợp với các bộ lọc chuyên sâu (Huyện, Tình trạng phê duyệt, Thẩm quyền, Công bố, Cắm mốc, Gửi hồ sơ Sở Xây dựng).</li>
+                              <li><b>Đóng băng cột thông tin:</b> Cột <i>Tên quy hoạch</i> được cố định thông minh giúp người dùng trượt ngang bảng dữ liệu rộng mà không bị mất dấu.</li>
+                              <li><b>Quản lý hồ sơ (Admin/Thành viên):</b> Nhấn <b>Thêm hồ sơ</b> hoặc biểu tượng <b>Sửa</b> để cập nhật thông số đồ án. Nhấn <b>Xuất Excel</b> để tải dữ liệu dạng bảng tính.</li>
+                            </ul>
+                          </div>
+
+                          {/* Tab 3 */}
+                          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                            <h4 className="font-bold text-teal-800 text-base mb-2 flex items-center gap-2">
+                              <span className="bg-teal-600 text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-xs">3</span> 
+                              Tab Rà soát Cụm Huyện Cũ & Sáp nhập ĐVHC
+                            </h4>
+                            <ul className="list-disc pl-5 text-sm space-y-1.5">
+                              <li><b>Rà soát cụm huyện cũ:</b> Theo dõi tiến độ rà soát định hướng phát triển không gian đối với các khu vực huyện cũ trước khi sáp nhập.</li>
+                              <li><b>Sáp nhập ĐVHC:</b> Tra cứu nhanh chiều sáp nhập từ các xã/phường/thị trấn cũ sang đơn vị hành chính mới theo Nghị quyết 1664/NQ-UBTVQH15, kèm theo căn cứ pháp lý và tính năng xuất báo cáo Excel.</li>
+                            </ul>
+                          </div>
+
+                          {/* Tab 4 */}
                           <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
                             <h4 className="font-bold text-teal-800 text-base mb-2 flex items-center gap-2">
                               <span className="bg-teal-600 text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-xs">4</span> 
-                              Xuất Báo Cáo Thông Minh Tự Động (A4)
+                              Tab Đầu mối Liên hệ & Kiểm tra Quy hoạch
                             </h4>
-                            <ol className="list-decimal pl-5 space-y-1.5 text-sm">
-                              <li>Tại tab <b>Thống kê Quy hoạch chung</b> hoặc <b>Chi tiết</b>, nhấn nút <b>Xuất Báo Cáo Thông Minh</b>.</li>
-                              <li>Tải lên tệp đề cương mẫu định dạng Word (.docx / .doc).</li>
-                              <li>Hệ thống sẽ tự động tổng hợp toàn bộ số liệu thời gian thực của hệ thống, điền chuẩn xác vào biểu mẫu hành chính và cho phép tải về file Word hoặc in trực tiếp ra file PDF.</li>
-                            </ol>
+                            <ul className="list-disc pl-5 text-sm space-y-1.5">
+                              <li><b>Đầu mối liên hệ:</b> Tra cứu danh bạ cán bộ phụ trách quy hoạch tại các địa phương, hỗ trợ gọi điện trực tiếp hoặc gửi email nhanh chóng.</li>
+                              <li><b>Kiểm tra quy hoạch (Tab đặc biệt):</b> 
+                                <ol className="list-decimal pl-5 mt-1 space-y-1 text-xs">
+                                  <li>Nhập mục tiêu dự án (VD: <i>Đất sản xuất công nghiệp</i>).</li>
+                                  <li>Nhập tọa độ đỉnh ranh giới khu đất (hoặc tải file KML, KMZ, TXT, Excel).</li>
+                                  <li>Hệ thống tự động tính diện tích, đối chiếu không gian với các vùng tọa độ đã khai báo và trả kết quả: <b>Phù hợp</b>, <b>Chưa phù hợp</b> hoặc cảnh báo <b>Khu đất nằm ngoài vùng dữ liệu</b>.</li>
+                                  <li><i>Quản lý vùng (Admin):</i> Khai báo đồ án mới, thiết lập đa chức năng sử dụng đất và đa vùng tọa độ riêng biệt ngay tại Bảng 3 bên dưới tab này.</li>
+                                </ol>
+                              </li>
+                            </ul>
+                          </div>
+
+                          {/* Tính năng Header nâng cao */}
+                          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                            <h4 className="font-bold text-teal-800 text-base mb-2 flex items-center gap-2">
+                              <span className="bg-teal-600 text-white w-6 h-6 rounded-full inline-flex items-center justify-center text-xs">5</span> 
+                              Các Tính Năng Quản Trị & Công Cụ Nâng Cao (Dành cho Admin trên Header)
+                            </h4>
+                            <ul className="list-disc pl-5 text-sm space-y-1.5">
+                              <li><b>Xét duyệt Thành viên:</b> Quản lý các yêu cầu đăng ký tài khoản mới của cán bộ địa phương (Phê duyệt hoặc Từ chối cấp quyền).</li>
+                              <li><b>Duyệt Dữ liệu:</b> Kiểm tra và phê duyệt các nội dung đóng góp, chỉnh sửa do Thành viên gửi lên trước khi hiển thị chính thức trên web.</li>
+                              <li><b>Nhật ký Hệ thống:</b> Ghi nhận toàn bộ lịch sử Thêm/Sửa/Xóa dữ liệu, hỗ trợ chức năng <b>Khôi phục lại</b> trạng thái cũ khi cần thiết.</li>
+                              <li><b>Quản lý CSDL & Đồng bộ Đám mây:</b> Kết nối Firebase Firestore hoặc Google Apps Script để đồng bộ real-time đa thiết bị, sao lưu toàn bộ cơ sở dữ liệu (.json) hoặc khôi phục dữ liệu gốc.</li>
+                            </ul>
                           </div>
 
                         </div>
