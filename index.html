@@ -2737,8 +2737,8 @@ function App() {
                   <div className="max-w-4xl mx-auto">
                     <div className="text-center mb-10 border-b pb-6">
                       <h2 className="text-2xl md:text-3xl font-bold text-blue-900 mb-2 uppercase">Tài liệu Hướng dẫn Sử dụng Hệ thống</h2>
-                      <p className="text-slate-500 text-sm">Hệ thống Quản lý Cơ sở dữ liệu Quy hoạch & Sáp nhập ĐVHC tỉnh Gia Lai (Giai đoạn 2025 - 2045)</p>
-                      <span className="inline-block mt-3 bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1 rounded-full">✨ Đã cập nhật đầy đủ các tính năng mới nhất (Đa chức năng & Kiểm tra tọa độ)</span>
+                      <p className="text-slate-500 text-sm">Hệ thống Quản lý Cơ sở dữ liệu Quy hoạch & Tra cứu thông tin tỉnh Gia Lai </p>
+                      <span className="inline-block mt-3 bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1 rounded-full">✨ Đã cập nhật đầy đủ các tính năng mới nhất </span>
                     </div>
 
                     <div className="space-y-10 text-slate-700">
@@ -2753,7 +2753,7 @@ function App() {
                           <ul className="list-disc pl-6 space-y-2">
                             <li><b>Khách vãng lai (Chưa đăng nhập):</b> Chỉ có thể xem các bảng thống kê và dữ liệu công khai. Toàn bộ các tài liệu đính kèm và tab tính năng chuyên sâu đều ở trạng thái khóa.</li>
                             <li><b>Thành viên (Đã đăng nhập):</b> Được cấp quyền tra cứu toàn bộ các lớp dữ liệu, sử dụng tính năng tra cứu quy hoạch, tải tài liệu đính kèm, xuất file Excel và xuất báo cáo thông minh. Có quyền gửi đề xuất thêm mới/chỉnh sửa (cần Admin phê duyệt).</li>
-                            <li><b>Quản trị viên (Admin):</b> Nắm toàn quyền hệ thống. Chỉ tài khoản Admin mới thấy và quản lý được Bảng 3 (Khai báo vùng tọa độ đồ án), thêm/sửa/xóa trực tiếp dữ liệu, xét duyệt tài khoản thành viên và cấu hình đồng bộ đám mây.</li>
+                            <li><b>Quản trị viên (Admin):</b> Nắm toàn quyền hệ thống. Chỉ tài khoản Admin mới thấy và quản lý được Bảng 3 (Khai báo vùng tọa độ quy hoạch), thêm/sửa/xóa trực tiếp dữ liệu, xét duyệt tài khoản thành viên và cấu hình đồng bộ đám mây.</li>
                           </ul>
                         </div>
                       </section>
@@ -2798,7 +2798,7 @@ function App() {
                               Quản lý Đa chức năng & Đa vùng tọa độ (Dành cho Admin)
                             </h4>
                             <ol className="list-decimal pl-5 space-y-1.5 text-sm">
-                              <li>Tại tab Kiểm tra quy hoạch, kéo xuống <b>Mục 3 (Danh sách Đồ án & Đa vùng tọa độ)</b> — khu vực này chỉ hiển thị khi đăng nhập tài khoản Admin.</li>
+                              <li>Tại tab Kiểm tra quy hoạch, kéo xuống <b>Mục 3 (Danh sách quy hoạch & Khai báo vùng tọa độ)</b> — khu vực này chỉ hiển thị khi đăng nhập tài khoản Admin.</li>
                               <li>Nhấn nút <b>Khai báo đồ án mới</b> hoặc nhấn biểu tượng <b>Sửa</b> ở từng dòng đồ án.</li>
                               <li>Trong bảng Modal khai báo, anh có thể cấu hình tên đồ án, xã/huyện, đồng thời nhấn nút <b>Thêm chức năng khác</b> để phân tách thành nhiều nhóm chức năng sử dụng đất độc lập (VD: Chức năng 1: Đất ở, Chức năng 2: Đất công cộng) kèm theo tọa độ các vùng riêng biệt cho từng chức năng.</li>
                             </ol>
@@ -2930,12 +2930,12 @@ function App() {
                   </div>
                 </div>
 
-                {/* BẢNG 3: DANH SÁCH ĐỒ ÁN VÀ ĐA CHỨC NĂNG - CHỈ ADMIN MỚI THẤY */}
+                {/* BẢNG 3: DANH SÁCH QUY HOẠCH VÀ KHAI BÁO VÙNG TỌA ĐỘ - CHỈ ADMIN MỚI THẤY */}
                 {userRole === 'ADMIN' && (
                   <div className="bg-white rounded-xl shadow-sm border p-4">
                     <div className="flex justify-between items-center border-b pb-2 mb-3">
                       <h3 className="font-bold text-slate-800 uppercase text-xs flex items-center gap-2">
-                        <Layers className="w-4 h-4 text-teal-600" /> 3. Danh sách Đồ án quy hoạch, Đa chức năng & Đa vùng tọa độ khoanh vùng ({vungChucNangDaKhaiBao.length})
+                        <Layers className="w-4 h-4 text-teal-600" /> 3. Danh sách quy hoạch, chức năng sử dụng đất & khai báo vùng tọa độ ({vungChucNangDaKhaiBao.length})
                       </h3>
                       <button onClick={() => openVungModal(null)} className="bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm">
                         <Plus className="w-3.5 h-3.5" /> Khai báo đồ án mới
@@ -2991,7 +2991,7 @@ function App() {
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[99999]">
               <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in">
                 <div className="flex justify-between items-center p-4 border-b bg-teal-50 shrink-0">
-                  <h3 className="font-bold text-teal-800 uppercase text-sm">{editingVungRecord ? 'Cập nhật Đồ án & Đa chức năng' : 'Khai báo Đồ án, Đa chức năng & Đa vùng tọa độ'}</h3>
+                  <h3 className="font-bold text-teal-800 uppercase text-sm">{editingVungRecord ? 'Cập nhật quy hoạch & khai báo vùng tọa độ' : 'Khai báo quy hoạch, chức năng sử dụng đất & đa vùng tọa độ'}</h3>
                   <button onClick={() => setIsVungModalOpen(false)} className="text-slate-400 hover:text-slate-700"><X className="w-5 h-5" /></button>
                 </div>
                 <form onSubmit={handleSaveVung} className="p-4 flex flex-col gap-3 overflow-y-auto flex-1 custom-scrollbar">
