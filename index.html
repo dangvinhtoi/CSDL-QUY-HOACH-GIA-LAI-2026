@@ -907,87 +907,25 @@ function App() {
         return points;
       };
 
-      // THUẬT TOÁN ĐỐI CHÍNH XÁC TỌA ĐỘ KHU ĐẤT VỚI CÁC VÙNG ĐÃ KHAI BÁO
-      const handleThucHienKiemTra = (e) => {
-        e.preventDefault();
-        if (!kiemTraForm.mucTieuDuAn.trim()) {
-          showNotification('⚠️ Vui lòng nhập mục tiêu dự án!');
-          return;
-        }
-        if (kiemTraForm.loaiNhap === 'truc_tiep' && !kiemTraForm.toaDoTrucTiep.trim()) {
-          showNotification('❌ Vui lòng nhập tọa độ khu đất!');
-          return;
-        }
-        if (kiemTraForm.loaiNhap !== 'truc_tiep' && !kiemTraForm.fileName) {
-          showNotification('❌ Vui lòng đính kèm file dữ liệu!');
-          return;
-        }
-
-        const inputPoints = parseCoordinates(kiemTraForm.toaDoTrucTiep);
-        const dienTichTinhToan = tinhDienTichTuToaDo(kiemTraForm.toaDoTrucTiep);
-
-        if (inputPoints.length === 0) {
-          showNotification('❌ Không đọc được tọa độ hợp lệ từ dữ liệu nhập vào!');
-          return;
-        }
-
-        // Tính trung tâm (centroid) hoặc phạm vi của khu đất nhập vào để đối chiếu
-        const avgX = inputPoints.reduce((sum, p) => sum + p.x, 0) / inputPoints.length;
-        const avgY = inputPoints.reduce((sum, p) => sum + p.y, 0) / inputPoints.length;
-
-        let matchedZone = null;
-        let matchedChucNangName = '';
-
-        // Duyệt qua danh sách các vùng đã được khai báo trong hệ thống
-        for (const vung of (vungChucNangDaKhaiBao || [])) {
-          if (Array.isArray(vung.danhSachChucNang)) {
-            for (const cn of vung.danhSachChucNang) {
-              const zonePoints = parseCoordinates(cn.toaDoVung);
-              if (zonePoints.length > 0) {
-                // Tính bounding box của vùng khai báo để kiểm tra khu đất có nằm trong vùng hay không
-                const minX = Math.min(...zonePoints.map(p => p.x));
-                const maxX = Math.max(...zonePoints.map(p => p.x));
-                const minY = Math.min(...zonePoints.map(p => p.y));
-                const maxY = Math.max(...zonePoints.map(p => p.y));
-
-                // Kiểm tra nếu tâm khu đất nằm trong phạm vi bounding box của vùng khai báo (hoặc có biên độ dung sai)
-                const tolerance = 500; // Dung sai mét trong không gian VN-2000
-                if (avgX >= (minX - tolerance) && avgX <= (maxX + tolerance) && avgY >= (minY - tolerance) && avgY <= (maxY + tolerance)) {
-                  matchedZone = vung;
-                  matchedChucNangName = cn.tenChucNang;
-                  break;
-                }
-              }
-            }
-          }
-          if (matchedZone) break;
-        }
-
-        // TRƯỜNG HỢP 1: KHU ĐẤT NẰM NGOÀI VÙNG DỮ LIỆU ĐÃ KHAI BÁO
-        if (!matchedZone) {
-          const ketQuaNgoaiVung = {
-            diaDiem: 'Ngoài ranh giới cơ sở dữ liệu hệ thống',
-            dienTich: dienTichTinhToan ? `${dienTichTinhToan} ha` : '',
-            loaiQuyhoach: 'Không xác định (Ngoài vùng quy hoạch)',
-            chucNangSuDung: '---',
-            ketLuan: `⚠️ KHU ĐẤT NẰM NGOÀI VÙNG DỮ LIỆU CỦA HỆ THỐNG. Tọa độ ranh giới khu đất không trùng khớp hoặc nằm ngoài phạm vi các đồ án quy hoạch đã được khai báo.`,
-            phuHop: false
-          };
-          setKetQuaKiemTra(ketQuaNgoaiVung);
-          showNotification('⚠️ Cảnh báo: Khu đất nằm ngoài vùng dữ liệu của hệ thống!');
-          return;
-        }
-
-        // TRƯỜNG HỢP 2: NẰM TRONG VÙNG ĐÃ KHAI BÁO -> TIẾN HÀNH ĐỐI CHÍNH MỤC TIÊU
+      // ĐỐI CHÍNH XÁC MỤC TIÊU DỰ ÁN VỚI CHỨC NĂNG ĐẤT ĐÃ KHAI BÁO
         const mucTieuLower = kiemTraForm.mucTieuDuAn.toLowerCase();
         const chucNangLower = matchedChucNangName.toLowerCase();
         
-        // Kiểm tra xem mục tiêu dự án có phù hợp với chức năng đất được khai báo không
         let isPhuHop = true;
-        if (chucNangLower.includes('công nghiệp') && mucTieuLower.includes('nhà ở') && !mucTieuLower.includes('công nhân')) {
+        let lyDoKhongPhuHop = "";
+
+        // Kiểm tra nếu mục tiêu là CÔNG NGHIỆP / SẢN XUẤT CÔNG NGHIỆP nhưng quy hoạch là NÔNG NGHIỆP / ĐẤT LÚA / CÂY LÂU NĂM
+        const isMucTieuCongNghiep = mucTieuLower.includes('công nghiệp') || mucTieuLower.includes('sản xuất') || mucTieuLower.includes('nhà máy') || mucTieuLower.includes('xưởng');
+        const isQuyHoachNongNghiep = chucNangLower.includes('nông nghiệp') || chucNangLower.includes('trồng cây') || chucNangLower.includes('lúa') || chucNangLower.includes('rừng');
+
+        if (isMucTieuCongNghiep && isQuyHoachNongNghiep) {
           isPhuHop = false;
-        } else if (chucNangLower.includes('nông nghiệp') && (mucTieuLower.includes('khu đô thị') || mucTieuLower.includes('chung cư'))) {
+          lyDoKhongPhuHop = `Mục tiêu dự án (${kiemTraForm.mucTieuDuAn}) yêu cầu đất chuyên dùng cho công nghiệp, trong khi vị trí khu đất theo quy hoạch được phê duyệt là "${matchedChucNangName}".`;
+        } 
+        // Kiểm tra ngược lại nếu dự án nhà ở / đô thị mà đè vào đất nông nghiệp/công nghiệp
+        else if ((mucTieuLower.includes('khu đô thị') || mucTieuLower.includes('nhà ở thương mại')) && (chucNangLower.includes('nông nghiệp') || chucNangLower.includes('công nghiệp'))) {
           isPhuHop = false;
+          lyDoKhongPhuHop = `Mục tiêu dự án (${kiemTraForm.mucTieuDuAn}) không phù hợp với chức năng quy hoạch hiện trạng là "${matchedChucNangName}".`;
         }
 
         const ketQua = {
@@ -997,10 +935,9 @@ function App() {
           chucNangSuDung: matchedChucNangName,
           ketLuan: isPhuHop 
             ? `Việc đề xuất dự án "${kiemTraForm.mucTieuDuAn}" tại vị trí khu đất nêu trên là PHÙ HỢP theo định hướng chức năng "${matchedChucNangName}" thuộc ${matchedZone.tenQuyHoach}.`
-            : `Việc đề xuất dự án "${kiemTraForm.mucTieuDuAn}" tại vị trí khu đất nêu trên CHƯA PHÙ HỢP với chức năng quy hoạch hiện trạng là "${matchedChucNangName}" (${matchedZone.tenQuyHoach}).`,
+            : `⚠️ CHƯA PHÙ HỢP QUY HOẠCH: Việc đề xuất dự án "${kiemTraForm.mucTieuDuAn}" tại vị trí khu đất nêu trên không phù hợp. ${lyDoKhongPhuHop}`,
           phuHop: isPhuHop
         };
-
         setKetQuaKiemTra(ketQua);
         showNotification(isPhuHop ? '✅ Đã đối chiếu: PHÙ HỢP quy hoạch vùng khai báo!' : '⚠️ Đã đối chiếu: CHƯA PHÙ HỢP quy hoạch vùng khai báo!');
       };
