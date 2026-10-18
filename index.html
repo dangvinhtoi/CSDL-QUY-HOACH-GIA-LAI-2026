@@ -1065,10 +1065,10 @@ function App() {
         matchedDetails.forEach(detail => {
           const m2Val = (detail.dienTichHa * 10000).toLocaleString('en-US');
           if (detail.chucNang.includes('Ngoài phạm vi') || detail.chucNang.includes('Ngoài vùng')) {
-            ketLuanLines.push(`- ${detail.dienTichHa} ha (${m2Val} m²) nằm ngoài vùng dữ liệu của hệ thống.`);
+            ketLuanLines.push(` ${detail.dienTichHa} ha (${m2Val} m²) nằm ngoài vùng dữ liệu của hệ thống.`);
           } else {
             matchingAreaTotal += detail.dienTichHa;
-            ketLuanLines.push(`- ${detail.dienTichHa} ha (${m2Val} m²) phù hợp với chức năng ${detail.chucNang.toLowerCase()}.`);
+            ketLuanLines.push(` ${detail.dienTichHa} ha (${m2Val} m²) phù hợp với chức năng ${detail.chucNang.toLowerCase()}.`);
           }
         });
 
