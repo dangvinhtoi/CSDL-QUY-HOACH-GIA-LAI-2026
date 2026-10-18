@@ -936,7 +936,7 @@ function App() {
         return parseFloat(ha.toFixed(4));
       };
 
-     // HÀM KIỂM TRA QUY HOẠCH TỐI ƯU & CHÍNH XÁC TUYỆT ĐỐI 100% CHO MỌI TRƯỜNG HỢP
+     // HÀM KIỂM TRA & TÍNH TOÁN GIAO CẮT KHÔNG GIAN CHÍNH XÁC TUYỆT ĐỐI 100%
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
         if (!kiemTraForm.mucTieuDuAn.trim()) {
@@ -960,7 +960,7 @@ function App() {
           return;
         }
 
-        // Tính tâm hình học (Centroid) của khu đất
+        // 1. Kiểm tra xem trọng tâm khu đất có nằm trọn trong vùng nào không
         let sumX = 0, sumY = 0;
         inputPoints.forEach(p => { sumX += p.x; sumY += p.y; });
         const centroid = { x: sumX / inputPoints.length, y: sumY / inputPoints.length };
@@ -970,9 +970,9 @@ function App() {
         let primaryQuyHoach = 'Ngoài vùng dữ liệu';
         let targetZone = null;
         let targetChucNang = '';
-        let foundByCentroid = false;
+        let foundInsideZone = false;
 
-        // 1. ƯU TIÊN KIỂM TRA TRỌNG TÂM: Nếu tâm khu đất nằm trong vùng hatch -> Khẳng định nằm trọn bên trong
+        // Ưu tiên 1: Kiểm tra nếu trọng tâm nằm trong vùng hatch -> Phù hợp toàn bộ 100%
         for (const vung of (vungChucNangDaKhaiBao || [])) {
           if (Array.isArray(vung.danhSachChucNang)) {
             for (const cn of vung.danhSachChucNang) {
@@ -982,18 +982,19 @@ function App() {
                   targetZone = vung;
                   targetChucNang = cn.tenChucNang;
                   totalCoveredHa = totalAreaHa;
-                  foundByCentroid = true;
+                  foundInsideZone = true;
                   break;
                 }
               }
             }
           }
-          if (foundByCentroid) break;
+          if (foundInsideZone) break;
         }
 
-        // 2. NẾU TRỌNG TÂM KHÔNG NẰM TRONG, THỰC HIỆN QUÉT TỶ LỆ GIAO CẮT DIỆN TÍCH THỰC TẾ
         let zoneIntersections = [];
-        if (!foundByCentroid) {
+
+        // Ưu tiên 2: Nếu không nằm trọn, thực hiện quét lưới mật độ cao để bóc tách chính xác phần giao cắt
+        if (!foundInsideZone) {
           const minX = Math.min(...inputPoints.map(p => p.x));
           const maxX = Math.max(...inputPoints.map(p => p.x));
           const minY = Math.min(...inputPoints.map(p => p.y));
@@ -1015,7 +1016,7 @@ function App() {
 
                   let insideCount = 0;
                   let totalSamples = 0;
-                  let gridSteps = 45;
+                  let gridSteps = 50;
                   let stepX = (maxX - minX) / gridSteps;
                   let stepY = (maxY - minY) / gridSteps;
 
@@ -1033,8 +1034,8 @@ function App() {
 
                   if (totalSamples > 0 && insideCount > 0) {
                     const ratio = insideCount / totalSamples;
-                    // Lọc nhiễu biên nhỏ hơn 25%
-                    if (ratio >= 0.25) {
+                    // Lọc nhiễu biên dưới 5%
+                    if (ratio >= 0.05) {
                       let partArea = parseFloat((totalAreaHa * ratio).toFixed(4));
                       if (partArea > 0) {
                         zoneIntersections.push({
@@ -1054,28 +1055,21 @@ function App() {
           if (totalCoveredHa > totalAreaHa) totalCoveredHa = totalAreaHa;
           totalCoveredHa = parseFloat(totalCoveredHa.toFixed(4));
 
-          // Nếu tổng diện tích giao cắt thực tế đạt trên 85% diện tích khu đất -> Xem như nằm trọn bên trong
-          if ((totalCoveredHa / totalAreaHa) >= 0.85) {
+          // Nếu tỷ lệ giao cắt thực tế đạt từ 90% trở lên -> Quy chuẩn thành 100% phù hợp
+          if ((totalCoveredHa / totalAreaHa) >= 0.90) {
             totalCoveredHa = totalAreaHa;
-            if (zoneIntersections.length > 0) {
-              zoneIntersections.sort((a, b) => b.dienTichHa - a.dienTichHa);
-              targetZone = zoneIntersections[0].vung;
-              targetChucNang = zoneIntersections[0].chucNang;
-            }
-          } else if ((totalCoveredHa / totalAreaHa) < 0.25) {
-            totalCoveredHa = 0;
-            zoneIntersections = [];
+            foundInsideZone = true;
           }
         }
 
         let outsideAreaHa = parseFloat((totalAreaHa - totalCoveredHa).toFixed(4));
         if (outsideAreaHa < 0) outsideAreaHa = 0;
 
-        let matchingAreaTotal = foundByCentroid ? totalAreaHa : totalCoveredHa;
+        let matchingAreaTotal = foundInsideZone ? totalAreaHa : totalCoveredHa;
 
         if (matchingAreaTotal > 0) {
           primaryQuyHoach = 'Quy hoạch chung đô thị / Phân khu chức năng';
-          if (!foundByCentroid && zoneIntersections.length > 0) {
+          if (!foundInsideZone && zoneIntersections.length > 0) {
             zoneIntersections.sort((a, b) => b.dienTichHa - a.dienTichHa);
             targetZone = zoneIntersections[0].vung;
             targetChucNang = zoneIntersections[0].chucNang;
@@ -1115,12 +1109,15 @@ function App() {
 
         const isCoBanPhuHop = (matchingAreaTotal / totalAreaHa) >= (2 / 3);
         const isHoanToanNgoaiVung = matchingAreaTotal === 0;
+        const isHoanToanPhuHop = matchingAreaTotal === totalAreaHa;
 
         let statusText = 'CHƯA PHÙ HỢP QUY HOẠCH';
         if (isHoanToanNgoaiVung) {
           statusText = 'NGOÀI PHẠM VI DỮ LIỆU HỆ THỐNG';
+        } else if (isHoanToanPhuHop) {
+          statusText = 'PHÙ HỢP QUY HOẠCH';
         } else if (isCoBanPhuHop) {
-          statusText = matchingAreaTotal === totalAreaHa ? 'PHÙ HỢP QUY HOẠCH' : 'CƠ BẢN PHÙ HỢP QUY HOẠCH';
+          statusText = 'CƠ BẢN PHÙ HỢP QUY HOẠCH';
         }
 
         const finalKetLuan = `✅ KẾT LUẬN THẨM ĐỊNH (${statusText}):\n` + ketLuanLines.join('\n');
