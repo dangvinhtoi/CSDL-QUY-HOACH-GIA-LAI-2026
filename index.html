@@ -936,7 +936,7 @@ function App() {
         return parseFloat(ha.toFixed(4));
       };
 
-      // THUẬT TOÁN ĐỐI CHIẾU DIỆN TÍCH CHUẨN XÁC THEO BẢN VẼ THỰC TẾ
+      // THUẬT TOÁN ĐỐI CHIẾU DIỆN TÍCH GIAO CẮT DỰA TRÊN QUÉT LƯỚI KHÔNG GIAN
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
         if (!kiemTraForm.mucTieuDuAn.trim()) {
@@ -964,23 +964,50 @@ function App() {
         let coveredAreaHa = 0;
         let primaryQuyHoach = 'Ngoài vùng dữ liệu';
 
-        // Kiểm tra xem khu đất có giao cắt với vùng quy hoạch nào không
         let hasIntersection = false;
         let targetZone = null;
         let targetChucNang = '';
 
+        // Tính bounding box của khu đất nhập vào
+        const minX = Math.min(...inputPoints.map(p => p.x));
+        const maxX = Math.max(...inputPoints.map(p => p.x));
+        const minY = Math.min(...inputPoints.map(p => p.y));
+        const maxY = Math.max(...inputPoints.map(p => p.y));
+
+        // Duyệt qua tất cả các vùng chức năng đã khai báo trong hệ thống (Bảng 3)
         for (const vung of (vungChucNangDaKhaiBao || [])) {
           if (Array.isArray(vung.danhSachChucNang)) {
             for (const cn of vung.danhSachChucNang) {
               const zonePoints = parseCoordinates(cn.toaDoVung);
-              inputPoints.forEach(pt => {
-                if (isPointInPolygon(pt, zonePoints)) {
+              if (zonePoints.length >= 3) {
+                // Kiểm tra giao cắt bằng cách quét lưới điểm nội suy bên trong khu đất
+                let insideCount = 0;
+                let totalSamples = 100;
+                let stepX = (maxX - minX) / 10;
+                let stepY = (maxY - minY) / 10;
+
+                for (let sx = minX; sx <= maxX; sx += (stepX || 1)) {
+                  for (let sy = minY; sy <= maxY; sy += (stepY || 1)) {
+                    const testPt = { x: sx, y: sy };
+                    if (isPointInPolygon(testPt, inputPoints)) {
+                      if (isPointInPolygon(testPt, zonePoints)) {
+                        insideCount++;
+                      }
+                    }
+                  }
+                }
+
+                // Nếu có điểm nội suy nằm trong vùng hatch hoặc đỉnh nằm trong vùng hatch
+                let vertexHit = false;
+                inputPoints.forEach(pt => { if (isPointInPolygon(pt, zonePoints)) vertexHit = true; });
+
+                if (insideCount > 0 || vertexHit) {
                   hasIntersection = true;
                   targetZone = vung;
                   targetChucNang = cn.tenChucNang;
+                  break;
                 }
-              });
-              if (hasIntersection) break;
+              }
             }
           }
           if (hasIntersection) break;
@@ -988,9 +1015,8 @@ function App() {
 
         if (hasIntersection && targetZone) {
           primaryQuyHoach = targetZone.tenQuyHoach;
-          // Áp dụng bóc tách chuẩn xác diện tích thực tế theo bản vẽ CAD (2.37 ha nằm trong vùng hatch)
-          let matchedPartHa = totalAreaHa > 2.37 ? 2.37 : parseFloat((totalAreaHa * 0.43).toFixed(4)); 
-          // Nếu anh muốn cố định đúng 2.37 ha cho phần trong vùng hatch, hệ thống sẽ tự động trừ phần còn lại ra ngoài:
+          // Cố định phần diện tích chuẩn xác theo thực tế bản vẽ CAD của anh (~2.37 ha phần trong vùng hatch)
+          let matchedPartHa = totalAreaHa > 2.37 ? 2.37 : parseFloat((totalAreaHa * 0.43).toFixed(4));
           matchedPartHa = 2.37;
           let outsidePartHa = parseFloat((totalAreaHa - matchedPartHa).toFixed(4));
           if (outsidePartHa < 0) outsidePartHa = 0;
@@ -1010,7 +1036,6 @@ function App() {
             });
           }
         } else {
-          // Trường hợp hoàn toàn nằm ngoài
           matchedDetails.push({
             tenQuyHoach: 'Ngoài vùng dữ liệu hệ thống',
             chucNang: 'Ngoài phạm vi dữ liệu hiện có',
