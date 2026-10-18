@@ -936,7 +936,7 @@ function App() {
         return parseFloat(ha.toFixed(4));
       };
 
-      // THUẬT TOÁN BÓC TÁCH DIỆN TÍCH ĐA CHỨC NĂNG VÀ ĐỐI CHÍNH XÁC KHÔNG GIAN
+      // THUẬT TOÁN BÓC TÁCH ĐA VÙNG & ĐỐI CHÍNH XÁC DIỆN TÍCH KHU ĐẤT
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
         if (!kiemTraForm.mucTieuDuAn.trim()) {
@@ -960,19 +960,22 @@ function App() {
           return;
         }
 
-        // Kiểm tra giao cắt ranh giới khu đất với các vùng chức năng đã được khai báo
         let matchedDetails = [];
         let coveredAreaHa = 0;
         let primaryQuyHoach = 'Ngoài vùng dữ liệu';
 
+        // Duyệt qua tất cả các vùng chức năng đã được khai báo trong hệ thống (Bảng 3)
         for (const vung of (vungChucNangDaKhaiBao || [])) {
           if (Array.isArray(vung.danhSachChucNang)) {
             for (const cn of vung.danhSachChucNang) {
               const zonePoints = parseCoordinates(cn.toaDoVung);
               if (zonePoints.length >= 3) {
+                // Đếm số đỉnh của khu đất nằm bên trong vùng quy hoạch này
                 let pointsInsideCount = 0;
                 inputPoints.forEach(pt => {
-                  if (isPointInPolygon(pt, zonePoints)) pointsInsideCount++;
+                  if (isPointInPolygon(pt, zonePoints)) {
+                    pointsInsideCount++;
+                  }
                 });
 
                 if (pointsInsideCount > 0) {
@@ -993,7 +996,7 @@ function App() {
           }
         }
 
-        // Tính toán phần diện tích nằm ngoài vùng dữ liệu hệ thống
+        // Tính phần diện tích nằm ngoài vùng dữ liệu hệ thống
         let outsideAreaHa = parseFloat((totalAreaHa - coveredAreaHa).toFixed(4));
         if (outsideAreaHa < 0) outsideAreaHa = 0;
 
@@ -1005,6 +1008,7 @@ function App() {
             dienTichHa: totalAreaHa
           }];
         } else if (outsideAreaHa > 0) {
+          // Thêm phần diện tích ngoài vùng dữ liệu vào bảng kê chi tiết
           matchedDetails.push({
             tenQuyHoach: 'Ngoài vùng dữ liệu hệ thống',
             chucNang: 'Ngoài phạm vi dữ liệu hiện có của hệ thống',
@@ -1012,11 +1016,11 @@ function App() {
           });
         }
 
-        // Tổng hợp tên các chức năng đất hiển thị lên giao diện
+        // Tổng hợp tên các chức năng đất để hiển thị lên ô "Chức năng đất:"
         const uniqueChucNang = [...new Set(matchedDetails.map(d => d.chucNang))];
         const chucNangDisplay = uniqueChucNang.join(' và ');
 
-        // Xây dựng nội dung chi tiết kết luận bóc tách diện tích ha và m2
+        // Xây dựng nội dung kết luận bóc tách chi tiết diện tích ha và m2
         let ketLuanLines = [];
         let matchingAreaTotal = 0;
 
@@ -1030,7 +1034,7 @@ function App() {
           }
         });
 
-        // Đánh giá tỷ lệ ngưỡng 2/3 (tương đương 66.67%)
+        // Đánh giá tỷ lệ ngưỡng 2/3 (66.67%)
         const isCoBanPhuHop = (matchingAreaTotal / totalAreaHa) >= (2 / 3);
         const statusText = isCoBanPhuHop ? 'CƠ BẢN PHÙ HỢP QUY HOẠCH' : 'CHƯA PHÙ HỢP QUY HOẠCH';
 
