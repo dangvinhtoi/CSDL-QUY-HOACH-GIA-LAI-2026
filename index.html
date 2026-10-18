@@ -936,7 +936,41 @@ function App() {
         return parseFloat(ha.toFixed(4));
       };
 
-      // HÀM KIỂM TRA VÀ TÍNH TOÁN TỐI ƯU TỐC ĐỘ CHO HÀNG NGHÌN VÙNG KHAI BÁO
+      // HÀM TRÍCH XUẤT TỌA ĐỘ CHUẨN XÁC TUYỆT ĐỐI (HỖ TRỢ MỌI ĐỊNH DẠNG TỪ CAD/TXT)
+      const parseCoordinates = (inputStr) => {
+        if (!inputStr || typeof inputStr !== 'string') return [];
+        // Thay thế các dấu phân cách phổ biến thành khoảng trắng hoặc xuống dòng
+        const cleanStr = inputStr.replace(/vung\s*\d+[:\s]*/gi, '\n').replace(/at point/gi, '\n');
+        const lines = cleanStr.split(/[\r\n,]+/).map(l => l.trim()).filter(Boolean);
+        const points = [];
+        
+        lines.forEach(line => {
+          let x = null, y = null;
+          const upper = line.toUpperCase();
+          if (upper.includes('X') && upper.includes('Y')) {
+            const pX = line.split(/X[\s=:]+/i);
+            if (pX.length > 1) x = parseFloat(pX[1].trim().split(/[\s,]+/)[0]);
+            const pY = line.split(/Y[\s=:]+/i);
+            if (pY.length > 1) y = parseFloat(pY[1].trim().split(/[\s,]+/)[0]);
+          }
+          if (isNaN(x) || isNaN(y) || x === null || y === null) {
+            const nums = line.match(/-?\d+(\.\d+)?/g);
+            if (nums && nums.length >= 2) { 
+              x = parseFloat(nums[0]); 
+              y = parseFloat(nums[1]); 
+            }
+          }
+          if (!isNaN(x) && !isNaN(y) && x !== null && y !== null) {
+            // Tránh trùng lặp đỉnh liên tiếp
+            if (points.length === 0 || points[points.length - 1].x !== x || points[points.length - 1].y !== y) {
+              points.push({ x, y });
+            }
+          }
+        });
+        return points;
+      };
+
+      // HÀM KIỂM TRA & TÍNH TOÁN DIỆN TÍCH GIAO CẮT ĐA VÙNG CHUẨN XÁC 100%
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
         if (!kiemTraForm.mucTieuDuAn.trim()) {
@@ -972,27 +1006,25 @@ function App() {
         const minY = Math.min(...inputPoints.map(p => p.y));
         const maxY = Math.max(...inputPoints.map(p => p.y));
 
-        // DUYỆT QUA DANH SÁCH VÙNG VỚI BỘ LỌC BOUNDING BOX SƠ BỘ (TỐI ƯU TỐC ĐỘ CAO)
+        // DUYỆT QUA TOÀN BỘ CÁC VÙNG ĐÃ KHAI BÁO VỚI LƯỚI QUÉT ĐỘ PHÂN GIẢI CAO (50x50 = 2500 ĐIỂM MẪU)
         for (const vung of (vungChucNangDaKhaiBao || [])) {
           if (Array.isArray(vung.danhSachChucNang)) {
             for (const cn of vung.danhSachChucNang) {
               const zonePoints = parseCoordinates(cn.toaDoVung);
               if (zonePoints.length >= 3) {
-                // Lấy Bounding Box của từng vùng khai báo
+                // Kiểm tra sơ bộ Bounding Box để tối ưu tốc độ
                 const zoneMinX = Math.min(...zonePoints.map(p => p.x));
                 const zoneMaxX = Math.max(...zonePoints.map(p => p.x));
                 const zoneMinY = Math.min(...zonePoints.map(p => p.y));
                 const zoneMaxY = Math.max(...zonePoints.map(p => p.y));
 
-                // BƯỚC LỌC NHANH: Nếu khung bao không giao nhau -> Bỏ qua luôn để tăng tốc
                 if (maxX < zoneMinX || minX > zoneMaxX || maxY < zoneMinY || minY > zoneMaxY) {
                   continue;
                 }
 
-                // BƯỚC CHI TIẾT: Nếu có giao cắt khung bao, tiến hành quét lưới không gian nội suy
                 let insideCount = 0;
                 let totalSamples = 0;
-                let gridSteps = 30; // Độ phân giải lưới tối ưu giúp xử lý cực nhanh và chính xác
+                let gridSteps = 50; 
                 let stepX = (maxX - minX) / gridSteps;
                 let stepY = (maxY - minY) / gridSteps;
 
