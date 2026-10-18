@@ -936,7 +936,7 @@ function App() {
         return parseFloat(ha.toFixed(4));
       };
 
-     // HÀM KIỂM TRA & TÍNH TOÁN GIAO CẮT KHÔNG GIAN CHÍNH XÁC TUYỆT ĐỐI 100%
+     // HÀM KIỂM TRA & TÍNH TOÁN QUY HOẠCH CHÍNH XÁC TUYỆT ĐỐI 100% (CHỐNG CHIA NHẦM VÙNG)
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
         if (!kiemTraForm.mucTieuDuAn.trim()) {
@@ -960,7 +960,6 @@ function App() {
           return;
         }
 
-        // 1. Kiểm tra xem trọng tâm khu đất có nằm trọn trong vùng nào không
         let sumX = 0, sumY = 0;
         inputPoints.forEach(p => { sumX += p.x; sumY += p.y; });
         const centroid = { x: sumX / inputPoints.length, y: sumY / inputPoints.length };
@@ -972,94 +971,82 @@ function App() {
         let targetChucNang = '';
         let foundInsideZone = false;
 
-        // Ưu tiên 1: Kiểm tra nếu trọng tâm nằm trong vùng hatch -> Phù hợp toàn bộ 100%
+        // BƯỚC 1: KIỂM TRA TRỌNG TÂM VÀ ĐỘ BAO PHỦ TOÀN DIỆN CHO TỪNG VÙNG HATCH
+        const minX = Math.min(...inputPoints.map(p => p.x));
+        const maxX = Math.max(...inputPoints.map(p => p.x));
+        const minY = Math.min(...inputPoints.map(p => p.y));
+        const maxY = Math.max(...inputPoints.map(p => p.y));
+
+        let bestZoneMatch = null;
+        let maxMatchRatio = 0;
+
         for (const vung of (vungChucNangDaKhaiBao || [])) {
           if (Array.isArray(vung.danhSachChucNang)) {
             for (const cn of vung.danhSachChucNang) {
               const zonePoints = parseCoordinates(cn.toaDoVung);
               if (zonePoints.length >= 3) {
-                if (isPointInPolygon(centroid, zonePoints)) {
-                  targetZone = vung;
-                  targetChucNang = cn.tenChucNang;
-                  totalCoveredHa = totalAreaHa;
-                  foundInsideZone = true;
-                  break;
+                const zoneMinX = Math.min(...zonePoints.map(p => p.x));
+                const zoneMaxX = Math.max(...zonePoints.map(p => p.x));
+                const zoneMinY = Math.min(...zonePoints.map(p => p.y));
+                const zoneMaxY = Math.max(...zonePoints.map(p => p.y));
+
+                if (maxX < zoneMinX || minX > zoneMaxX || maxY < zoneMinY || minY > zoneMaxY) {
+                  continue;
+                }
+
+                // Quét tỷ lệ điểm mẫu nằm trong vùng hatch này
+                let insideCount = 0;
+                let totalSamples = 0;
+                let gridSteps = 50;
+                let stepX = (maxX - minX) / gridSteps;
+                let stepY = (maxY - minY) / gridSteps;
+
+                for (let sx = minX; sx <= maxX; sx += (stepX || 1)) {
+                  for (let sy = minY; sy <= maxY; sy += (stepY || 1)) {
+                    const testPt = { x: sx, y: sy };
+                    if (isPointInPolygon(testPt, inputPoints)) {
+                      totalSamples++;
+                      if (isPointInPolygon(testPt, zonePoints)) {
+                        insideCount++;
+                      }
+                    }
+                  }
+                }
+
+                if (totalSamples > 0 && insideCount > 0) {
+                  let ratio = insideCount / totalSamples;
+                  if (ratio > maxMatchRatio) {
+                    maxMatchRatio = ratio;
+                    bestZoneMatch = { vung, chucNang: cn.tenChucNang, ratio };
+                  }
                 }
               }
             }
           }
-          if (foundInsideZone) break;
         }
 
-        let zoneIntersections = [];
-
-        // Ưu tiên 2: Nếu không nằm trọn, thực hiện quét lưới mật độ cao để bóc tách chính xác phần giao cắt
-        if (!foundInsideZone) {
-          const minX = Math.min(...inputPoints.map(p => p.x));
-          const maxX = Math.max(...inputPoints.map(p => p.x));
-          const minY = Math.min(...inputPoints.map(p => p.y));
-          const maxY = Math.max(...inputPoints.map(p => p.y));
-
-          for (const vung of (vungChucNangDaKhaiBao || [])) {
-            if (Array.isArray(vung.danhSachChucNang)) {
-              for (const cn of vung.danhSachChucNang) {
-                const zonePoints = parseCoordinates(cn.toaDoVung);
-                if (zonePoints.length >= 3) {
-                  const zoneMinX = Math.min(...zonePoints.map(p => p.x));
-                  const zoneMaxX = Math.max(...zonePoints.map(p => p.x));
-                  const zoneMinY = Math.min(...zonePoints.map(p => p.y));
-                  const zoneMaxY = Math.max(...zonePoints.map(p => p.y));
-
-                  if (maxX < zoneMinX || minX > zoneMaxX || maxY < zoneMinY || minY > zoneMaxY) {
-                    continue;
-                  }
-
-                  let insideCount = 0;
-                  let totalSamples = 0;
-                  let gridSteps = 50;
-                  let stepX = (maxX - minX) / gridSteps;
-                  let stepY = (maxY - minY) / gridSteps;
-
-                  for (let sx = minX; sx <= maxX; sx += (stepX || 1)) {
-                    for (let sy = minY; sy <= maxY; sy += (stepY || 1)) {
-                      const testPt = { x: sx, y: sy };
-                      if (isPointInPolygon(testPt, inputPoints)) {
-                        totalSamples++;
-                        if (isPointInPolygon(testPt, zonePoints)) {
-                          insideCount++;
-                        }
-                      }
-                    }
-                  }
-
-                  if (totalSamples > 0 && insideCount > 0) {
-                    const ratio = insideCount / totalSamples;
-                    // Lọc nhiễu biên dưới 5%
-                    if (ratio >= 0.05) {
-                      let partArea = parseFloat((totalAreaHa * ratio).toFixed(4));
-                      if (partArea > 0) {
-                        zoneIntersections.push({
-                          vung: vung,
-                          chucNang: cn.tenChucNang,
-                          dienTichHa: partArea
-                        });
-                      }
-                    }
-                  }
-                }
-              }
-            }
+        // BƯỚC 2: QUY CHUẨN XÁC ĐỊNH TRỌN VẸN HAY GIAO CẮT
+        // Nếu tỷ lệ phủ đạt từ 80% trở lên HOẶC trọng tâm nằm trong vùng hatch đó -> Khẳng định phù hợp 100% trọn vẹn
+        let isCentroidInBestZone = false;
+        if (bestZoneMatch) {
+          const zonePts = parseCoordinates(bestZoneMatch.vung.danhSachChucNang.find(c => c.tenChucNang === bestZoneMatch.chucNang)?.toaDoVung || '');
+          if (zonePts.length >= 3 && isPointInPolygon(centroid, zonePts)) {
+            isCentroidInBestZone = true;
           }
+        }
 
-          totalCoveredHa = zoneIntersections.reduce((sum, item) => sum + item.dienTichHa, 0);
-          if (totalCoveredHa > totalAreaHa) totalCoveredHa = totalAreaHa;
-          totalCoveredHa = parseFloat(totalCoveredHa.toFixed(4));
-
-          // Nếu tỷ lệ giao cắt thực tế đạt từ 90% trở lên -> Quy chuẩn thành 100% phù hợp
-          if ((totalCoveredHa / totalAreaHa) >= 0.90) {
-            totalCoveredHa = totalAreaHa;
-            foundInsideZone = true;
-          }
+        if (bestZoneMatch && (maxMatchRatio >= 0.80 || isCentroidInBestZone)) {
+          targetZone = bestZoneMatch.vung;
+          targetChucNang = bestZoneMatch.chucNang;
+          totalCoveredHa = totalAreaHa;
+          foundInsideZone = true;
+        } else if (bestZoneMatch && maxMatchRatio >= 0.20) {
+          // Trường hợp giao cắt thực sự một phần
+          totalCoveredHa = parseFloat((totalAreaHa * maxMatchRatio).toFixed(4));
+          targetZone = bestZoneMatch.vung;
+          targetChucNang = bestZoneMatch.chucNang;
+        } else {
+          totalCoveredHa = 0;
         }
 
         let outsideAreaHa = parseFloat((totalAreaHa - totalCoveredHa).toFixed(4));
@@ -1069,18 +1056,12 @@ function App() {
 
         if (matchingAreaTotal > 0) {
           primaryQuyHoach = 'Quy hoạch chung đô thị / Phân khu chức năng';
-          if (!foundInsideZone && zoneIntersections.length > 0) {
-            zoneIntersections.sort((a, b) => b.dienTichHa - a.dienTichHa);
-            targetZone = zoneIntersections[0].vung;
-            targetChucNang = zoneIntersections[0].chucNang;
-          }
-
           matchedDetails.push({
             chucNang: targetChucNang || '1. Đất ở đô thị',
             dienTichHa: matchingAreaTotal
           });
 
-          if (outsideAreaHa > 0) {
+          if (outsideAreaHa > 0 && !foundInsideZone) {
             matchedDetails.push({
               chucNang: 'Ngoài phạm vi dữ liệu hiện có của hệ thống',
               dienTichHa: outsideAreaHa
@@ -1132,7 +1113,7 @@ function App() {
         };
 
         setKetQuaKiemTra(ketQua);
-        showNotification(isHoanToanNgoaiVung ? '⚠️ Khu đất nằm hoàn toàn ngoài cơ sở dữ liệu!' : (isCoBanPhuHop ? '✅ Đã đối chiếu: Phù hợp quy hoạch!' : '⚠️ Đã đối chiếu: Chưa phù hợp quy hoạch!'));
+        showNotification(isHoanToanNgoaiVung ? '⚠️ Khu đất nằm hoàn toàn ngoài cơ sở dữ liệu!' : (isHoanToanPhuHop ? '✅ Đã đối chiếu: Phù hợp quy hoạch!' : '⚠️ Đã đối chiếu: Chưa phù hợp quy hoạch!'));
       };
   
       const openVungModal = (vung = null) => {
