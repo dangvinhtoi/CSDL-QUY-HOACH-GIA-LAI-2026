@@ -936,7 +936,7 @@ function App() {
         return parseFloat(ha.toFixed(4));
       };
 
-     // HÀM KIỂM TRA & XỬ LÝ KHU ĐẤT NGOÀI VÙNG HOẶC GIAO CẮT CHUẨN XÁC TUYỆT ĐỐI
+     // HÀM KIỂM TRA & XỬ LÝ KHU ĐẤT TOÀN DIỆN (CHỐNG LỌT NHẦM KHI NẰM NGOÀI HOÀN TOÀN)
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
         if (!kiemTraForm.mucTieuDuAn.trim()) {
@@ -983,8 +983,18 @@ function App() {
                 const zoneMinY = Math.min(...zonePoints.map(p => p.y));
                 const zoneMaxY = Math.max(...zonePoints.map(p => p.y));
 
+                // Lọc nhanh Bounding Box
                 if (maxX < zoneMinX || minX > zoneMaxX || maxY < zoneMinY || minY > zoneMaxY) {
                   continue;
+                }
+
+                // KIỂM TRA ĐIỀU KIỆN TIÊN QUYẾT: Phải có ít nhất 1 đỉnh của khu đất nằm trong vùng hatch 
+                // HOẶC ít nhất 1 đỉnh của vùng hatch nằm trong khu đất
+                let hasVertexInside = inputPoints.some(pt => isPointInPolygon(pt, zonePoints)) ||
+                                      zonePoints.some(pt => isPointInPolygon(pt, inputPoints));
+
+                if (!hasVertexInside) {
+                  continue; // Nếu không giao cắt đỉnh thực tế -> Bỏ qua, chống quét nhầm khoảng trống
                 }
 
                 let insideCount = 0;
@@ -1007,8 +1017,8 @@ function App() {
 
                 if (totalSamples > 0 && insideCount > 0) {
                   const ratio = insideCount / totalSamples;
-                  // CHỈ TÍNH KHI TỶ LỆ GIAO CẮT THỰC TẾ ĐẠT TRÊN 15% (LỌC BỎ NHIỄU BIÊN)
-                  if (ratio >= 0.15) {
+                  // CHỈ TÍNH KHI TỶ LỆ GIAO CẮT THỰC TẾ ĐẠT TRÊN 20%
+                  if (ratio >= 0.20) {
                     let partArea = parseFloat((totalAreaHa * ratio).toFixed(4));
                     if (partArea > 0) {
                       zoneIntersections.push({
@@ -1029,8 +1039,8 @@ function App() {
         if (totalCoveredHa > totalAreaHa) totalCoveredHa = totalAreaHa;
         totalCoveredHa = parseFloat(totalCoveredHa.toFixed(4));
 
-        // NẾU TỶ LỆ PHÙ HỢP DƯỚI 20% -> XEM NHƯ NGOÀI HOÀN TOÀN VÙNG DỮ LIỆU
-        if ((totalCoveredHa / totalAreaHa) < 0.20) {
+        // NẾU TỶ LỆ PHÙ HỢP DƯỚI 25% -> XEM NHƯ NGOÀI HOÀN TOÀN VÙNG DỮ LIỆU
+        if ((totalCoveredHa / totalAreaHa) < 0.25) {
           totalCoveredHa = 0;
           zoneIntersections = [];
         }
