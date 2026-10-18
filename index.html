@@ -907,7 +907,20 @@ function App() {
         return points;
       };
 
-      // THUẬT TOÁN ĐỐI CHÍNH XÁC TỌA ĐỘ KHU ĐẤT VỚI CÁC VÙNG ĐÃ KHAI BÁO
+      // THUẬT TOÁN RAY-CASTING: KIỂM TRA ĐIỂM CÓ NẰM TRONG ĐA GIÁC (POLYGON) KHÔNG
+      const isPointInPolygon = (point, polygonPoints) => {
+        let x = point.x, y = point.y;
+        let inside = false;
+        for (let i = 0, j = polygonPoints.length - 1; i < polygonPoints.length; j = i++) {
+          let xi = polygonPoints[i].x, yi = polygonPoints[i].y;
+          let xj = polygonPoints[j].x, yj = polygonPoints[j].y;
+          let intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+          if (intersect) inside = !inside;
+        }
+        return inside;
+      };
+
+      // THUẬT TOÁN ĐỐI CHÍNH XÁC TỌA ĐỘ KHU ĐẤT VỚI VÙNG ĐÃ KHAI BÁO
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
         if (!kiemTraForm.mucTieuDuAn.trim()) {
@@ -931,9 +944,11 @@ function App() {
           return;
         }
 
-        // Tính trung tâm (centroid) hoặc phạm vi của khu đất nhập vào để đối chiếu
-        const avgX = inputPoints.reduce((sum, p) => sum + p.x, 0) / inputPoints.length;
-        const avgY = inputPoints.reduce((sum, p) => sum + p.y, 0) / inputPoints.length;
+        // Lấy tâm khu đất (centroid) để kiểm tra thuộc tính đa giác
+        const centerPoint = {
+          x: inputPoints.reduce((sum, p) => sum + p.x, 0) / inputPoints.length,
+          y: inputPoints.reduce((sum, p) => sum + p.y, 0) / inputPoints.length
+        };
 
         let matchedZone = null;
         let matchedChucNangName = '';
@@ -943,16 +958,9 @@ function App() {
           if (Array.isArray(vung.danhSachChucNang)) {
             for (const cn of vung.danhSachChucNang) {
               const zonePoints = parseCoordinates(cn.toaDoVung);
-              if (zonePoints.length > 0) {
-                // Tính bounding box của vùng khai báo để kiểm tra khu đất có nằm trong vùng hay không
-                const minX = Math.min(...zonePoints.map(p => p.x));
-                const maxX = Math.max(...zonePoints.map(p => p.x));
-                const minY = Math.min(...zonePoints.map(p => p.y));
-                const maxY = Math.max(...zonePoints.map(p => p.y));
-
-                // Kiểm tra nếu tâm khu đất nằm trong phạm vi bounding box của vùng khai báo (hoặc có biên độ dung sai)
-                const tolerance = 500; // Dung sai mét trong không gian VN-2000
-                if (avgX >= (minX - tolerance) && avgX <= (maxX + tolerance) && avgY >= (minY - tolerance) && avgY <= (maxY + tolerance)) {
+              if (zonePoints.length >= 3) {
+                // Sử dụng thuật toán Ray-Casting để kiểm tra tâm khu đất có nằm CHÍNH XÁC bên trong đa giác vùng màu cam không
+                if (isPointInPolygon(centerPoint, zonePoints)) {
                   matchedZone = vung;
                   matchedChucNangName = cn.tenChucNang;
                   break;
@@ -963,40 +971,37 @@ function App() {
           if (matchedZone) break;
         }
 
-        // TRƯỜNG HỢP 1: KHU ĐẤT NẰM NGOÀI VÙNG DỮ LIỆU ĐÃ KHAI BÁO
+        // TRƯỜNG HỢP 1: KHU ĐẤT NẰM NGOÀI CÁC VÙNG KHAI BÁO (HOẶC NẰM Ở VÙNG TRẮNG XEN KẼ)
         if (!matchedZone) {
           const ketQuaNgoaiVung = {
-            diaDiem: 'Ngoài ranh giới cơ sở dữ liệu hệ thống',
+            diaDiem: 'Ngoài ranh giới các vùng chức năng đã khai báo',
             dienTich: dienTichTinhToan ? `${dienTichTinhToan} ha` : '',
-            loaiQuyhoach: 'Không xác định (Ngoài vùng quy hoạch)',
+            loaiQuyhoach: 'Khu vực trống / Ngoài vùng chức năng quy hoạch',
             chucNangSuDung: '---',
-            ketLuan: `⚠️ KHU ĐẤT NẰM NGOÀI VÙNG DỮ LIỆU CỦA HỆ THỐNG. Tọa độ ranh giới khu đất không trùng khớp hoặc nằm ngoài phạm vi các đồ án quy hoạch đã được khai báo.`,
+            ketLuan: `⚠️ KHU ĐẤT NẰM NGOÀI VÙNG DỮ LIỆU CỦA HỆ THỐNG (Hoặc nằm ở khu vực trống xen kẽ giữa các vùng quy hoạch). Tọa độ ranh giới không nằm bên trong đa giác vùng đất ở đã khai báo.`,
             phuHop: false
           };
           setKetQuaKiemTra(ketQuaNgoaiVung);
-          showNotification('⚠️ Cảnh báo: Khu đất nằm ngoài vùng dữ liệu của hệ thống!');
+          showNotification('⚠️ Cảnh báo: Khu đất nằm ngoài vùng dữ liệu/vùng trống của hệ thống!');
           return;
         }
 
-        // TRƯỜNG HỢP 2: NẰM TRONG VÙNG ĐÃ KHAI BÁO -> TIẾN HÀNH ĐỐI CHÍNH MỤC TIÊU
+        // TRƯỜNG HỢP 2: NẰM TRONG VÙNG ĐÃ KHAI BÁO -> ĐỐI CHIẾU MỤC TIÊU DỰ ÁN
         const mucTieuLower = kiemTraForm.mucTieuDuAn.toLowerCase();
         const chucNangLower = matchedChucNangName.toLowerCase();
         
-        // ĐỐI CHÍNH XÁC MỤC TIÊU DỰ ÁN VỚI CHỨC NĂNG ĐẤT ĐÃ KHAI BÁO
         let isPhuHop = true;
         let lyDoKhongPhuHop = "";
 
-        const isMucTieuCongNghiep = mucTieuLower.includes('công nghiệp') || mucTieuLower.includes('sản xuất công nghiệp') || mucTieuLower.includes('nhà máy') || mucTieuLower.includes('xưởng');
-        const isQuyHoachNongNghiep = chucNangLower.includes('nông nghiệp') || chucNangLower.includes('sản xuất nông nghiệp') || chucNangLower.includes('trồng cây') || chucNangLower.includes('lúa');
+        const isMucTieuCongNghiep = mucTieuLower.includes('công nghiệp') || mucTieuLower.includes('sản xuất công nghiệp') || mucTieuLower.includes('nhà máy');
+        const isQuyHoachDatO = chucNangLower.includes('đất ở') || chucNangLower.includes('dân cư') || chucNangLower.includes('đô thị');
 
-        // Nếu mục tiêu là Công nghiệp / Sản xuất công nghiệp mà quy hoạch là Nông nghiệp / Sản xuất nông nghiệp -> BẮT BUỘC CHƯA PHÙ HỢP
-        if (isMucTieuCongNghiep && isQuyHoachNongNghiep) {
+        if (isMucTieuCongNghiep && isQuyHoachDatO) {
           isPhuHop = false;
-          lyDoKhongPhuHop = `Mục tiêu dự án ("${kiemTraForm.mucTieuDuAn}") yêu cầu quỹ đất cho sản xuất công nghiệp, nhưng vị trí khu đất theo quy hoạch được phê duyệt là "${matchedChucNangName}".`;
-        } 
-        else if ((mucTieuLower.includes('khu đô thị') || mucTieuLower.includes('nhà ở')) && (chucNangLower.includes('nông nghiệp') || chucNangLower.includes('công nghiệp'))) {
+          lyDoKhongPhuHop = `Mục tiêu dự án ("${kiemTraForm.mucTieuDuAn}") là sản xuất công nghiệp, không phù hợp khi đặt vào phân khu chức năng "${matchedChucNangName}".`;
+        } else if (mucTieuLower.includes('nhà ở') && chucNangLower.includes('công nghiệp')) {
           isPhuHop = false;
-          lyDoKhongPhuHop = `Mục tiêu dự án không phù hợp với chức năng quy hoạch hiện trạng là "${matchedChucNangName}".`;
+          lyDoKhongPhuHop = `Mục tiêu nhà ở không phù hợp với quy hoạch đất công nghiệp.`;
         }
 
         const ketQua = {
