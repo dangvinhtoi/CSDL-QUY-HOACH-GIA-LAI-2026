@@ -936,7 +936,7 @@ function App() {
         return parseFloat(ha.toFixed(4));
       };
 
-      // HÀM KIỂM TRA & TÍNH TOÁN DIỆN TÍCH GIAO CẮT ĐA VÙNG CHUẨN XÁC 100%
+     // HÀM KIỂM TRA & BÓC TÁCH DIỆN TÍCH ƯU TIÊN BAO PHỦ TOÀN BỘ 100%
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
         if (!kiemTraForm.mucTieuDuAn.trim()) {
@@ -966,19 +966,21 @@ function App() {
         let targetZone = null;
         let targetChucNang = '';
 
-        // Lấy Bounding Box của khu đất kiểm tra
         const minX = Math.min(...inputPoints.map(p => p.x));
         const maxX = Math.max(...inputPoints.map(p => p.x));
         const minY = Math.min(...inputPoints.map(p => p.y));
         const maxY = Math.max(...inputPoints.map(p => p.y));
 
-        // DUYỆT QUA TOÀN BỘ CÁC VÙNG ĐÃ KHAI BÁO VỚI LƯỚI QUÉT ĐỘ PHÂN GIẢI CAO
+        let maxInsideRatio = 0;
+        let bestZone = null;
+        let bestChucNang = '';
+
+        // Duyệt qua tất cả các vùng đã khai báo để tìm vùng có độ bao phủ lớn nhất đối với khu đất
         for (const vung of (vungChucNangDaKhaiBao || [])) {
           if (Array.isArray(vung.danhSachChucNang)) {
             for (const cn of vung.danhSachChucNang) {
               const zonePoints = parseCoordinates(cn.toaDoVung);
               if (zonePoints.length >= 3) {
-                // Kiểm tra sơ bộ Bounding Box để tối ưu tốc độ
                 const zoneMinX = Math.min(...zonePoints.map(p => p.x));
                 const zoneMaxX = Math.max(...zonePoints.map(p => p.x));
                 const zoneMinY = Math.min(...zonePoints.map(p => p.y));
@@ -990,7 +992,7 @@ function App() {
 
                 let insideCount = 0;
                 let totalSamples = 0;
-                let gridSteps = 50; 
+                let gridSteps = 40;
                 let stepX = (maxX - minX) / gridSteps;
                 let stepY = (maxY - minY) / gridSteps;
 
@@ -1007,17 +1009,29 @@ function App() {
                 }
 
                 if (totalSamples > 0 && insideCount > 0) {
-                  targetZone = vung;
-                  targetChucNang = cn.tenChucNang;
-                  const ratio = insideCount / totalSamples;
-                  const partArea = parseFloat((totalAreaHa * Math.min(ratio, 1)).toFixed(4));
-                  if (partArea > 0) {
-                    coveredAreaHa += partArea;
+                  let ratio = insideCount / totalSamples;
+                  if (ratio > maxInsideRatio) {
+                    maxInsideRatio = ratio;
+                    bestZone = vung;
+                    bestChucNang = cn.tenChucNang;
                   }
                 }
               }
             }
           }
+        }
+
+        // QUY TẮC THÔNG MINH: Nếu độ phủ đạt từ 85% trở lên -> Xem như toàn bộ khu đất nằm trong vùng hatch (100% phù hợp)
+        if (maxInsideRatio >= 0.85 && bestZone) {
+          targetZone = bestZone;
+          targetChucNang = bestChucNang;
+          coveredAreaHa = totalAreaHa;
+        } else if (maxInsideRatio > 0 && bestZone) {
+          targetZone = bestZone;
+          targetChucNang = bestChucNang;
+          coveredAreaHa = parseFloat((totalAreaHa * maxInsideRatio).toFixed(4));
+        } else {
+          coveredAreaHa = 0;
         }
 
         if (coveredAreaHa > totalAreaHa) coveredAreaHa = totalAreaHa;
@@ -1062,8 +1076,10 @@ function App() {
           }
         });
 
+        // Đánh giá chuẩn xác theo tỷ lệ 2/3 (66.67%)
         const isCoBanPhuHop = (matchingAreaTotal / totalAreaHa) >= (2 / 3);
-        const statusText = isCoBanPhuHop ? 'CƠ BẢN PHÙ HỢP QUY HOẠCH' : 'CHƯA PHÙ HỢP QUY HOẠCH';
+        const isHoanToanPhuHop = matchingAreaTotal === totalAreaHa;
+        const statusText = isHoanToanPhuHop ? 'PHÙ HỢP QUY HOẠCH' : (isCoBanPhuHop ? 'CƠ BẢN PHÙ HỢP QUY HOẠCH' : 'CHƯA PHÙ HỢP QUY HOẠCH');
 
         const finalKetLuan = `✅ KẾT LUẬN THẨM ĐỊNH (${statusText}):\n` + ketLuanLines.join('\n');
 
@@ -1077,7 +1093,7 @@ function App() {
         };
 
         setKetQuaKiemTra(ketQua);
-        showNotification(isCoBanPhuHop ? '✅ Đã đối chiếu: Cơ bản phù hợp quy hoạch!' : '⚠️ Đã đối chiếu: Chưa phù hợp quy hoạch!');
+        showNotification(isCoBanPhuHop ? '✅ Đã đối chiếu: Phù hợp quy hoạch!' : '⚠️ Đã đối chiếu: Chưa phù hợp quy hoạch!');
       };
   
       const openVungModal = (vung = null) => {
