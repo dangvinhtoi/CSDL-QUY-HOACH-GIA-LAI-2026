@@ -1006,7 +1006,7 @@ function App() {
         const minY = Math.min(...inputPoints.map(p => p.y));
         const maxY = Math.max(...inputPoints.map(p => p.y));
 
-        // DUYỆT QUA TOÀN BỘ CÁC VÙNG ĐÃ KHAI BÁO VỚI LƯỚI QUÉT ĐỘ PHÂN GIẢI CAO (50x50 = 2500 ĐIỂM MẪU)
+        // DUYỆT QUA TOÀN BỘ CÁC VÙNG ĐÃ KHAI BÁO VỚI LƯỚI QUÉT ĐỘ PHÂN GIẢI CAO
         for (const vung of (vungChucNangDaKhaiBao || [])) {
           if (Array.isArray(vung.danhSachChucNang)) {
             for (const cn of vung.danhSachChucNang) {
