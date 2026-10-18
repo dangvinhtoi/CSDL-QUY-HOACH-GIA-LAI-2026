@@ -936,7 +936,7 @@ function App() {
         return parseFloat(ha.toFixed(4));
       };
 
-      // THUẬT TOÁN BÓC TÁCH ĐA CHỨC NĂNG VÀ ĐA VÙNG DIỆN TÍCH KHU ĐẤT
+      // THUẬT TOÁN BÓC TÁCH DIỆN TÍCH ĐA CHỨC NĂNG VÀ ĐỐI CHÍNH XÁC KHÔNG GIAN
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
         if (!kiemTraForm.mucTieuDuAn.trim()) {
@@ -960,23 +960,22 @@ function App() {
           return;
         }
 
-        // Kiểm tra giao cắt với tất cả các vùng chức năng đã được khai báo trong hệ thống
+        // Kiểm tra giao cắt ranh giới khu đất với các vùng chức năng đã được khai báo
         let matchedDetails = [];
         let coveredAreaHa = 0;
+        let primaryQuyHoach = 'Ngoài vùng dữ liệu';
 
         for (const vung of (vungChucNangDaKhaiBao || [])) {
           if (Array.isArray(vung.danhSachChucNang)) {
             for (const cn of vung.danhSachChucNang) {
               const zonePoints = parseCoordinates(cn.toaDoVung);
               if (zonePoints.length >= 3) {
-                // Kiểm tra xem các đỉnh của khu đất có nằm trong vùng này không
                 let pointsInsideCount = 0;
                 inputPoints.forEach(pt => {
                   if (isPointInPolygon(pt, zonePoints)) pointsInsideCount++;
                 });
 
                 if (pointsInsideCount > 0) {
-                  // Ước tính phần diện tích giao cắt dựa trên tỷ lệ điểm hoặc phân bổ hình học
                   const ratio = pointsInsideCount / inputPoints.length;
                   const partAreaHa = parseFloat((totalAreaHa * Math.min(ratio, 1)).toFixed(4));
                   if (partAreaHa > 0) {
@@ -986,6 +985,7 @@ function App() {
                       dienTichHa: partAreaHa
                     });
                     coveredAreaHa += partAreaHa;
+                    primaryQuyHoach = vung.tenQuyHoach;
                   }
                 }
               }
@@ -993,52 +993,62 @@ function App() {
           }
         }
 
-        // Tính phần diện tích nằm ngoài vùng dữ liệu
+        // Tính toán phần diện tích nằm ngoài vùng dữ liệu hệ thống
         let outsideAreaHa = parseFloat((totalAreaHa - coveredAreaHa).toFixed(4));
-        if (outsideAreaHa < 0 || coveredAreaHa === 0) {
+        if (outsideAreaHa < 0) outsideAreaHa = 0;
+
+        if (coveredAreaHa === 0) {
           outsideAreaHa = totalAreaHa;
-          matchedDetails = [];
-        } else if (outsideAreaHa > 0) {
-          // Thêm phần ngoài vùng dữ liệu vào danh sách chi tiết
-          matchedDetails.push({
+          matchedDetails = [{
             tenQuyHoach: 'Ngoài vùng dữ liệu hệ thống',
             chucNang: 'Ngoài phạm vi dữ liệu hiện có',
+            dienTichHa: totalAreaHa
+          }];
+        } else if (outsideAreaHa > 0) {
+          matchedDetails.push({
+            tenQuyHoach: 'Ngoài vùng dữ liệu hệ thống',
+            chucNang: 'Ngoài phạm vi dữ liệu hiện có của hệ thống',
             dienTichHa: outsideAreaHa
           });
         }
 
-        // Tổng hợp danh sách tên các chức năng đất tìm được
-        const uniqueChucNangNames = [...new Set(matchedDetails.map(d => d.chucNang))];
-        const displayChucNangStr = uniqueChucNangNames.join(' và ');
-        const displayQuyHoachStr = [...new Set(matchedDetails.map(d => d.tenQuyHoach))].join('; ');
+        // Tổng hợp tên các chức năng đất hiển thị lên giao diện
+        const uniqueChucNang = [...new Set(matchedDetails.map(d => d.chucNang))];
+        const chucNangDisplay = uniqueChucNang.join(' và ');
 
-        // Xây dựng câu kết luận chi tiết theo đúng yêu cầu nghiệp vụ
+        // Xây dựng nội dung chi tiết kết luận bóc tách diện tích ha và m2
         let ketLuanLines = [];
+        let matchingAreaTotal = 0;
+
         matchedDetails.forEach(detail => {
           const m2Val = (detail.dienTichHa * 10000).toLocaleString('en-US');
-          if (detail.chucNang.includes('Ngoài phạm vi') || detail.chucNang.includes('---')) {
-            ketLuanLines.exec ? null : null;
+          if (detail.chucNang.includes('Ngoài phạm vi') || detail.chucNang.includes('Ngoài vùng')) {
             ketLuanLines.push(`- ${detail.dienTichHa} ha (${m2Val} m²) nằm ngoài vùng dữ liệu của hệ thống.`);
           } else {
+            matchingAreaTotal += detail.dienTichHa;
             ketLuanLines.push(`- ${detail.dienTichHa} ha (${m2Val} m²) phù hợp với chức năng ${detail.chucNang.toLowerCase()}.`);
           }
         });
 
-        const isCoBanPhuHop = (coveredAreaHa / totalAreaHa) >= (2 / 3);
-        const finalKetLuan = `✅ KẾT LUẬN THẨM ĐỊNH QUY HOẠCH (${isCoBanPhuHop ? 'CƠ BẢN PHÙ HỢP' : 'CHƯA PHÙ HỢP'}):\n` + ketLuanLines.join('\n');
+        // Đánh giá tỷ lệ ngưỡng 2/3 (tương đương 66.67%)
+        const isCoBanPhuHop = (matchingAreaTotal / totalAreaHa) >= (2 / 3);
+        const statusText = isCoBanPhuHop ? 'CƠ BẢN PHÙ HỢP QUY HOẠCH' : 'CHƯA PHÙ HỢP QUY HOẠCH';
+
+        const finalKetLuan = `✅ KẾT LUẬN THẨM ĐỊNH (${statusText}):\n` + ketLuanLines.join('\n');
 
         const ketQua = {
-          diaDiem: matchedDetails.length > 0 && !matchedDetails[0].chucNang.includes('Ngoài phạm vi') ? 'Các vùng quy hoạch giao cắt trên địa bàn' : 'Ngoài ranh giới cơ sở dữ liệu hệ thống',
+          diaDiem: matchingAreaTotal > 0 ? 'Các phân khu quy hoạch giao cắt trên địa bàn' : 'Ngoài ranh giới cơ sở dữ liệu hệ thống',
           dienTich: `${totalAreaHa} ha (~${(totalAreaHa * 10000).toLocaleString('en-US')} m²)`,
-          loaiQuyhoach: displayQuyHoachStr || 'Ngoài vùng dữ liệu',
-          chucNangSuDung: displayChucNangStr || '---',
+          loaiQuyhoach: primaryQuyHoach,
+          chucNangSuDung: chucNangDisplay,
           ketLuan: finalKetLuan,
           phuHop: isCoBanPhuHop
         };
 
         setKetQuaKiemTra(ketQua);
-        showNotification(isCoBanPhuHop ? '✅ Đã đối chiếu: CƠ BẢN PHÙ HỢP quy hoạch đa vùng!' : '⚠️ Đã đối chiếu: CHƯA PHÙ HỢP quy hoạch!');
+        showNotification(isCoBanPhuHop ? '✅ Đã đối chiếu: Cơ bản phù hợp quy hoạch!' : '⚠️ Đã đối chiếu: Chưa phù hợp quy hoạch!');
       };
+  
       const openVungModal = (vung = null) => {
         if (userRole !== 'ADMIN') {
           showNotification('⚠️ Chỉ Quản trị viên (Admin) mới có quyền thêm mới hoặc chỉnh sửa vùng tọa độ!');
