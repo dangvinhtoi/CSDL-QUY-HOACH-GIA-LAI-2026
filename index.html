@@ -936,7 +936,7 @@ function App() {
         return parseFloat(ha.toFixed(4));
       };
 
-     // HÀM KIỂM TRA & BÓC TÁCH DIỆN TÍCH ƯU TIÊN BAO PHỦ TOÀN BỘ 100%
+     // HÀM KIỂM TRA & BÓC TÁCH DIỆN TÍCH TỐI ƯU TOÀN DIỆN CHO 555 VÙNG KHAI BÁO
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
         if (!kiemTraForm.mucTieuDuAn.trim()) {
@@ -975,7 +975,7 @@ function App() {
         let bestZone = null;
         let bestChucNang = '';
 
-        // Duyệt qua tất cả các vùng đã khai báo để tìm vùng có độ bao phủ lớn nhất đối với khu đất
+        // Duyệt qua toàn bộ danh sách 555 vùng tọa độ đã khai báo để tìm mức độ bao phủ lớn nhất
         for (const vung of (vungChucNangDaKhaiBao || [])) {
           if (Array.isArray(vung.danhSachChucNang)) {
             for (const cn of vung.danhSachChucNang) {
@@ -1021,8 +1021,8 @@ function App() {
           }
         }
 
-        // QUY TẮC THÔNG MINH: Nếu độ phủ đạt từ 85% trở lên -> Xem như toàn bộ khu đất nằm trong vùng hatch (100% phù hợp)
-        if (maxInsideRatio >= 0.85 && bestZone) {
+        // QUY TẮC THÔNG MINH CHO CÁC MẢNH HATCH: Nếu độ phủ đạt từ 50% trở lên -> Toàn bộ khu đất nằm trong vùng đất ở (100% phù hợp)
+        if (maxInsideRatio >= 0.50 && bestZone) {
           targetZone = bestZone;
           targetChucNang = bestChucNang;
           coveredAreaHa = totalAreaHa;
@@ -1076,7 +1076,6 @@ function App() {
           }
         });
 
-        // Đánh giá chuẩn xác theo tỷ lệ 2/3 (66.67%)
         const isCoBanPhuHop = (matchingAreaTotal / totalAreaHa) >= (2 / 3);
         const isHoanToanPhuHop = matchingAreaTotal === totalAreaHa;
         const statusText = isHoanToanPhuHop ? 'PHÙ HỢP QUY HOẠCH' : (isCoBanPhuHop ? 'CƠ BẢN PHÙ HỢP QUY HOẠCH' : 'CHƯA PHÙ HỢP QUY HOẠCH');
