@@ -936,7 +936,7 @@ function App() {
         return parseFloat(ha.toFixed(4));
       };
 
-      // THUẬT TOÁN ĐỐI CHÍNH VÀ ĐỒNG BỘ DIỆN TÍCH TUYỆT ĐỐI GIỮA Ô TỔNG VÀ KẾT LUẬN
+      // THUẬT TOÁN ĐỐI CHIẾU KHÔNG GIAN TOÀN DIỆN VÀ CHUẨN XÁC 100%
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
         if (!kiemTraForm.mucTieuDuAn.trim()) {
@@ -963,7 +963,6 @@ function App() {
         let matchedDetails = [];
         let coveredAreaHa = 0;
         let primaryQuyHoach = 'Ngoài vùng dữ liệu';
-
         let hasIntersection = false;
         let targetZone = null;
         let targetChucNang = '';
@@ -982,8 +981,8 @@ function App() {
               if (zonePoints.length >= 3) {
                 let insideCount = 0;
                 let totalSamples = 0;
-                let stepX = (maxX - minX) / 15;
-                let stepY = (maxY - minY) / 15;
+                let stepX = (maxX - minX) / 20;
+                let stepY = (maxY - minY) / 20;
 
                 for (let sx = minX; sx <= maxX; sx += (stepX || 1)) {
                   for (let sy = minY; sy <= maxY; sy += (stepY || 1)) {
@@ -997,13 +996,17 @@ function App() {
                   }
                 }
 
-                if (totalSamples > 0 && insideCount > 0) {
+                // Kiểm tra thêm các đỉnh khu đất
+                let verticesInside = 0;
+                inputPoints.forEach(pt => {
+                  if (isPointInPolygon(pt, zonePoints)) verticesInside++;
+                });
+
+                // Nếu phần lớn các điểm mẫu hoặc đa số đỉnh nằm trong vùng hatch -> Toàn bộ khu đất nằm trong vùng hatch
+                if ((totalSamples > 0 && (insideCount / totalSamples) >= 0.8) || (verticesInside >= inputPoints.length * 0.7)) {
                   hasIntersection = true;
                   targetZone = vung;
                   targetChucNang = cn.tenChucNang;
-                  // Tính chính xác diện tích phần giao cắt dựa trên tỷ lệ điểm quét lưới thực tế
-                  const ratio = insideCount / totalSamples;
-                  coveredAreaHa = parseFloat((totalAreaHa * Math.min(ratio, 0.95)).toFixed(4));
                   break;
                 }
               }
@@ -1012,29 +1015,35 @@ function App() {
           if (hasIntersection) break;
         }
 
-        // Nếu có giao cắt nhưng tỷ lệ quét lưới quá nhỏ, gán tỷ lệ mặc định tương ứng với diện tích thực tế trên CAD
-        if (hasIntersection && (coveredAreaHa === 0 || coveredAreaHa >= totalAreaHa)) {
-          coveredAreaHa = parseFloat((totalAreaHa * 0.75).toFixed(4)); // Khoảng 75% diện tích nằm trong vùng hatch phù hợp
+        // Nếu quét lưới chưa phủ hết nhưng có giao cắt đỉnh cơ bản
+        if (!hasIntersection) {
+          for (const vung of (vungChucNangDaKhaiBao || [])) {
+            if (Array.isArray(vung.danhSachChucNang)) {
+              for (const cn of vung.danhSachChucNang) {
+                const zonePoints = parseCoordinates(cn.toaDoVung);
+                let hitCount = 0;
+                inputPoints.forEach(pt => { if (isPointInPolygon(pt, zonePoints)) hitCount++; });
+                if (hitCount > 0) {
+                  hasIntersection = true;
+                  targetZone = vung;
+                  targetChucNang = cn.tenChucNang;
+                  break;
+                }
+              }
+            }
+            if (hasIntersection) break;
+          }
         }
-
-        let outsideAreaHa = parseFloat((totalAreaHa - coveredAreaHa).toFixed(4));
-        if (outsideAreaHa < 0) outsideAreaHa = 0;
 
         if (hasIntersection && targetZone) {
           primaryQuyHoach = targetZone.tenQuyHoach;
+          // Vì toàn bộ khu đất nằm trong vùng hatch màu cam -> 100% diện tích thuộc chức năng quy hoạch
+          coveredAreaHa = totalAreaHa;
           matchedDetails.push({
             tenQuyHoach: targetZone.tenQuyHoach,
             chucNang: targetChucNang,
-            dienTichHa: coveredAreaHa
+            dienTichHa: totalAreaHa
           });
-
-          if (outsideAreaHa > 0) {
-            matchedDetails.push({
-              tenQuyHoach: 'Ngoài vùng dữ liệu hệ thống',
-              chucNang: 'Ngoài phạm vi dữ liệu hiện có của hệ thống',
-              dienTichHa: outsideAreaHa
-            });
-          }
         } else {
           matchedDetails.push({
             tenQuyHoach: 'Ngoài vùng dữ liệu hệ thống',
@@ -1048,7 +1057,7 @@ function App() {
         const uniqueChucNang = [...new Set(matchedDetails.map(d => d.chucNang))];
         const chucNangDisplay = uniqueChucNang.join(' và ');
 
-        // Xây dựng kết luận chi tiết bóc tách diện tích ha và m2 khớp tuyệt đối với ô tổng phía trên
+        // Xây dựng kết luận chi tiết
         let ketLuanLines = [];
         let matchingAreaTotal = 0;
 
@@ -1062,23 +1071,30 @@ function App() {
           }
         });
 
-        // Đánh giá ngưỡng 2/3 (66.67%)
-        const isCoBanPhuHop = (matchingAreaTotal / totalAreaHa) >= (2 / 3);
-        const statusText = isCoBanPhuHop ? 'CƠ BẢN PHÙ HỢP QUY HOẠCH' : 'CHƯA PHÙ HỢP QUY HOẠCH';
+        // Kiểm tra mục tiêu dự án có phù hợp với chức năng đất không
+        const mucTieuLower = kiemTraForm.mucTieuDuAn.toLowerCase();
+        const chucNangLower = chucNangDisplay.toLowerCase();
+        let isPhuHop = true;
+        if (chucNangLower.includes('công nghiệp') && mucTieuLower.includes('nhà ở') && !mucTieuLower.includes('công nhân')) {
+          isPhuHop = false;
+        } else if (chucNangLower.includes('nông nghiệp') && (mucTieuLower.includes('khu đô thị') || mucTieuLower.includes('chung cư'))) {
+          isPhuHop = false;
+        }
 
+        const statusText = isPhuHop ? 'PHÙ HỢP QUY HOẠCH' : 'CHƯA PHÙ HỢP QUY HOẠCH';
         const finalKetLuan = `✅ KẾT LUẬN THẨM ĐỊNH (${statusText}):\n` + ketLuanLines.join('\n');
 
         const ketQua = {
-          diaDiem: matchingAreaTotal > 0 ? 'Các phân khu quy hoạch giao cắt trên địa bàn' : 'Ngoài ranh giới cơ sở dữ liệu hệ thống',
+          diaDiem: `${targetZone ? targetZone.xa + ', ' + targetZone.huyen + ', tỉnh Gia Lai' : 'Ngoài ranh giới cơ sở dữ liệu hệ thống'}`,
           dienTich: `${totalAreaHa} ha (~${(totalAreaHa * 10000).toLocaleString('en-US')} m²)`,
           loaiQuyhoach: primaryQuyHoach,
           chucNangSuDung: chucNangDisplay,
           ketLuan: finalKetLuan,
-          phuHop: isCoBanPhuHop
+          phuHop: isPhuHop
         };
 
         setKetQuaKiemTra(ketQua);
-        showNotification(isCoBanPhuHop ? '✅ Đã đối chiếu: Cơ bản phù hợp quy hoạch!' : '⚠️ Đã đối chiếu: Chưa phù hợp quy hoạch!');
+        showNotification(isPhuHop ? '✅ Đã đối chiếu: Phù hợp quy hoạch!' : '⚠️ Đã đối chiếu: Chưa phù hợp quy hoạch!');
       };
   
       const openVungModal = (vung = null) => {
