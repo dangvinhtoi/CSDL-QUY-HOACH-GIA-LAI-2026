@@ -936,40 +936,6 @@ function App() {
         return parseFloat(ha.toFixed(4));
       };
 
-      // HÀM TRÍCH XUẤT TỌA ĐỘ CHUẨN XÁC TUYỆT ĐỐI (HỖ TRỢ MỌI ĐỊNH DẠNG TỪ CAD/TXT)
-      const parseCoordinates = (inputStr) => {
-        if (!inputStr || typeof inputStr !== 'string') return [];
-        // Thay thế các dấu phân cách phổ biến thành khoảng trắng hoặc xuống dòng
-        const cleanStr = inputStr.replace(/vung\s*\d+[:\s]*/gi, '\n').replace(/at point/gi, '\n');
-        const lines = cleanStr.split(/[\r\n,]+/).map(l => l.trim()).filter(Boolean);
-        const points = [];
-        
-        lines.forEach(line => {
-          let x = null, y = null;
-          const upper = line.toUpperCase();
-          if (upper.includes('X') && upper.includes('Y')) {
-            const pX = line.split(/X[\s=:]+/i);
-            if (pX.length > 1) x = parseFloat(pX[1].trim().split(/[\s,]+/)[0]);
-            const pY = line.split(/Y[\s=:]+/i);
-            if (pY.length > 1) y = parseFloat(pY[1].trim().split(/[\s,]+/)[0]);
-          }
-          if (isNaN(x) || isNaN(y) || x === null || y === null) {
-            const nums = line.match(/-?\d+(\.\d+)?/g);
-            if (nums && nums.length >= 2) { 
-              x = parseFloat(nums[0]); 
-              y = parseFloat(nums[1]); 
-            }
-          }
-          if (!isNaN(x) && !isNaN(y) && x !== null && y !== null) {
-            // Tránh trùng lặp đỉnh liên tiếp
-            if (points.length === 0 || points[points.length - 1].x !== x || points[points.length - 1].y !== y) {
-              points.push({ x, y });
-            }
-          }
-        });
-        return points;
-      };
-
       // HÀM KIỂM TRA & TÍNH TOÁN DIỆN TÍCH GIAO CẮT ĐA VÙNG CHUẨN XÁC 100%
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
