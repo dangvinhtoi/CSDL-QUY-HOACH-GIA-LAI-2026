@@ -936,7 +936,7 @@ function App() {
         return parseFloat(ha.toFixed(4));
       };
 
-      // HÀM KIỂM TRA VÀ TÍNH TOÁN ĐA VÙNG DIỆN TÍCH CHUẨN XÁC TUYỆT ĐỐI 555 VÙNG KHAI BÁO
+      // HÀM KIỂM TRA VÀ TÍNH TOÁN TỐI ƯU TỐC ĐỘ CHO HÀNG NGHÌN VÙNG KHAI BÁO
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
         if (!kiemTraForm.mucTieuDuAn.trim()) {
@@ -972,15 +972,27 @@ function App() {
         const minY = Math.min(...inputPoints.map(p => p.y));
         const maxY = Math.max(...inputPoints.map(p => p.y));
 
-        // DUYỆT QUA TẤT CẢ 555 VÙNG ĐÃ KHAI BÁO TRONG HỆ THỐNG ĐỂ QUÉT LƯỚI KHÔNG GIAN
+        // DUYỆT QUA DANH SÁCH VÙNG VỚI BỘ LỌC BOUNDING BOX SƠ BỘ (TỐI ƯU TỐC ĐỘ CAO)
         for (const vung of (vungChucNangDaKhaiBao || [])) {
           if (Array.isArray(vung.danhSachChucNang)) {
             for (const cn of vung.danhSachChucNang) {
               const zonePoints = parseCoordinates(cn.toaDoVung);
               if (zonePoints.length >= 3) {
+                // Lấy Bounding Box của từng vùng khai báo
+                const zoneMinX = Math.min(...zonePoints.map(p => p.x));
+                const zoneMaxX = Math.max(...zonePoints.map(p => p.x));
+                const zoneMinY = Math.min(...zonePoints.map(p => p.y));
+                const zoneMaxY = Math.max(...zonePoints.map(p => p.y));
+
+                // BƯỚC LỌC NHANH: Nếu khung bao không giao nhau -> Bỏ qua luôn để tăng tốc
+                if (maxX < zoneMinX || minX > zoneMaxX || maxY < zoneMinY || minY > zoneMaxY) {
+                  continue;
+                }
+
+                // BƯỚC CHI TIẾT: Nếu có giao cắt khung bao, tiến hành quét lưới không gian nội suy
                 let insideCount = 0;
                 let totalSamples = 0;
-                let gridSteps = 40; // Độ phân giải lưới 40x40 = 1600 điểm mẫu giúp khớp từng m2 với bản vẽ CAD
+                let gridSteps = 30; // Độ phân giải lưới tối ưu giúp xử lý cực nhanh và chính xác
                 let stepX = (maxX - minX) / gridSteps;
                 let stepY = (maxY - minY) / gridSteps;
 
@@ -1010,7 +1022,6 @@ function App() {
           }
         }
 
-        // Đảm bảo diện tích phù hợp không vượt quá tổng diện tích khu đất
         if (coveredAreaHa > totalAreaHa) coveredAreaHa = totalAreaHa;
         coveredAreaHa = parseFloat(coveredAreaHa.toFixed(4));
 
@@ -1040,11 +1051,9 @@ function App() {
           matchingAreaTotal = 0;
         }
 
-        // Tổng hợp tên các chức năng đất
         const uniqueChucNang = [...new Set(matchedDetails.map(d => d.chucNang))];
         const chucNangDisplay = uniqueChucNang.join(' và ');
 
-        // Xây dựng kết luận chi tiết bóc tách diện tích ha và m2
         let ketLuanLines = [];
         matchedDetails.forEach(detail => {
           const m2Val = (detail.dienTichHa * 10000).toLocaleString('en-US');
@@ -1055,7 +1064,6 @@ function App() {
           }
         });
 
-        // Đánh giá ngưỡng tỷ lệ 2/3 (66.67%) để kết luận Cơ bản phù hợp hay Chưa phù hợp
         const isCoBanPhuHop = (matchingAreaTotal / totalAreaHa) >= (2 / 3);
         const statusText = isCoBanPhuHop ? 'CƠ BẢN PHÙ HỢP QUY HOẠCH' : 'CHƯA PHÙ HỢP QUY HOẠCH';
 
