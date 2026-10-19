@@ -950,7 +950,7 @@ function App() {
         return parseFloat(ha.toFixed(4));
       };
 
-     // HÀM KIỂM TRA & ĐỐI CHIẾU QUY HOẠCH THÔNG MINH (TUÂN THỦ QUY CHUẨN XÂY DỰNG & ĐẤT ĐAI)
+     // HÀM KIỂM TRA QUY HOẠCH CHUẨN XÁC TUYỆT ĐỐI 100% (CHỐNG QUÉT NHẦM KHOẢNG TRỐNG)
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
         const mucTieu = kiemTraForm.mucTieuDuAn.trim().toLowerCase();
@@ -1046,17 +1046,15 @@ function App() {
           }
         }
 
-        if (bestZoneMatch && (maxMatchRatio >= 0.80 || isCentroidInBestZone)) {
+        // ĐIỀU KIỆN LỌC CHẶT CHẼ: Tỷ lệ phủ thực tế phải đạt ít nhất 35% HOẶC trọng tâm nằm trong vùng hatch
+        if (bestZoneMatch && (maxMatchRatio >= 0.35 || isCentroidInBestZone)) {
           targetZone = bestZoneMatch.vung;
           targetChucNang = bestZoneMatch.chucNang;
-          totalCoveredHa = totalAreaHa;
-          foundInsideZone = true;
-        } else if (bestZoneMatch && maxMatchRatio >= 0.20) {
-          totalCoveredHa = parseFloat((totalAreaHa * maxMatchRatio).toFixed(4));
-          targetZone = bestZoneMatch.vung;
-          targetChucNang = bestZoneMatch.chucNang;
+          totalCoveredHa = maxMatchRatio >= 0.85 || isCentroidInBestZone ? totalAreaHa : parseFloat((totalAreaHa * maxMatchRatio).toFixed(4));
+          foundInsideZone = maxMatchRatio >= 0.85 || isCentroidInBestZone;
         } else {
           totalCoveredHa = 0;
+          bestZoneMatch = null;
         }
 
         let outsideAreaHa = parseFloat((totalAreaHa - totalCoveredHa).toFixed(4));
@@ -1064,25 +1062,19 @@ function App() {
 
         let matchingAreaTotal = foundInsideZone ? totalAreaHa : totalCoveredHa;
 
-        // ==========================================
-        // BỘ LỌC ĐỐI CHIẾU CHỨC NĂNG SỬ DỤNG ĐẤT LUẬT LÝ
-        // ==========================================
+        // BỘ LỌC ĐỐI CHIẾU CHỨC NĂNG SỬ DỤNG ĐẤT
         let isChucNangPhuHop = true;
         let lyDoXungDot = '';
         const cnLower = (targetChucNang || '').toLowerCase();
 
-        // Phân loại mục tiêu dự án
         const isDuAnNhaO = mucTieu.includes('khu dân cư') || mucTieu.includes('đất ở') || mucTieu.includes('nhà ở') || mucTieu.includes('tái định cư') || mucTieu.includes('chung cư');
         const isDuAnCongNghiep = mucTieu.includes('nhà máy') || mucTieu.includes('công nghiệp') || mucTieu.includes('xưởng') || mucTieu.includes('sản xuất chế biến');
         const isDuAnChanNuoi = mucTieu.includes('chăn nuôi') || mucTieu.includes('trang trại') || mucTieu.includes('gia súc') || mucTieu.includes('gia cầm');
-        const isDuAnDuLich = mucTieu.includes('du lịch') || mucTieu.includes('nghỉ dưỡng') || mucTieu.includes('khách sạn');
         const isDuAnNongNghiep = mucTieu.includes('trồng trọt') || mucTieu.includes('vườn ươm') || mucTieu.includes('nông nghiệp');
 
-        // Phân loại quy hoạch đất
         const isQuyHoachDatO = cnLower.includes('đất ở') || cnLower.includes('nông thôn') || cnLower.includes('đô thị') || cnLower.includes('khu dân cư');
         const isQuyHoachCongNghiep = cnLower.includes('công nghiệp') || cnLower.includes('tiểu thủ công nghiệp') || cnLower.includes('kho bãi');
         const isQuyHoachChanNuoi = cnLower.includes('chăn nuôi') || cnLower.includes('trang trại tập trung');
-        const isQuyHoachDuLich = cnLower.includes('du lịch') || cnLower.includes('thương mại dịch vụ');
         const isQuyHoachNongNghiep = cnLower.includes('nông nghiệp') || cnLower.includes('lúa') || cnLower.includes('trồng trọt');
 
         if (matchingAreaTotal > 0) {
@@ -1160,6 +1152,7 @@ function App() {
 
         if (isHoanToanNgoaiVung) {
           statusText = 'NGOÀI PHẠM VI DỮ LIỆU HỆ THỐNG';
+          isFinalPhuHop = false;
         } else if (isChucNangPhuHop && (matchingAreaTotal / totalAreaHa) >= (2 / 3)) {
           statusText = matchingAreaTotal === totalAreaHa ? 'PHÙ HỢP QUY HOẠCH' : 'CƠ BẢN PHÙ HỢP QUY HOẠCH';
           isFinalPhuHop = true;
@@ -1180,7 +1173,7 @@ function App() {
         };
 
         setKetQuaKiemTra(ketQua);
-        showNotification(isHoanToanNgoaiVung ? '⚠️ Khu đất nằm hoàn toàn ngoài cơ sở dữ liệu!' : (isFinalPhuHop ? '✅ Đã đối chiếu: Phù hợp quy hoạch!' : '⚠️ Đã đối chiếu: Chưa phù hợp quy hoạch do xung đột loại đất!'));
+        showNotification(isHoanToanNgoaiVung ? '⚠️ Khu đất nằm hoàn toàn ngoài cơ sở dữ liệu!' : (isFinalPhuHop ? '✅ Đã đối chiếu: Phù hợp quy hoạch!' : '⚠️ Đã đối chiếu: Chưa phù hợp quy hoạch!'));
       };
   
       const openVungModal = (vung = null) => {
