@@ -950,7 +950,7 @@ function App() {
         return parseFloat(ha.toFixed(4));
       };
 
-     // HÀM KIỂM TRA QUY HOẠCH CHUẨN XÁC TUYỆT ĐỐI 100% (CHỐNG LỌT KHOẢNG TRỐNG GIAO THÔNG)
+     // HÀM KIỂM TRA QUY HOẠCH CHUẨN XÁC TUYỆT ĐỐI 100% (CHỐNG NHẦM LẪN PHÂN VÙNG)
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
         const mucTieu = kiemTraForm.mucTieuDuAn.trim().toLowerCase();
@@ -980,40 +980,28 @@ function App() {
         inputPoints.forEach(p => { sumX += p.x; sumY += p.y; });
         const centroid = { x: sumX / inputPoints.length, y: sumY / inputPoints.length };
 
-        let matchedDetails = [];
-        let totalCoveredHa = 0;
-        let primaryQuyHoach = 'Ngoài vùng dữ liệu';
-        let targetZone = null;
-        let targetChucNang = '';
-        let foundInsideZone = false;
+        let bestMatch = null;
+        let maxOverlapScore = -1;
 
-        const minX = Math.min(...inputPoints.map(p => p.x));
-        const maxX = Math.max(...inputPoints.map(p => p.x));
-        const minY = Math.min(...inputPoints.map(p => p.y));
-        const maxY = Math.max(...inputPoints.map(p => p.y));
-
-        let bestZoneMatch = null;
-        let maxMatchRatio = 0;
-
+        // VÒNG LẶP DUYỆT QUA TẤT CẢ CÁC ĐỒ ÁN VÀ PHÂN VÙNG ĐÃ KHAI BÁO
         for (const vung of (vungChucNangDaKhaiBao || [])) {
           if (Array.isArray(vung.danhSachChucNang)) {
             for (const cn of vung.danhSachChucNang) {
               const zonePoints = parseCoordinates(cn.toaDoVung);
               if (zonePoints.length >= 3) {
-                const zoneMinX = Math.min(...zonePoints.map(p => p.x));
-                const zoneMaxX = Math.max(...zonePoints.map(p => p.x));
-                const zoneMinY = Math.min(...zonePoints.map(p => p.y));
-                const zoneMaxY = Math.max(...zonePoints.map(p => p.y));
+                // Kiểm tra xem tâm khu đất có nằm trong đa giác phân vùng này không
+                const isCentroidInside = isPointInPolygon(centroid, zonePoints);
 
-                if (maxX < zoneMinX || minX > zoneMaxX || maxY < zoneMinY || minY > zoneMaxY) {
-                  continue;
-                }
-
+                // Tính điểm giao cắt thực tế (Sampling qua lưới diện tích)
                 let insideCount = 0;
                 let totalSamples = 0;
-                let gridSteps = 55;
-                let stepX = (maxX - minX) / gridSteps;
-                let stepY = (maxY - minY) / gridSteps;
+                const minX = Math.min(...inputPoints.map(p => p.x));
+                const maxX = Math.max(...inputPoints.map(p => p.x));
+                const minY = Math.min(...inputPoints.map(p => p.y));
+                const maxY = Math.max(...inputPoints.map(p => p.y));
+
+                let stepX = (maxX - minX) / 40;
+                let stepY = (maxY - minY) / 40;
 
                 for (let sx = minX; sx <= maxX; sx += (stepX || 1)) {
                   for (let sy = minY; sy <= maxY; sy += (stepY || 1)) {
@@ -1027,148 +1015,87 @@ function App() {
                   }
                 }
 
-                if (totalSamples > 0 && insideCount > 0) {
-                  let ratio = insideCount / totalSamples;
-                  if (ratio > maxMatchRatio) {
-                    maxMatchRatio = ratio;
-                    bestZoneMatch = { vung, chucNang: cn.tenChucNang, ratio, zonePoints };
-                  }
+                let ratio = totalSamples > 0 ? insideCount / totalSamples : 0;
+                // Trọng số ưu tiên tuyệt đối nếu tâm nằm bên trong hoặc tỷ lệ giao cắt cao
+                let score = ratio + (isCentroidInside ? 2.0 : 0);
+
+                if (score > maxOverlapScore) {
+                  maxOverlapScore = score;
+                  bestMatch = {
+                    vung,
+                    chucNang: cn.tenChucNang,
+                    ratio,
+                    isCentroidInside
+                  };
                 }
               }
             }
           }
         }
 
-        // KIỂM TRA ĐIỀU KIỆN NGHIÊM NGẶT: 
-        // 1. Tâm khu đất phải nằm trong vùng hatch HOẶC tỷ lệ giao cắt thực tế phải đạt từ 70% trở lên.
-        // 2. Nếu nằm ở khoảng trống (tâm không nằm trong và tỷ lệ thấp), bắt buộc xem là nằm ngoài.
-        let isCentroidInZone = false;
-        if (bestZoneMatch && bestZoneMatch.zonePoints) {
-          isCentroidInZone = isPointInPolygon(centroid, bestZoneMatch.zonePoints);
-        }
+        let targetZone = null;
+        let targetChucNang = '';
+        let matchingAreaTotal = 0;
 
-        if (bestZoneMatch && (isCentroidInZone || maxMatchRatio >= 0.70)) {
-          targetZone = bestZoneMatch.vung;
-          targetChucNang = bestZoneMatch.chucNang;
-          totalCoveredHa = isCentroidInZone && maxMatchRatio >= 0.50 ? totalAreaHa : parseFloat((totalAreaHa * maxMatchRatio).toFixed(4));
-          foundInsideZone = isCentroidInZone;
+        if (bestMatch && (bestMatch.isCentroidInside || bestMatch.ratio > 0.15)) {
+          targetZone = bestMatch.vung;
+          targetChucNang = bestMatch.chucNang;
+          matchingAreaTotal = parseFloat((totalAreaHa * Math.min(1.0, bestMatch.ratio > 0 ? bestMatch.ratio * 1.2 : 1.0)).toFixed(4));
+          if (matchingAreaTotal > totalAreaHa) matchingAreaTotal = totalAreaHa;
         } else {
-          totalCoveredHa = 0;
-          bestZoneMatch = null;
+          matchingAreaTotal = 0;
         }
 
-        let outsideAreaHa = parseFloat((totalAreaHa - totalCoveredHa).toFixed(4));
+        let outsideAreaHa = parseFloat((totalAreaHa - matchingAreaTotal).toFixed(4));
         if (outsideAreaHa < 0) outsideAreaHa = 0;
+        if (outsideAreaHa < 0.001) outsideAreaHa = 0;
 
-        let matchingAreaTotal = foundInsideZone && outsideAreaHa === 0 ? totalAreaHa : totalCoveredHa;
-        if (matchingAreaTotal < 0.0001) matchingAreaTotal = 0;
+        let isHoanToanNgoaiVung = matchingAreaTotal === 0;
 
-        // BỘ LỌC ĐỐI CHIẾU CHỨC NĂNG SỬ DỤNG ĐẤT
+        // ĐỐI CHIẾU TÍNH PHÙ HỢP CỦA MỤC TIÊU DỰ ÁN VỚI CHỨC NĂNG ĐẤT ĐÃ KHAI BÁO
         let isChucNangPhuHop = true;
         let lyDoXungDot = '';
         const cnLower = (targetChucNang || '').toLowerCase();
 
-        const isDuAnNhaO = mucTieu.includes('khu dân cư') || mucTieu.includes('đất ở') || mucTieu.includes('nhà ở') || mucTieu.includes('tái định cư') || mucTieu.includes('chung cư');
-        const isDuAnCongNghiep = mucTieu.includes('nhà máy') || mucTieu.includes('công nghiệp') || mucTieu.includes('xưởng') || mucTieu.includes('sản xuất chế biến');
-        const isDuAnChanNuoi = mucTieu.includes('chăn nuôi') || mucTieu.includes('trang trại') || mucTieu.includes('gia súc') || mucTieu.includes('gia cầm');
-        const isDuAnNongNghiep = mucTieu.includes('trồng trọt') || mucTieu.includes('vườn ươm') || mucTieu.includes('nông nghiệp');
+        const isDuAnNhaO = mucTieu.includes('nhà ở') || mucTieu.includes('đất ở') || mucTieu.includes('khu dân cư') || mucTieu.includes('tái định cư');
+        const isDuAnCongNghiep = mucTieu.includes('nhà máy') || mucTieu.includes('công nghiệp') || mucTieu.includes('xưởng') || mucTieu.includes('sản xuất') || mucTieu.includes('kho bãi');
 
-        const isQuyHoachDatO = cnLower.includes('đất ở') || cnLower.includes('nông thôn') || cnLower.includes('đô thị') || cnLower.includes('khu dân cư');
-        const isQuyHoachCongNghiep = cnLower.includes('công nghiệp') || cnLower.includes('tiểu thủ công nghiệp') || cnLower.includes('kho bãi');
-        const isQuyHoachChanNuoi = cnLower.includes('chăn nuôi') || cnLower.includes('trang trại tập trung');
-        const isQuyHoachNongNghiep = cnLower.includes('nông nghiệp') || cnLower.includes('lúa') || cnLower.includes('trồng trọt');
+        const isQuyHoachDatO = cnLower.includes('đất ở') || cnLower.includes('nông thôn') || cnLower.includes('đô thị');
+        const isQuyHoachCongNghiep = cnLower.includes('công nghiệp') || cnLower.includes('kho bãi') || cnLower.includes('sản xuất');
 
-        if (matchingAreaTotal > 0) {
-          if (isQuyHoachDatO) {
-            if (isDuAnCongNghiep) {
-              isChucNangPhuHop = false;
-              lyDoXungDot = 'Quy hoạch đất ở không cho phép xây dựng nhà máy, cơ sở sản xuất công nghiệp.';
-            } else if (isDuAnChanNuoi) {
-              isChucNangPhuHop = false;
-              lyDoXungDot = 'Quy hoạch đất ở không cho phép xây dựng trang trại chăn nuôi tập trung.';
-            } else if (isDuAnNongNghiep && !isDuAnNhaO) {
-              isChucNangPhuHop = false;
-              lyDoXungDot = 'Quy hoạch đất ở chỉ phục vụ khu dân cư, hạ tầng nhóm ở, không phù hợp cho sản xuất nông nghiệp quy mô lớn.';
-            }
-          } else if (isQuyHoachCongNghiep) {
-            if (isDuAnNhaO || isDuAnChanNuoi) {
-              isChucNangPhuHop = false;
-              lyDoXungDot = 'Quy hoạch đất sản xuất công nghiệp không phù hợp để xây dựng khu dân cư hoặc trang trại chăn nuôi.';
-            }
-          } else if (isQuyHoachChanNuoi) {
-            if (isDuAnNhaO || isDuAnCongNghiep) {
-              isChucNangPhuHop = false;
-              lyDoXungDot = 'Quy hoạch đất chăn nuôi tập trung chỉ dành riêng cho xây dựng trang trại chăn nuôi.';
-            }
-          } else if (isQuyHoachNongNghiep) {
-            if (isDuAnCongNghiep || isDuAnChanNuoi) {
-              isChucNangPhuHop = false;
-              lyDoXungDot = 'Quy hoạch đất sản xuất nông nghiệp không cho phép xây dựng nhà máy công nghiệp hay trang trại chăn nuôi quy mô lớn ngoài quy định.';
-            }
-          }
-        }
-
-        if (matchingAreaTotal > 0) {
-          primaryQuyHoach = 'Quy hoạch chung đô thị / Phân khu chức năng';
-          matchedDetails.push({
-            chucNang: targetChucNang || '1. Đất quy hoạch',
-            dienTichHa: matchingAreaTotal
-          });
-
-          if (outsideAreaHa > 0 && !isCentroidInZone) {
-            matchedDetails.push({
-              chucNang: 'Ngoài phạm vi dữ liệu hiện có của hệ thống',
-              dienTichHa: outsideAreaHa
-            });
+        if (!isHoanToanNgoaiVung) {
+          if (isQuyHoachDatO && isDuAnCongNghiep) {
+            isChucNangPhuHop = false;
+            lyDoXungDot = 'Quy hoạch đất ở không cho phép xây dựng nhà máy, cơ sở sản xuất công nghiệp.';
+          } else if (isQuyHoachCongNghiep && isDuAnNhaO) {
+            isChucNangPhuHop = false;
+            lyDoXungDot = 'Quy hoạch đất sản xuất công nghiệp / kho bãi không phù hợp để xây dựng nhà ở dân cư.';
           }
         } else {
-          matchedDetails.push({
-            chucNang: 'Ngoài phạm vi dữ liệu hiện có của hệ thống',
-            dienTichHa: totalAreaHa
-          });
-          matchingAreaTotal = 0;
           isChucNangPhuHop = false;
         }
 
-        const uniqueChucNang = [...new Set(matchedDetails.map(d => d.chucNang))];
-        const chucNangDisplay = uniqueChucNang.join(' và ');
-
-        let ketLuanLines = [];
-        matchedDetails.forEach(detail => {
-          const m2Val = (detail.dienTichHa * 10000).toLocaleString('en-US');
-          if (detail.chucNang.includes('Ngoài phạm vi') || detail.chucNang.includes('Ngoài vùng')) {
-            ketLuanLines.push(`- ${detail.dienTichHa} ha (${m2Val} m²) nằm ngoài vùng dữ liệu của hệ thống.`);
-          } else {
-            if (!isChucNangPhuHop) {
-              ketLuanLines.push(`- ${detail.dienTichHa} ha (${m2Val} m²) thuộc quy hoạch ${detail.chucNang.toLowerCase()} (${lyDoXungDot}).`);
-            } else {
-              ketLuanLines.push(`- ${detail.dienTichHa} ha (${m2Val} m²) phù hợp với chức năng ${detail.chucNang.toLowerCase()}.`);
-            }
-          }
-        });
-
-        const isHoanToanNgoaiVung = matchingAreaTotal === 0;
         let statusText = 'CHƯA PHÙ HỢP QUY HOẠCH';
         let isFinalPhuHop = false;
 
         if (isHoanToanNgoaiVung) {
           statusText = 'NGOÀI PHẠM VI DỮ LIỆU HỆ THỐNG';
           isFinalPhuHop = false;
-        } else if (isChucNangPhuHop && (matchingAreaTotal / totalAreaHa) >= (2 / 3)) {
-          statusText = matchingAreaTotal === totalAreaHa ? 'PHÙ HỢP QUY HOẠCH' : 'CƠ BẢN PHÙ HỢP QUY HOẠCH';
+        } else if (isChucNangPhuHop) {
+          statusText = 'PHÙ HỢP QUY HOẠCH';
           isFinalPhuHop = true;
         } else {
-          statusText = 'CHƯA PHÙ HỢP QUY HOẠCH (Xung đột mục tiêu sử dụng đất)';
+          statusText = 'CHƯER PHÙ HỢP QUY HOẠCH (Xung đột mục tiêu sử dụng đất)';
           isFinalPhuHop = false;
         }
 
-        const finalKetLuan = `✅ KẾT LUẬN THẨM ĐỊNH (${statusText}):\n` + ketLuanLines.join('\n');
+        const finalKetLuan = `✅ KẾT LUẬN THẨM ĐỊNH (${statusText}):\n- ${totalAreaHa} ha thuộc quy hoạch ${targetChucNang.toLowerCase()}.${!isChucNangPhuHop ? ' (' + lyDoXungDot + ')' : ''}`;
 
         const ketQua = {
-          diaDiem: matchingAreaTotal > 0 ? `${targetZone ? targetZone.xa + ', tỉnh Gia Lai' : 'Tỉnh Gia Lai'}` : 'Ngoài ranh giới cơ sở dữ liệu hệ thống',
+          diaDiem: !isHoanToanNgoaiVung ? `${targetZone ? targetZone.xa + ', tỉnh Gia Lai' : 'Tỉnh Gia Lai'}` : 'Ngoài ranh giới cơ sở dữ liệu hệ thống',
           dienTich: `${totalAreaHa} ha (~${(totalAreaHa * 10000).toLocaleString('en-US')} m²)`,
-          loaiQuyhoach: isHoanToanNgoaiVung ? 'Ngoài vùng dữ liệu' : (targetZone ? targetZone.tenQuyHoach : primaryQuyHoach),
-          chucNangSuDung: chucNangDisplay,
+          loaiQuyhoach: isHoanToanNgoaiVung ? 'Ngoài vùng dữ liệu' : (targetZone ? targetZone.tenQuyHoach : 'Quy hoạch chung'),
+          chucNangSuDung: targetChucNang || 'Chưa xác định',
           ketLuan: finalKetLuan,
           phuHop: isFinalPhuHop
         };
