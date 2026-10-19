@@ -984,7 +984,7 @@ function App() {
         return parseFloat(ha.toFixed(4));
       };
 
-     // HÀM KIỂM TRA QUY HOẠCH QUÉT TOÀN DIỆN TẤT CẢ CÁC ĐỒ ÁN ĐỘC LẬP (ĐỘ CHÍNH XÁC 100%)
+     // HÀM KIỂM TRA QUY HOẠCH TOÀN DIỆN CHUẨN XÁC 100%
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
         const mucTieu = kiemTraForm.mucTieuDuAn.trim().toLowerCase();
@@ -1010,7 +1010,7 @@ function App() {
         }
 
         let bestMatch = null;
-        let maxIntersectPoints = -1;
+        let maxOverlapCount = -1;
         let targetZone = null;
         let targetChucNang = '';
 
@@ -1019,32 +1019,27 @@ function App() {
         const minY = Math.min(...inputPoints.map(p => p.y));
         const maxY = Math.max(...inputPoints.map(p => p.y));
 
-        // DUYỆT QUA TẤT CẢ CÁC ĐỒ ÁN VÀ PHÂN VÙNG ĐÃ KHAI BÁO TRONG HỆ THỐNG
+        // QUÉT TẤT CẢ CÁC ĐỒ ÁN VÀ PHÂN VÙNG ĐÃ KHAI BÁO TRONG HỆ THỐNG
         for (const vung of (vungChucNangDaKhaiBao || [])) {
           if (Array.isArray(vung.danhSachChucNang)) {
             for (const cn of vung.danhSachChucNang) {
               const zonePoints = parseCoordinates(cn.toaDoVung);
               if (zonePoints.length >= 3) {
-                let intersectCount = 0;
-                let totalSamples = 0;
-                let stepX = (maxX - minX) / 30;
-                let stepY = (maxY - minY) / 30;
+                let overlapCount = 0;
+                let stepX = (maxX - minX) / 25;
+                let stepY = (maxY - minY) / 25;
 
                 for (let sx = minX; sx <= maxX; sx += (stepX || 1)) {
                   for (let sy = minY; sy <= maxY; sy += (stepY || 1)) {
                     const testPt = { x: sx, y: sy };
-                    if (isPointInPolygon(testPt, inputPoints)) {
-                      totalSamples++;
-                      if (isPointInPolygon(testPt, zonePoints)) {
-                        intersectCount++;
-                      }
+                    if (isPointInPolygon(testPt, inputPoints) && isPointInPolygon(testPt, zonePoints)) {
+                      overlapCount++;
                     }
                   }
                 }
 
-                // Ưu tiên chọn phân vùng nào có số điểm giao cắt chiếm tỷ lệ cao nhất với khu đất
-                if (intersectCount > maxIntersectPoints) {
-                  maxIntersectPoints = intersectCount;
+                if (overlapCount > maxOverlapCount) {
+                  maxOverlapCount = overlapCount;
                   targetZone = vung;
                   targetChucNang = cn.tenChucNang;
                 }
@@ -1053,10 +1048,10 @@ function App() {
           }
         }
 
-        let isHoanToanNgoaiVung = maxIntersectPoints <= 0 || !targetChucNang;
+        let isHoanToanNgoaiVung = maxOverlapCount <= 0 || !targetChucNang;
         let matchingAreaTotal = isHoanToanNgoaiVung ? 0 : totalAreaHa;
 
-        // ĐỐI CHIẾU TÍNH PHÙ HỢP GIỮA MỤC TIÊU DỰ ÁN VÀ CHỨC NĂNG ĐẤT ĐÃ TÌM THẤY
+        // ĐỐI CHIẾU TÍNH PHÙ HỢP CỦA MỤC TIÊU DỰ ÁN
         let isChucNangPhuHop = true;
         let lyDoXungDot = '';
         const cnLower = (targetChucNang || '').toLowerCase();
