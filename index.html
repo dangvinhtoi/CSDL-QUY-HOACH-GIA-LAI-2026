@@ -847,7 +847,7 @@ function App() {
                 setVungChucNangDaKhaiBao(fetchedData);
               }
             }, (error) => {
-              console.error("Lỗi đồng bộ Firebase: ", error);
+              console.error("Lỗi kết nối Firebase: ", error);
             });
             return () => unsubscribe();
           }
@@ -1230,10 +1230,14 @@ function App() {
 
       const handleLuuDuAn = async (e) => {
           e.preventDefault();
-          // Kiểm tra dữ liệu hợp lệ...
+          if (!formDuAn.xa || !formDuAn.tenQuyHoach) {
+            showNotification('⚠️ Vui lòng điền đầy đủ thông tin địa điểm và tên quy hoạch!');
+            return;
+          }
+
           const newData = {
             xa: formDuAn.xa,
-            huyen: formDuAn.huyen,
+            huyen: formDuAn.huyen || 'Huyện Hoài Ân',
             tenQuyHoach: formDuAn.tenQuyHoach,
             danhSachChucNang: danhSachChucNangKhaiBao,
             updatedAt: new Date().toISOString()
@@ -1241,19 +1245,20 @@ function App() {
 
           try {
             if (typeof db !== 'undefined') {
-              if (editingId) {
-                // Cập nhật dữ liệu cũ trên Firebase
-                await db.collection("vungQuyHoachGiaLai").doc(editingId).set(newData);
+              if (editingVungRecord) {
+                // Cập nhật bản ghi cũ trên Firestore
+                await db.collection("vungQuyHoachGiaLai").doc(editingVungRecord.id).set(newData);
                 showNotification('✅ Đã cập nhật vùng quy hoạch lên Đám mây thành công!');
               } else {
-                // Thêm mới dữ liệu lên Firebase
+                // Thêm mới bản ghi lên Firestore
                 await db.collection("vungQuyHoachGiaLai").add(newData);
-                showNotification('✅ Đã lưu khai báo vùng quy hoạch mới lên Đám mây thành công!');
+                showNotification('✅ Đã lưu vùng quy hoạch mới lên Đám mây thành công!');
               }
             }
-            // Reset form và đóng modal...
+            setIsVungModalOpen(false);
+            setEditingVungRecord(null);
           } catch (error) {
-            showNotification('❌ Lỗi khi lưu dữ liệu lên đám mây: ' + error.message);
+            showNotification('❌ Lỗi lưu dữ liệu lên đám mây: ' + error.message);
           }
         };
 
@@ -1261,11 +1266,12 @@ function App() {
           if (confirm('Bạn có chắc chắn muốn xóa vùng quy hoạch này không?')) {
             try {
               if (typeof db !== 'undefined') {
+                // Xóa trực tiếp trên đám mây Firebase Firestore
                 await db.collection("vungQuyHoachGiaLai").doc(id).delete();
                 showNotification('🗑️ Đã xóa vùng quy hoạch khỏi hệ thống đám mây!');
               }
             } catch (error) {
-              showNotification('❌ Lỗi khi xóa dữ liệu: ' + error.message);
+              showNotification('❌ Lỗi khi xóa dữ liệu trên đám mây: ' + error.message);
             }
           }
         };
