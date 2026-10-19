@@ -898,23 +898,16 @@ function App() {
         } catch (e) { return ""; }
       };
 
-      // HÀM TRÍCH XUẤT TỌA ĐỘ ĐA VÙNG (ĐỌC TRỌN VẸN TẤT CẢ CÁC VÙNG TỪ TRÊN XUỐNG DƯỚI)
+      // HÀM TRÍCH XUẤT TỌA ĐỘ TỐI ƯU (CHỐNG CẮT CỤT DỮ LIỆU & LOẠI BỎ ĐIỂM DỊ THƯỜNG Y=X)
       const parseCoordinates = (inputStr) => {
         if (!inputStr || typeof inputStr !== 'string') return [];
         const lines = inputStr.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-        const allPolygons = [];
-        let currentPolygon = [];
-
+        const points = [];
         lines.forEach(line => {
           const upper = line.toUpperCase();
           if ((upper.startsWith('VÙNG') || upper.startsWith('VUNG')) && !upper.includes('X') && !upper.includes('Y')) {
-            if (currentPolygon.length >= 3) {
-              allPolygons.push(currentPolygon);
-              currentPolygon = [];
-            }
             return;
           }
-
           let x = null, y = null;
           if (upper.includes('X') && upper.includes('Y')) {
             const pX = line.split(/X[\s=:]+/i);
@@ -929,27 +922,12 @@ function App() {
               y = parseFloat(nums[1]); 
             }
           }
-          if (!isNaN(x) && !isNaN(y) && x !== null && y !== null) {
-            currentPolygon.push({ x, y });
+          // Lọc bỏ các điểm lỗi có X trùng khớp Y (dị thường hình học)
+          if (!isNaN(x) && !isNaN(y) && x !== null && y !== null && Math.abs(x - y) > 0.001) {
+            points.push({ x, y });
           }
         });
-
-        if (currentPolygon.length >= 3) {
-          allPolygons.push(currentPolygon);
-        }
-
-        // Nếu không chia theo cụm Vùng mà là danh sách điểm liên tục
-        if (allPolygons.length === 0 && currentPolygon.length > 0) {
-          allPolygons.push(currentPolygon);
-        }
-
-        // Trả về tất cả các điểm của các vùng (gộp chung không gian quét để không bao giờ bỏ sót)
-        let mergedPoints = [];
-        allPolygons.forEach(poly => {
-          mergedPoints = mergedPoints.concat(poly);
-        });
-
-        return mergedPoints.length > 0 ? mergedPoints : currentPolygon;
+        return points;
       };
       // THUẬT TOÁN RAY-CASTING: KIỂM TRA ĐIỂM CÓ NẰM TRONG ĐA GIÁC (POLYGON) KHÔNG
       const isPointInPolygon = (point, polygonPoints) => {
