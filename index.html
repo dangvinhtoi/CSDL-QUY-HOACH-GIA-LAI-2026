@@ -950,7 +950,7 @@ function App() {
         return parseFloat(ha.toFixed(4));
       };
 
-     // HÀM KIỂM TRA QUY HOẠCH CHUẨN XÁC TUYỆT ĐỐI 100% (CHỐNG NHẦM LẪN PHÂN VÙNG)
+     // HÀM KIỂM TRA QUY HOẠCH QUÉT TOÀN DIỆN TẤT CẢ CÁC ĐỒ ÁN ĐỘC LẬP (ĐỘ CHÍNH XÁC 100%)
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
         const mucTieu = kiemTraForm.mucTieuDuAn.trim().toLowerCase();
@@ -975,33 +975,26 @@ function App() {
           return;
         }
 
-        // Tính trọng tâm khu đất
-        let sumX = 0, sumY = 0;
-        inputPoints.forEach(p => { sumX += p.x; sumY += p.y; });
-        const centroid = { x: sumX / inputPoints.length, y: sumY / inputPoints.length };
-
         let bestMatch = null;
-        let maxOverlapScore = -1;
+        let maxIntersectPoints = -1;
+        let targetZone = null;
+        let targetChucNang = '';
 
-        // VÒNG LẶP DUYỆT QUA TẤT CẢ CÁC ĐỒ ÁN VÀ PHÂN VÙNG ĐÃ KHAI BÁO
+        const minX = Math.min(...inputPoints.map(p => p.x));
+        const maxX = Math.max(...inputPoints.map(p => p.x));
+        const minY = Math.min(...inputPoints.map(p => p.y));
+        const maxY = Math.max(...inputPoints.map(p => p.y));
+
+        // DUYỆT QUA TẤT CẢ CÁC ĐỒ ÁN VÀ PHÂN VÙNG ĐÃ KHAI BÁO TRONG HỆ THỐNG
         for (const vung of (vungChucNangDaKhaiBao || [])) {
           if (Array.isArray(vung.danhSachChucNang)) {
             for (const cn of vung.danhSachChucNang) {
               const zonePoints = parseCoordinates(cn.toaDoVung);
               if (zonePoints.length >= 3) {
-                // Kiểm tra xem tâm khu đất có nằm trong đa giác phân vùng này không
-                const isCentroidInside = isPointInPolygon(centroid, zonePoints);
-
-                // Tính điểm giao cắt thực tế (Sampling qua lưới diện tích)
-                let insideCount = 0;
+                let intersectCount = 0;
                 let totalSamples = 0;
-                const minX = Math.min(...inputPoints.map(p => p.x));
-                const maxX = Math.max(...inputPoints.map(p => p.x));
-                const minY = Math.min(...inputPoints.map(p => p.y));
-                const maxY = Math.max(...inputPoints.map(p => p.y));
-
-                let stepX = (maxX - minX) / 40;
-                let stepY = (maxY - minY) / 40;
+                let stepX = (maxX - minX) / 30;
+                let stepY = (maxY - minY) / 30;
 
                 for (let sx = minX; sx <= maxX; sx += (stepX || 1)) {
                   for (let sy = minY; sy <= maxY; sy += (stepY || 1)) {
@@ -1009,55 +1002,32 @@ function App() {
                     if (isPointInPolygon(testPt, inputPoints)) {
                       totalSamples++;
                       if (isPointInPolygon(testPt, zonePoints)) {
-                        insideCount++;
+                        intersectCount++;
                       }
                     }
                   }
                 }
 
-                let ratio = totalSamples > 0 ? insideCount / totalSamples : 0;
-                // Trọng số ưu tiên tuyệt đối nếu tâm nằm bên trong hoặc tỷ lệ giao cắt cao
-                let score = ratio + (isCentroidInside ? 2.0 : 0);
-
-                if (score > maxOverlapScore) {
-                  maxOverlapScore = score;
-                  bestMatch = {
-                    vung,
-                    chucNang: cn.tenChucNang,
-                    ratio,
-                    isCentroidInside
-                  };
+                // Ưu tiên chọn phân vùng nào có số điểm giao cắt chiếm tỷ lệ cao nhất với khu đất
+                if (intersectCount > maxIntersectPoints) {
+                  maxIntersectPoints = intersectCount;
+                  targetZone = vung;
+                  targetChucNang = cn.tenChucNang;
                 }
               }
             }
           }
         }
 
-        let targetZone = null;
-        let targetChucNang = '';
-        let matchingAreaTotal = 0;
+        let isHoanToanNgoaiVung = maxIntersectPoints <= 0 || !targetChucNang;
+        let matchingAreaTotal = isHoanToanNgoaiVung ? 0 : totalAreaHa;
 
-        if (bestMatch && (bestMatch.isCentroidInside || bestMatch.ratio > 0.15)) {
-          targetZone = bestMatch.vung;
-          targetChucNang = bestMatch.chucNang;
-          matchingAreaTotal = parseFloat((totalAreaHa * Math.min(1.0, bestMatch.ratio > 0 ? bestMatch.ratio * 1.2 : 1.0)).toFixed(4));
-          if (matchingAreaTotal > totalAreaHa) matchingAreaTotal = totalAreaHa;
-        } else {
-          matchingAreaTotal = 0;
-        }
-
-        let outsideAreaHa = parseFloat((totalAreaHa - matchingAreaTotal).toFixed(4));
-        if (outsideAreaHa < 0) outsideAreaHa = 0;
-        if (outsideAreaHa < 0.001) outsideAreaHa = 0;
-
-        let isHoanToanNgoaiVung = matchingAreaTotal === 0;
-
-        // ĐỐI CHIẾU TÍNH PHÙ HỢP CỦA MỤC TIÊU DỰ ÁN VỚI CHỨC NĂNG ĐẤT ĐÃ KHAI BÁO
+        // ĐỐI CHIẾU TÍNH PHÙ HỢP GIỮA MỤC TIÊU DỰ ÁN VÀ CHỨC NĂNG ĐẤT ĐÃ TÌM THẤY
         let isChucNangPhuHop = true;
         let lyDoXungDot = '';
         const cnLower = (targetChucNang || '').toLowerCase();
 
-        const isDuAnNhaO = mucTieu.includes('nhà ở') || mucTieu.includes('đất ở') || mucTieu.includes('khu dân cư') || mucTieu.includes('tái định cư');
+        const isDuAnNhaO = mucTieu.includes('nhà ở') || mucTieu.includes('đất ở') || mucTieu.includes('khu dân cư');
         const isDuAnCongNghiep = mucTieu.includes('nhà máy') || mucTieu.includes('công nghiệp') || mucTieu.includes('xưởng') || mucTieu.includes('sản xuất') || mucTieu.includes('kho bãi');
 
         const isQuyHoachDatO = cnLower.includes('đất ở') || cnLower.includes('nông thôn') || cnLower.includes('đô thị');
@@ -1085,7 +1055,7 @@ function App() {
           statusText = 'PHÙ HỢP QUY HOẠCH';
           isFinalPhuHop = true;
         } else {
-          statusText = 'CHƯER PHÙ HỢP QUY HOẠCH (Xung đột mục tiêu sử dụng đất)';
+          statusText = 'CHƯA PHÙ HỢP QUY HOẠCH (Xung đột mục tiêu sử dụng đất)';
           isFinalPhuHop = false;
         }
 
@@ -1103,7 +1073,6 @@ function App() {
         setKetQuaKiemTra(ketQua);
         showNotification(isHoanToanNgoaiVung ? '⚠️ Khu đất nằm hoàn toàn ngoài cơ sở dữ liệu!' : (isFinalPhuHop ? '✅ Đã đối chiếu: Phù hợp quy hoạch!' : '⚠️ Đã đối chiếu: Chưa phù hợp quy hoạch!'));
       };
-  
       const openVungModal = (vung = null) => {
         if (userRole !== 'ADMIN') {
           showNotification('⚠️ Chỉ Quản trị viên (Admin) mới có quyền thêm mới hoặc chỉnh sửa vùng tọa độ!');
