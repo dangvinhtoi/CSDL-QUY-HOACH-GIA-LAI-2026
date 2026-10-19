@@ -1036,27 +1036,29 @@ function App() {
 
         let isHoanToanNgoaiVung = maxOverlapScore <= 0.02 || !bestMatchChucNang;
 
-        // ĐỐI CHIẾU TÍNH PHÙ HỢP CỦA MỤC TIÊU DỰ ÁN
+        // ĐỐI CHIẾU TÍNH PHÙ HỢP CỦA MỤC TIÊU DỰ ÁN VỚI ĐẶC THÙ ĐẤT ĐỒI NÚI / RỪNG
         let isChucNangPhuHop = true;
         let lyDoXungDot = '';
         const mucTieuLower = mucTieu.toLowerCase();
         const cnLower = (bestMatchChucNang || '').toLowerCase();
 
         const isDuAnNhaO = mucTieuLower.includes('nhà ở') || mucTieuLower.includes('đất ở') || mucTieuLower.includes('khu dân cư');
-        const isDuAnCongNghiep = mucTieuLower.includes('nhà máy') || mucTieuLower.includes('công nghiệp') || mucTieuLower.includes('xưởng') || mucTieuLower.includes('sản xuất') || mucTieuLower.includes('kho bãi');
+        const isDuAnCongNghiepThongThuong = mucTieuLower.includes('nhà máy sản xuất') || mucTieuLower.includes('xưởng cơ khí') || mucTieuLower.includes('kho bãi logistic');
+        
+        // Các dự án được phép trên đất đồi núi / lâm nghiệp: Khai thác khoáng sản, mỏ vật liệu, nhà máy chế biến đá, chế biến lâm sản
+        const isDuAnKhoangSanVatLieu = mucTieuLower.includes('khai thác') || mucTieuLower.includes('mỏ') || mucTieuLower.includes('chế biến đá') || mucTieuLower.includes('vật liệu xây dựng') || mucTieuLower.includes('khoáng sản');
 
-        const isQuyHoachDatO = cnLower.includes('đất ở') || cnLower.includes('nông thôn') || cnLower.includes('đô thị');
-        const isQuyHoachCongNghiep = cnLower.includes('công nghiệp') || cnLower.includes('kho bãi') || cnLower.includes('sản xuất') || cnLower.includes('cảng cạn');
+        const isQuyHoachDatDoiNui = cnLower.includes('đồi núi') || cnLower.includes('lâm nghiệp') || cnLower.includes('trồng rừng');
 
         if (!isHoanToanNgoaiVung) {
-          if (isQuyHoachDatO && isDuAnCongNghiep) {
-            isChucNangPhuHop = false;
-            lyDoXungDot = 'Quy hoạch đất ở không cho phép xây dựng nhà máy, cơ sở sản xuất công nghiệp.';
-          } else if (isQuyHoachCongNghiep && isDuAnNhaO) {
-            isChucNangPhuHop = false;
-            lyDoXungDot = 'Quy hoạch đất sản xuất công nghiệp / kho bãi không phù hợp để xây dựng nhà ở dân cư.';
-          } else if (cnLower.includes('đất ở') && isDuAnNhaO) {
-            isChucNangPhuHop = true;
+          if (isQuyHoachDatDoiNui) {
+            if (isDuAnNhaO || isDuAnCongNghiepThongThuong) {
+              isChucNangPhuHop = false;
+              lyDoXungDot = 'Quy hoạch đất đồi núi, lâm nghiệp không cho phép xây dựng nhà ở dân cư hoặc nhà máy công nghiệp thông thường.';
+            } else if (isDuAnKhoangSanVatLieu) {
+              // Đất đồi núi / rừng ĐƯỢC PHÉP làm mỏ khai thác khoáng sản, vật liệu xây dựng, nhà máy chế biến đá
+              isChucNangPhuHop = true;
+            }
           }
         } else {
           isChucNangPhuHop = false;
