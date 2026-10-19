@@ -898,17 +898,23 @@ function App() {
         } catch (e) { return ""; }
       };
 
-      // HÀM TRÍCH XUẤT TỌA ĐỘ CHUẨN XÁC TUYỆT ĐỐI (HỖ TRỢ MỌI ĐỊNH DẠNG VÙNG & TỌA ĐỘ)
+      // HÀM TRÍCH XUẤT TỌA ĐỘ ĐA VÙNG (ĐỌC TRỌN VẸN TẤT CẢ CÁC VÙNG TỪ TRÊN XUỐNG DƯỚI)
       const parseCoordinates = (inputStr) => {
         if (!inputStr || typeof inputStr !== 'string') return [];
         const lines = inputStr.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-        const points = [];
+        const allPolygons = [];
+        let currentPolygon = [];
+
         lines.forEach(line => {
           const upper = line.toUpperCase();
-          // Bỏ qua các dòng tiêu đề chỉ có tên vùng mà không chứa tọa độ X, Y
           if ((upper.startsWith('VÙNG') || upper.startsWith('VUNG')) && !upper.includes('X') && !upper.includes('Y')) {
+            if (currentPolygon.length >= 3) {
+              allPolygons.push(currentPolygon);
+              currentPolygon = [];
+            }
             return;
           }
+
           let x = null, y = null;
           if (upper.includes('X') && upper.includes('Y')) {
             const pX = line.split(/X[\s=:]+/i);
@@ -924,10 +930,26 @@ function App() {
             }
           }
           if (!isNaN(x) && !isNaN(y) && x !== null && y !== null) {
-            points.push({ x, y });
+            currentPolygon.push({ x, y });
           }
         });
-        return points;
+
+        if (currentPolygon.length >= 3) {
+          allPolygons.push(currentPolygon);
+        }
+
+        // Nếu không chia theo cụm Vùng mà là danh sách điểm liên tục
+        if (allPolygons.length === 0 && currentPolygon.length > 0) {
+          allPolygons.push(currentPolygon);
+        }
+
+        // Trả về tất cả các điểm của các vùng (gộp chung không gian quét để không bao giờ bỏ sót)
+        let mergedPoints = [];
+        allPolygons.forEach(poly => {
+          mergedPoints = mergedPoints.concat(poly);
+        });
+
+        return mergedPoints.length > 0 ? mergedPoints : currentPolygon;
       };
       // THUẬT TOÁN RAY-CASTING: KIỂM TRA ĐIỂM CÓ NẰM TRONG ĐA GIÁC (POLYGON) KHÔNG
       const isPointInPolygon = (point, polygonPoints) => {
