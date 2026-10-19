@@ -936,7 +936,7 @@ function App() {
         return parseFloat(ha.toFixed(4));
       };
 
-     // HÀM KIỂM TRA & ĐỐI CHIẾU QUY HOẠCH TOÀN DIỆN (KHÔNG GIAN + MỤC TIÊU DỰ ÁN)
+     // HÀM KIỂM TRA & ĐỐI CHIẾU QUY HOẠCH THÔNG MINH (TUÂN THỦ QUY CHUẨN XÂY DỰNG & ĐẤT ĐAI)
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
         const mucTieu = kiemTraForm.mucTieuDuAn.trim().toLowerCase();
@@ -945,7 +945,7 @@ function App() {
           return;
         }
         if (kiemTraForm.loaiNhap === 'truc_tiep' && !kiemTraForm.toaDoTrucTiep.trim()) {
-          showNotification('❌ Vuint lòng nhập tọa độ khu đất!');
+          showNotification('❌ Vui lòng nhập tọa độ khu đất!');
           return;
         }
         if (kiemTraForm.loaiNhap !== 'truc_tiep' && !kiemTraForm.fileName) {
@@ -1050,16 +1050,55 @@ function App() {
 
         let matchingAreaTotal = foundInsideZone ? totalAreaHa : totalCoveredHa;
 
-        // KIỂM TRA ĐỐI CHÉO MỤC TIÊU DỰ ÁN VỚI CHỨC NĂNG ĐẤT QUY HOẠCH
+        // ==========================================
+        // BỘ LỌC ĐỐI CHIẾU CHỨC NĂNG SỬ DỤNG ĐẤT LUẬT LÝ
+        // ==========================================
         let isChucNangPhuHop = true;
+        let lyDoXungDot = '';
         const cnLower = (targetChucNang || '').toLowerCase();
 
-        // Nếu dự án là công nghiệp / nhà máy / xưởng nhưng quy hoạch là đất ở / đất nông nghiệp -> Không phù hợp
-        const isDuAnCongNghiep = mucTieu.includes('nhà máy') || mucTieu.includes('công nghiệp') || mucTieu.includes('xưởng') || mucTieu.includes('sản xuất');
-        const isDatOHoacNongNghiep = cnLower.includes('đất ở') || cnLower.includes('nông thôn') || cnLower.includes('đô thị') || cnLower.includes('nông nghiệp') || cnLower.includes('lúa');
+        // Phân loại mục tiêu dự án
+        const isDuAnNhaO = mucTieu.includes('khu dân cư') || mucTieu.includes('đất ở') || mucTieu.includes('nhà ở') || mucTieu.includes('tái định cư') || mucTieu.includes('chung cư');
+        const isDuAnCongNghiep = mucTieu.includes('nhà máy') || mucTieu.includes('công nghiệp') || mucTieu.includes('xưởng') || mucTieu.includes('sản xuất chế biến');
+        const isDuAnChanNuoi = mucTieu.includes('chăn nuôi') || mucTieu.includes('trang trại') || mucTieu.includes('gia súc') || mucTieu.includes('gia cầm');
+        const isDuAnDuLich = mucTieu.includes('du lịch') || mucTieu.includes('nghỉ dưỡng') || mucTieu.includes('khách sạn');
+        const isDuAnNongNghiep = mucTieu.includes('trồng trọt') || mucTieu.includes('vườn ươm') || mucTieu.includes('nông nghiệp');
 
-        if (isDuAnCongNghiep && isDatOHoacNongNghiep && matchingAreaTotal > 0) {
-          isChucNangPhuHop = false;
+        // Phân loại quy hoạch đất
+        const isQuyHoachDatO = cnLower.includes('đất ở') || cnLower.includes('nông thôn') || cnLower.includes('đô thị') || cnLower.includes('khu dân cư');
+        const isQuyHoachCongNghiep = cnLower.includes('công nghiệp') || cnLower.includes('tiểu thủ công nghiệp') || cnLower.includes('kho bãi');
+        const isQuyHoachChanNuoi = cnLower.includes('chăn nuôi') || cnLower.includes('trang trại tập trung');
+        const isQuyHoachDuLich = cnLower.includes('du lịch') || cnLower.includes('thương mại dịch vụ');
+        const isQuyHoachNongNghiep = cnLower.includes('nông nghiệp') || cnLower.includes('lúa') || cnLower.includes('trồng trọt');
+
+        if (matchingAreaTotal > 0) {
+          if (isQuyHoachDatO) {
+            if (isDuAnCongNghiep) {
+              isChucNangPhuHop = false;
+              lyDoXungDot = 'Quy hoạch đất ở không cho phép xây dựng nhà máy, cơ sở sản xuất công nghiệp.';
+            } else if (isDuAnChanNuoi) {
+              isChucNangPhuHop = false;
+              lyDoXungDot = 'Quy hoạch đất ở không cho phép xây dựng trang trại chăn nuôi tập trung.';
+            } else if (isDuAnNongNghiep && !isDuAnNhaO) {
+              isChucNangPhuHop = false;
+              lyDoXungDot = 'Quy hoạch đất ở chỉ phục vụ khu dân cư, hạ tầng nhóm ở, không phù hợp cho sản xuất nông nghiệp quy mô lớn.';
+            }
+          } else if (isQuyHoachCongNghiep) {
+            if (isDuAnNhaO || isDuAnChanNuoi) {
+              isChucNangPhuHop = false;
+              lyDoXungDot = 'Quy hoạch đất sản xuất công nghiệp không phù hợp để xây dựng khu dân cư hoặc trang trại chăn nuôi.';
+            }
+          } else if (isQuyHoachChanNuoi) {
+            if (isDuAnNhaO || isDuAnCongNghiep) {
+              isChucNangPhuHop = false;
+              lyDoXungDot = 'Quy hoạch đất chăn nuôi tập trung chỉ dành riêng cho xây dựng trang trại chăn nuôi.';
+            }
+          } else if (isQuyHoachNongNghiep) {
+            if (isDuAnCongNghiep || isDuAnChanNuoi) {
+              isChucNangPhuHop = false;
+              lyDoXungDot = 'Quy hoạch đất sản xuất nông nghiệp không cho phép xây dựng nhà máy công nghiệp hay trang trại chăn nuôi quy mô lớn ngoài quy định.';
+            }
+          }
         }
 
         if (matchingAreaTotal > 0) {
@@ -1094,7 +1133,7 @@ function App() {
             ketLuanLines.push(`- ${detail.dienTichHa} ha (${m2Val} m²) nằm ngoài vùng dữ liệu của hệ thống.`);
           } else {
             if (!isChucNangPhuHop) {
-              ketLuanLines.push(`- ${detail.dienTichHa} ha (${m2Val} m²) thuộc quy hoạch ${detail.chucNang.toLowerCase()} (Không phù hợp với mục tiêu dự án công nghiệp).`);
+              ketLuanLines.push(`- ${detail.dienTichHa} ha (${m2Val} m²) thuộc quy hoạch ${detail.chucNang.toLowerCase()} (${lyDoXungDot}).`);
             } else {
               ketLuanLines.push(`- ${detail.dienTichHa} ha (${m2Val} m²) phù hợp với chức năng ${detail.chucNang.toLowerCase()}.`);
             }
@@ -1127,7 +1166,7 @@ function App() {
         };
 
         setKetQuaKiemTra(ketQua);
-        showNotification(isHoanToanNgoaiVung ? '⚠️ Khu đất nằm hoàn toàn ngoài cơ sở dữ liệu!' : (isFinalPhuHop ? '✅ Đã đối chiếu: Phù hợp quy hoạch!' : '⚠️ Đã đối chiếu: Chưa phù hợp quy hoạch!'));
+        showNotification(isHoanToanNgoaiVung ? '⚠️ Khu đất nằm hoàn toàn ngoài cơ sở dữ liệu!' : (isFinalPhuHop ? '✅ Đã đối chiếu: Phù hợp quy hoạch!' : '⚠️ Đã đối chiếu: Chưa phù hợp quy hoạch do xung đột loại đất!'));
       };
   
       const openVungModal = (vung = null) => {
