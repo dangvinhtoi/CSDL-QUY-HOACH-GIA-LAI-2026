@@ -1173,7 +1173,7 @@ function App() {
         const ketQua = {
           diaDiem: matchingAreaTotal > 0 ? `${targetZone ? targetZone.xa + ', tỉnh Gia Lai' : 'Tỉnh Gia Lai'}` : 'Ngoài ranh giới cơ sở dữ liệu hệ thống',
           dienTich: `${totalAreaHa} ha (~${(totalAreaHa * 10000).toLocaleString('en-US')} m²)`,
-          loaiQuyhoach: isHoanToanNgoaiVung ? 'Ngoài vùng dữ liệu' : primaryQuyHoach,
+          loaiQuyhoach: isHoanToanNgoaiVung ? 'Ngoài vùng dữ liệu' : (targetZone ? targetZone.tenQuyHoach : primaryQuyHoach),
           chucNangSuDung: chucNangDisplay,
           ketLuan: finalKetLuan,
           phuHop: isFinalPhuHop
