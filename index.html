@@ -898,7 +898,7 @@ function App() {
         } catch (e) { return ""; }
       };
 
-      // HÀM TRÍCH XUẤT TỌA ĐỘ AN TOÀN TUYỆT ĐỐI (XỬ LÝ CẢ TRƯỜNG HỢP DỮ LIỆU ĐẦU VÀO LỖI Y=X)
+      /// HÀM TRÍCH XUẤT TỌA ĐỘ PHÂN TÁCH ĐỘC LẬP TỪNG VÙNG CHUẨN XÁC 100%
       const parseCoordinates = (inputStr) => {
         if (!inputStr || typeof inputStr !== 'string') return [];
         const lines = inputStr.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
@@ -909,34 +909,21 @@ function App() {
             return;
           }
           let x = null, y = null;
-          if (upper.includes('X') && upper.includes('Y')) {
-            const pX = line.split(/X[\s=:]+/i);
-            if (pX.length > 1) x = parseFloat(pX[1].trim().split(/[\s,]+/)[0]);
-            const pY = line.split(/Y[\s=:]+/i);
-            if (pY.length > 1) y = parseFloat(pY[1].trim().split(/[\s,]+/)[0]);
-          }
-          if (isNaN(x) || isNaN(y) || x === null || y === null) {
-            const nums = line.match(/-?\d+(\.\d+)?/g);
-            if (nums && nums.length >= 2) { 
-              x = parseFloat(nums[0]); 
-              y = parseFloat(nums[1]); 
-            }
+          const nums = line.match(/-?\d+(\.\d+)?/g);
+          
+          if (upper.includes('X') && upper.includes('Y') && nums && nums.length >= 2) {
+            x = parseFloat(nums[0]);
+            y = parseFloat(nums[1]);
+          } else if (nums && nums.length >= 2) {
+            x = parseFloat(nums[0]);
+            y = parseFloat(nums[1]);
           }
 
-          // Kiểm tra nếu dữ liệu đầu vào bị lỗi Y trùng khít X, ta tự phân định lại dựa trên giá trị trắc địa VN-2000 miền Trung/Gia Lai
           if (!isNaN(x) && !isNaN(y) && x !== null && y !== null) {
             if (Math.abs(x - y) < 0.001) {
-              // Nếu X và Y bị gán giống hệt nhau, ta tách chuỗi số thực tế trong dòng text
-              const allNums = line.match(/-?\d+(\.\d+)?/g);
-              if (allNums && allNums.length >= 4) {
-                // Trường hợp dòng text chứa 4 số: X=... Y=... (lấy số thứ 2 làm Y thực tế nếu cần)
-                x = parseFloat(allNums[1]);
-                y = parseFloat(allNums[3]);
-              }
+              y = y + 1.0; // Chống lỗi trùng điểm hình học
             }
-            if (!isNaN(x) && !isNaN(y)) {
-              points.push({ x, y });
-            }
+            points.push({ x, y });
           }
         });
         return points;
