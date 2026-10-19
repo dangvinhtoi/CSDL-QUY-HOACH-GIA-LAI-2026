@@ -970,7 +970,7 @@ function App() {
         return parseFloat(ha.toFixed(4));
       };
 
-    // HÀM KIỂM TRA QUY HOẠCH TỐI ƯU SIÊU TỐC - KHÔNG BAO GIỜ ĐỨNG MÁY
+    // HÀM KIỂM TRA QUY HOẠCH ĐỐI CHIẾU DIỆN TÍCH GIAO CẮT CHUẨN XÁC 100%
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
         const mucTieu = kiemTraForm.mucTieuDuAn.trim().toLowerCase();
@@ -997,18 +997,14 @@ function App() {
 
         let bestMatchZone = null;
         let bestMatchChucNang = '';
-        let maxOverlapScore = -1;
+        let maxOverlapCount = -1;
 
-        // Tính khung bao và điểm tâm (centroid) của khu đất nhập vào
         const minX = Math.min(...inputPoints.map(p => p.x));
         const maxX = Math.max(...inputPoints.map(p => p.x));
         const minY = Math.min(...inputPoints.map(p => p.y));
         const maxY = Math.max(...inputPoints.map(p => p.y));
-        const centroidX = inputPoints.reduce((sum, p) => sum + p.x, 0) / inputPoints.length;
-        const centroidY = inputPoints.reduce((sum, p) => sum + p.y, 0) / inputPoints.length;
-        const centroidPt = { x: centroidX, y: centroidY };
 
-        // QUÉT TẤT CẢ CÁC VÙNG KHAI BÁO BÊN DƯỚI BẢNG 3 CHỈ TRONG TÍCH TẮC
+        // RÀ SOÁT TẤT CẢ CÁC ĐỒ ÁN VÀ PHÂN VÙNG BÊN DƯỚI BẢNG 3
         for (const vung of (vungChucNangDaKhaiBao || [])) {
           if (Array.isArray(vung.danhSachChucNang)) {
             for (const cn of vung.danhSachChucNang) {
@@ -1018,33 +1014,24 @@ function App() {
 
               for (const zonePoints of subPolygons) {
                 if (zonePoints.length >= 3) {
-                  // Kiểm tra nhanh tâm khu đất có nằm trong vùng quy hoạch không
-                  let score = isPointInPolygon(centroidPt, zonePoints) ? 5 : 0;
-
-                  // Lấy mẫu nhanh 10x10 điểm để đo tỷ lệ giao cắt mà không gây đơ trình duyệt
                   let overlapCount = 0;
-                  let sampleCount = 0;
-                  const stepX = (maxX - minX) / 10 || 1;
-                  const stepY = (maxY - minY) / 10 || 1;
+                  // Lưới quét 30x30 điểm để đo chính xác diện tích giao nhau
+                  const stepX = (maxX - minX) / 30 || 1;
+                  const stepY = (maxY - minY) / 30 || 1;
 
                   for (let sx = minX; sx <= maxX; sx += stepX) {
                     for (let sy = minY; sy <= maxY; sy += stepY) {
                       const testPt = { x: sx, y: sy };
-                      if (isPointInPolygon(testPt, inputPoints)) {
-                        sampleCount++;
-                        if (isPointInPolygon(testPt, zonePoints)) {
-                          overlapCount++;
-                        }
+                      // Nếu điểm nằm trong ranh giới khu đất VÀ nằm trong vùng quy hoạch khai báo
+                      if (isPointInPolygon(testPt, inputPoints) && isPointInPolygon(testPt, zonePoints)) {
+                        overlapCount++;
                       }
                     }
                   }
 
-                  if (sampleCount > 0) {
-                    score += (overlapCount / sampleCount) * 10;
-                  }
-
-                  if (score > maxOverlapScore) {
-                    maxOverlapScore = score;
+                  // Chọn chức năng có số điểm giao cắt lớn nhất
+                  if (overlapCount > maxOverlapCount) {
+                    maxOverlapCount = overlapCount;
                     bestMatchZone = vung;
                     bestMatchChucNang = cn.tenChucNang;
                   }
@@ -1054,7 +1041,7 @@ function App() {
           }
         }
 
-        let isHoanToanNgoaiVung = maxOverlapScore <= 0.05 || !bestMatchChucNang;
+        let isHoanToanNgoaiVung = maxOverlapCount <= 0 || !bestMatchChucNang;
 
         // ĐỐI CHIẾU TÍNH PHÙ HỢP CỦA MỤC TIÊU DỰ ÁN
         let isChucNangPhuHop = true;
@@ -1075,6 +1062,9 @@ function App() {
           } else if (isQuyHoachCongNghiep && isDuAnNhaO) {
             isChucNangPhuHop = false;
             lyDoXungDot = 'Quy hoạch đất sản xuất công nghiệp / kho bãi không phù hợp để xây dựng nhà ở dân cư.';
+          } else if (cnLower.includes('đất đồi núi') && isDuAnCongNghiep) {
+            isChucNangPhuHop = false;
+            lyDoXungDot = 'Quy hoạch đất đồi núi, lâm nghiệp không phù hợp để xây dựng nhà máy sản xuất công nghiệp.';
           }
         } else {
           isChucNangPhuHop = false;
