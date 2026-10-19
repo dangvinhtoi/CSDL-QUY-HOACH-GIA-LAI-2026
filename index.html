@@ -1268,19 +1268,29 @@ const handleSaveVung = async (e) => {
             return;
           }
 
+          // Chuẩn hóa danh sách chức năng để đảm bảo tất cả các trường đều là kiểu dữ liệu hợp lệ (tránh lỗi indexOf)
+          let sanitizedChucNang = [];
+          if (Array.isArray(vungFormData.danhSachChucNang)) {
+            sanitizedChucNang = vungFormData.danhSachChucNang.map(item => ({
+              id: item.id || Date.now(),
+              tenChucNang: String(item.tenChucNang || ''),
+              toaDoVung: String(item.toaDoVung || '')
+            }));
+          }
+
           const newData = {
-            xa: vungFormData.xa,
-            huyen: vungFormData.huyen || 'Huyện Hoài Ân',
-            tenQuyHoach: vungFormData.tenQuyHoach,
-            danhSachChucNang: vungFormData.danhSachChucNang || [],
+            xa: String(vungFormData.xa || ''),
+            huyen: String(vungFormData.huyen || 'Huyện Hoài Ân'),
+            tenQuyHoach: String(vungFormData.tenQuyHoach || ''),
+            danhSachChucNang: sanitizedChucNang,
             updatedAt: new Date().toISOString()
           };
 
           try {
             if (typeof db !== 'undefined') {
-              if (editingVungRecord) {
+              if (editingVungRecord && editingVungRecord.id) {
                 // Cập nhật bản ghi trên Firebase Firestore
-                await db.collection("vungQuyHoachGiaLai").doc(editingVungRecord.id).set(newData);
+                await db.collection("vungQuyHoachGiaLai").doc(String(editingVungRecord.id)).set(newData);
                 showNotification('✅ Đã cập nhật vùng quy hoạch thành công trên đám mây!');
               } else {
                 // Thêm mới bản ghi lên Firebase Firestore
