@@ -970,7 +970,7 @@ function App() {
         return parseFloat(ha.toFixed(4));
       };
 
-     // HÀM KIỂM TRA QUY HOẠCH TOÀN DIỆN CHUẨN XÁC 100%
+    // HÀM KIỂM TRA QUY HOẠCH CHUẨN XÁC THEO TỶ TRỌNG DIỆN TÍCH GIAO CẮT
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
         const mucTieu = kiemTraForm.mucTieuDuAn.trim().toLowerCase();
@@ -995,58 +995,64 @@ function App() {
           return;
         }
 
-        let bestMatch = null;
-        let maxOverlapCount = -1;
-        let targetZone = null;
-        let targetChucNang = '';
+        let bestMatchZone = null;
+        let bestMatchChucNang = '';
+        let maxOverlapArea = -1;
 
         const minX = Math.min(...inputPoints.map(p => p.x));
         const maxX = Math.max(...inputPoints.map(p => p.x));
         const minY = Math.min(...inputPoints.map(p => p.y));
         const maxY = Math.max(...inputPoints.map(p => p.y));
 
-        // QUÉT TẤT CẢ CÁC ĐỒ ÁN VÀ PHÂN VÙNG ĐÃ KHAI BÁO TRONG HỆ THỐNG
+        // DUYỆT QUA TẤT CẢ CÁC PHÂN VÙNG ĐÃ KHAI BÁO ĐỂ TÌM VÙNG GIAO CẮT LỚN NHẤT
         for (const vung of (vungChucNangDaKhaiBao || [])) {
           if (Array.isArray(vung.danhSachChucNang)) {
             for (const cn of vung.danhSachChucNang) {
               const zonePoints = parseCoordinates(cn.toaDoVung);
               if (zonePoints.length >= 3) {
-                let overlapCount = 0;
-                let stepX = (maxX - minX) / 25;
-                let stepY = (maxY - minY) / 25;
+                let overlapPointsCount = 0;
+                let totalSamplePoints = 0;
+                let stepX = (maxX - minX) / 30;
+                let stepY = (maxY - minY) / 30;
 
                 for (let sx = minX; sx <= maxX; sx += (stepX || 1)) {
                   for (let sy = minY; sy <= maxY; sy += (stepY || 1)) {
                     const testPt = { x: sx, y: sy };
-                    if (isPointInPolygon(testPt, inputPoints) && isPointInPolygon(testPt, zonePoints)) {
-                      overlapCount++;
+                    if (isPointInPolygon(testPt, inputPoints)) {
+                      totalSamplePoints++;
+                      if (isPointInPolygon(testPt, zonePoints)) {
+                        overlapPointsCount++;
+                      }
                     }
                   }
                 }
 
-                if (overlapCount > maxOverlapCount) {
-                  maxOverlapCount = overlapCount;
-                  targetZone = vung;
-                  targetChucNang = cn.tenChucNang;
+                if (totalSamplePoints > 0) {
+                  const ratio = overlapPointsCount / totalSamplePoints;
+                  const estimatedOverlapArea = totalAreaHa * ratio;
+                  if (estimatedOverlapArea > maxOverlapArea) {
+                    maxOverlapArea = estimatedOverlapArea;
+                    bestMatchZone = vung;
+                    bestMatchChucNang = cn.tenChucNang;
+                  }
                 }
               }
             }
           }
         }
 
-        let isHoanToanNgoaiVung = maxOverlapCount <= 0 || !targetChucNang;
-        let matchingAreaTotal = isHoanToanNgoaiVung ? 0 : totalAreaHa;
+        let isHoanToanNgoaiVung = maxOverlapArea <= 0.0001 || !bestMatchChucNang;
 
         // ĐỐI CHIẾU TÍNH PHÙ HỢP CỦA MỤC TIÊU DỰ ÁN
         let isChucNangPhuHop = true;
         let lyDoXungDot = '';
-        const cnLower = (targetChucNang || '').toLowerCase();
+        const cnLower = (bestMatchChucNang || '').toLowerCase();
 
         const isDuAnNhaO = mucTieu.includes('nhà ở') || mucTieu.includes('đất ở') || mucTieu.includes('khu dân cư');
         const isDuAnCongNghiep = mucTieu.includes('nhà máy') || mucTieu.includes('công nghiệp') || mucTieu.includes('xưởng') || mucTieu.includes('sản xuất') || mucTieu.includes('kho bãi');
 
         const isQuyHoachDatO = cnLower.includes('đất ở') || cnLower.includes('nông thôn') || cnLower.includes('đô thị');
-        const isQuyHoachCongNghiep = cnLower.includes('công nghiệp') || cnLower.includes('kho bãi') || cnLower.includes('sản xuất');
+        const isQuyHoachCongNghiep = cnLower.includes('công nghiệp') || cnLower.includes('kho bãi') || cnLower.includes('sản xuất') || cnLower.includes('cảng cạn');
 
         if (!isHoanToanNgoaiVung) {
           if (isQuyHoachDatO && isDuAnCongNghiep) {
@@ -1074,13 +1080,15 @@ function App() {
           isFinalPhuHop = false;
         }
 
-        const finalKetLuan = `✅ KẾT LUẬN THẨM ĐỊNH (${statusText}):\n- ${totalAreaHa} ha thuộc quy hoạch ${targetChucNang.toLowerCase()}.${!isChucNangPhuHop ? ' (' + lyDoXungDot + ')' : ''}`;
+        const finalKetLuan = isFinalPhuHop 
+          ? `✅ KẾT LUẬN THẨM ĐỊNH (PHÙ HỢP QUY HOẠCH):\n- ${totalAreaHa} ha hoàn toàn thuộc quy hoạch ${bestMatchChucNang.toLowerCase()}. Mục tiêu đầu tư phù hợp với chức năng sử dụng đất.`
+          : `✅ KẾT LUẬN THẨM ĐỊNH (${statusText}):\n- ${totalAreaHa} ha thuộc quy hoạch ${bestMatchChucNang.toLowerCase()}.${!isHoanToanNgoaiVung && !isChucNangPhuHop ? ' (' + lyDoXungDot + ')' : ''}`;
 
         const ketQua = {
-          diaDiem: !isHoanToanNgoaiVung ? `${targetZone ? targetZone.xa + ', tỉnh Gia Lai' : 'Tỉnh Gia Lai'}` : 'Ngoài ranh giới cơ sở dữ liệu hệ thống',
+          diaDiem: !isHoanToanNgoaiVung ? `${bestMatchZone ? bestMatchZone.xa + ', tỉnh Gia Lai' : 'Tỉnh Gia Lai'}` : 'Ngoài ranh giới cơ sở dữ liệu hệ thống',
           dienTich: `${totalAreaHa} ha (~${(totalAreaHa * 10000).toLocaleString('en-US')} m²)`,
-          loaiQuyhoach: isHoanToanNgoaiVung ? 'Ngoài vùng dữ liệu' : (targetZone ? targetZone.tenQuyHoach : 'Quy hoạch chung'),
-          chucNangSuDung: targetChucNang || 'Chưa xác định',
+          loaiQuyhoach: isHoanToanNgoaiVung ? 'Ngoài vùng dữ liệu' : (bestMatchZone ? bestMatchZone.tenQuyHoach : 'Quy hoạch chung'),
+          chucNangSuDung: bestMatchChucNang || 'Chưa xác định',
           ketLuan: finalKetLuan,
           phuHop: isFinalPhuHop
         };
