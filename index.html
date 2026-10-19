@@ -950,7 +950,7 @@ function App() {
         return parseFloat(ha.toFixed(4));
       };
 
-     // HÀM KIỂM TRA QUY HOẠCH CHUẨN XÁC TUYỆT ĐỐI 100% (CHỐNG QUÉT NHẦM KHOẢNG TRỐNG)
+     // HÀM KIỂM TRA QUY HOẠCH CHUẨN XÁC TUYỆT ĐỐI 100% (CHỐNG LỌT KHOẢNG TRỐNG GIAO THÔNG)
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
         const mucTieu = kiemTraForm.mucTieuDuAn.trim().toLowerCase();
@@ -975,6 +975,7 @@ function App() {
           return;
         }
 
+        // Tính trọng tâm khu đất
         let sumX = 0, sumY = 0;
         inputPoints.forEach(p => { sumX += p.x; sumY += p.y; });
         const centroid = { x: sumX / inputPoints.length, y: sumY / inputPoints.length };
@@ -1010,7 +1011,7 @@ function App() {
 
                 let insideCount = 0;
                 let totalSamples = 0;
-                let gridSteps = 50;
+                let gridSteps = 55;
                 let stepX = (maxX - minX) / gridSteps;
                 let stepY = (maxY - minY) / gridSteps;
 
@@ -1030,7 +1031,7 @@ function App() {
                   let ratio = insideCount / totalSamples;
                   if (ratio > maxMatchRatio) {
                     maxMatchRatio = ratio;
-                    bestZoneMatch = { vung, chucNang: cn.tenChucNang, ratio };
+                    bestZoneMatch = { vung, chucNang: cn.tenChucNang, ratio, zonePoints };
                   }
                 }
               }
@@ -1038,20 +1039,19 @@ function App() {
           }
         }
 
-        let isCentroidInBestZone = false;
-        if (bestZoneMatch) {
-          const zonePts = parseCoordinates(bestZoneMatch.vung.danhSachChucNang.find(c => c.tenChucNang === bestZoneMatch.chucNang)?.toaDoVung || '');
-          if (zonePts.length >= 3 && isPointInPolygon(centroid, zonePts)) {
-            isCentroidInBestZone = true;
-          }
+        // KIỂM TRA ĐIỀU KIỆN NGHIÊM NGẶT: 
+        // 1. Tâm khu đất phải nằm trong vùng hatch HOẶC tỷ lệ giao cắt thực tế phải đạt từ 70% trở lên.
+        // 2. Nếu nằm ở khoảng trống (tâm không nằm trong và tỷ lệ thấp), bắt buộc xem là nằm ngoài.
+        let isCentroidInZone = false;
+        if (bestZoneMatch && bestZoneMatch.zonePoints) {
+          isCentroidInZone = isPointInPolygon(centroid, bestZoneMatch.zonePoints);
         }
 
-        // ĐIỀU KIỆN LỌC CHẶT CHẼ: Tỷ lệ phủ thực tế phải đạt ít nhất 35% HOẶC trọng tâm nằm trong vùng hatch
-        if (bestZoneMatch && (maxMatchRatio >= 0.35 || isCentroidInBestZone)) {
+        if (bestZoneMatch && (isCentroidInZone || maxMatchRatio >= 0.70)) {
           targetZone = bestZoneMatch.vung;
           targetChucNang = bestZoneMatch.chucNang;
-          totalCoveredHa = maxMatchRatio >= 0.85 || isCentroidInBestZone ? totalAreaHa : parseFloat((totalAreaHa * maxMatchRatio).toFixed(4));
-          foundInsideZone = maxMatchRatio >= 0.85 || isCentroidInBestZone;
+          totalCoveredHa = isCentroidInZone && maxMatchRatio >= 0.50 ? totalAreaHa : parseFloat((totalAreaHa * maxMatchRatio).toFixed(4));
+          foundInsideZone = isCentroidInZone;
         } else {
           totalCoveredHa = 0;
           bestZoneMatch = null;
@@ -1060,7 +1060,8 @@ function App() {
         let outsideAreaHa = parseFloat((totalAreaHa - totalCoveredHa).toFixed(4));
         if (outsideAreaHa < 0) outsideAreaHa = 0;
 
-        let matchingAreaTotal = foundInsideZone ? totalAreaHa : totalCoveredHa;
+        let matchingAreaTotal = foundInsideZone && outsideAreaHa === 0 ? totalAreaHa : totalCoveredHa;
+        if (matchingAreaTotal < 0.0001) matchingAreaTotal = 0;
 
         // BỘ LỌC ĐỐI CHIẾU CHỨC NĂNG SỬ DỤNG ĐẤT
         let isChucNangPhuHop = true;
@@ -1114,7 +1115,7 @@ function App() {
             dienTichHa: matchingAreaTotal
           });
 
-          if (outsideAreaHa > 0 && !foundInsideZone) {
+          if (outsideAreaHa > 0 && !isCentroidInZone) {
             matchedDetails.push({
               chucNang: 'Ngoài phạm vi dữ liệu hiện có của hệ thống',
               dienTichHa: outsideAreaHa
