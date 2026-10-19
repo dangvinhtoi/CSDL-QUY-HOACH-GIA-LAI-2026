@@ -1262,14 +1262,16 @@ const handleSaveVung = async (e) => {
           return;
         }
 
-        // 🟢 Lọc bỏ các dòng chức năng bị bỏ trống tên hoặc không có nội dung hợp lệ
+        // Lọc cực kỳ nghiêm ngặt: loại bỏ các chức năng trống hoặc chứa hướng dẫn mẫu 'VD:'
         let validChucNang = [];
         if (Array.isArray(vungFormData.danhSachChucNang)) {
           validChucNang = vungFormData.danhSachChucNang
             .filter(item => {
               const ten = String(item.tenChucNang || '').trim();
-              // Bỏ qua các dòng trống hoặc dòng chứa chữ mẫu VD
-              return ten !== '' && !ten.toUpperCase().startsWith('VD:');
+              const toaDo = String(item.toaDoVung || '').trim();
+              if (ten === '' || ten.toUpperCase().includes('VD')) return false;
+              if (toaDo === '' || toaDo.toUpperCase().includes('VD:')) return false;
+              return true;
             })
             .map(item => ({
               id: Number(item.id) || Date.now(),
@@ -1279,7 +1281,7 @@ const handleSaveVung = async (e) => {
         }
 
         if (validChucNang.length === 0) {
-          showNotification('⚠️ Vui lòng khai báo ít nhất 1 chức năng sử dụng đất hợp lệ!');
+          showNotification('⚠️ Vui lòng khai báo ít nhất 1 chức năng và tọa độ hợp lệ (không để mẫu VD)!');
           return;
         }
 
@@ -1287,18 +1289,16 @@ const handleSaveVung = async (e) => {
           xa: String(vungFormData.xa || '').trim(),
           huyen: String(vungFormData.huyen || 'Huyện Hoài Ân').trim(),
           tenQuyHoach: String(vungFormData.tenQuyHoach || '').trim(),
-          danhSachChucNang: validChucNang, // Mảng đã được làm phẳng và loại bỏ phần tử rác
+          danhSachChucNang: validChucNang,
           updatedAt: new Date().toISOString()
         };
 
         try {
           if (typeof db !== 'undefined') {
             if (editingVungRecord && editingVungRecord.id) {
-              // Cập nhật bản ghi trên Firebase Firestore
               await db.collection("vungQuyHoachGiaLai").doc(String(editingVungRecord.id)).set(newData);
               showNotification('✅ Đã cập nhật vùng quy hoạch thành công trên đám mây!');
             } else {
-              // Thêm mới bản ghi lên Firebase Firestore
               await db.collection("vungQuyHoachGiaLai").add(newData);
               showNotification('✅ Đã thêm mới vùng quy hoạch thành công trên đám mây!');
             }
