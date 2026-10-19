@@ -1262,21 +1262,32 @@ const handleSaveVung = async (e) => {
           return;
         }
 
-        // Chuẩn hóa danh sách chức năng: loại bỏ cấu trúc mảng lồng nhau phức tạp, chỉ giữ kiểu chuỗi phẳng (String)
-        let sanitizedChucNang = [];
+        // 🟢 Lọc bỏ các dòng chức năng bị bỏ trống tên hoặc không có nội dung hợp lệ
+        let validChucNang = [];
         if (Array.isArray(vungFormData.danhSachChucNang)) {
-          sanitizedChucNang = vungFormData.danhSachChucNang.map(item => ({
-            id: item.id || Date.now(),
-            tenChucNang: String(item.tenChucNang || ''),
-            toaDoVung: String(item.toaDoVung || '') // Đảm bảo chỉ là chuỗi văn bản thuần túy, không lồng mảng
-          }));
+          validChucNang = vungFormData.danhSachChucNang
+            .filter(item => {
+              const ten = String(item.tenChucNang || '').trim();
+              // Bỏ qua các dòng trống hoặc dòng chứa chữ mẫu VD
+              return ten !== '' && !ten.toUpperCase().startsWith('VD:');
+            })
+            .map(item => ({
+              id: Number(item.id) || Date.now(),
+              tenChucNang: String(item.tenChucNang || '').trim(),
+              toaDoVung: String(item.toaDoVung || '').trim()
+            }));
+        }
+
+        if (validChucNang.length === 0) {
+          showNotification('⚠️ Vui lòng khai báo ít nhất 1 chức năng sử dụng đất hợp lệ!');
+          return;
         }
 
         const newData = {
-          xa: String(vungFormData.xa || ''),
-          huyen: String(vungFormData.huyen || 'Huyện Hoài Ân'),
-          tenQuyHoach: String(vungFormData.tenQuyHoach || ''),
-          danhSachChucNang: sanitizedChucNang,
+          xa: String(vungFormData.xa || '').trim(),
+          huyen: String(vungFormData.huyen || 'Huyện Hoài Ân').trim(),
+          tenQuyHoach: String(vungFormData.tenQuyHoach || '').trim(),
+          danhSachChucNang: validChucNang, // Mảng đã được làm phẳng và loại bỏ phần tử rác
           updatedAt: new Date().toISOString()
         };
 
