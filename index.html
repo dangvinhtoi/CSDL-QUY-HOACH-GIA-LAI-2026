@@ -1261,7 +1261,39 @@ function App() {
             showNotification('❌ Lỗi lưu dữ liệu lên đám mây: ' + error.message);
           }
         };
+const handleSaveVung = async (e) => {
+          e.preventDefault();
+          if (!vungFormData.xa || !vungFormData.tenQuyHoach) {
+            showNotification('⚠️ Vui lòng điền đầy đủ địa điểm và tên quy hoạch!');
+            return;
+          }
 
+          const newData = {
+            xa: vungFormData.xa,
+            huyen: vungFormData.huyen || 'Huyện Hoài Ân',
+            tenQuyHoach: vungFormData.tenQuyHoach,
+            danhSachChucNang: vungFormData.danhSachChucNang || [],
+            updatedAt: new Date().toISOString()
+          };
+
+          try {
+            if (typeof db !== 'undefined') {
+              if (editingVungRecord) {
+                // Cập nhật bản ghi trên Firebase Firestore
+                await db.collection("vungQuyHoachGiaLai").doc(editingVungRecord.id).set(newData);
+                showNotification('✅ Đã cập nhật vùng quy hoạch thành công trên đám mây!');
+              } else {
+                // Thêm mới bản ghi lên Firebase Firestore
+                await db.collection("vungQuyHoachGiaLai").add(newData);
+                showNotification('✅ Đã thêm mới vùng quy hoạch thành công trên đám mây!');
+              }
+            }
+            setIsVungModalOpen(false);
+            setEditingVungRecord(null);
+          } catch (error) {
+            showNotification('❌ Lỗi khi lưu dữ liệu: ' + error.message);
+          }
+        };
       const handleXoaDuAn = async (id) => {
           if (confirm('Bạn có chắc chắn muốn xóa vùng quy hoạch này không?')) {
             try {
