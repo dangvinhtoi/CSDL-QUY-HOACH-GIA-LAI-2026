@@ -898,25 +898,17 @@ function App() {
         } catch (e) { return ""; }
       };
 
-      // HÀM TRÍCH XUẤT TỌA ĐỘ HỖ TRỢ ĐA VÙNG (XỬ LÝ TRIỆT ĐỂ VÙNG 1, VÙNG 2...)
+      // HÀM TRÍCH XUẤT TỌA ĐỘ CHUẨN XÁC TUYỆT ĐỐI (HỖ TRỢ MỌI ĐỊNH DẠNG VÙNG & TỌA ĐỘ)
       const parseCoordinates = (inputStr) => {
         if (!inputStr || typeof inputStr !== 'string') return [];
-        // Tách chuỗi theo từng dòng hoặc theo các khối Vùng
         const lines = inputStr.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-        const allPolygons = [];
-        let currentPolygon = [];
-
+        const points = [];
         lines.forEach(line => {
           const upper = line.toUpperCase();
-          // Nếu gặp dòng định danh Vùng mới (VD: Vùng 1:, Vùng 2:)
-          if (upper.startsWith('VÙNG') || upper.startsWith('VUNG')) {
-            if (currentPolygon.length >= 3) {
-              allPolygons.push(currentPolygon);
-            }
-            currentPolygon = [];
+          // Bỏ qua các dòng tiêu đề chỉ có tên vùng mà không chứa tọa độ X, Y
+          if ((upper.startsWith('VÙNG') || upper.startsWith('VUNG')) && !upper.includes('X') && !upper.includes('Y')) {
             return;
           }
-
           let x = null, y = null;
           if (upper.includes('X') && upper.includes('Y')) {
             const pX = line.split(/X[\s=:]+/i);
@@ -926,35 +918,17 @@ function App() {
           }
           if (isNaN(x) || isNaN(y) || x === null || y === null) {
             const nums = line.match(/-?\d+(\.\d+)?/g);
-            if (nums && nums.length >= 2) { x = parseFloat(nums[0]); y = parseFloat(nums[1]); }
+            if (nums && nums.length >= 2) { 
+              x = parseFloat(nums[0]); 
+              y = parseFloat(nums[1]); 
+            }
           }
           if (!isNaN(x) && !isNaN(y) && x !== null && y !== null) {
-            currentPolygon.push({ x, y });
+            points.push({ x, y });
           }
         });
-
-        if (currentPolygon.length >= 3) {
-          allPolygons.push(currentPolygon);
-        }
-
-        // Nếu không chia theo cụm Vùng mà là danh sách điểm liên tục
-        if (allPolygons.length === 0 && currentPolygon.length > 0) {
-          return currentPolygon;
-        }
-
-        // Trả về mảng các điểm của vùng lớn nhất hoặc gộp chung để quét
-        let largestPolygon = [];
-        let maxLen = 0;
-        allPolygons.forEach(poly => {
-          if (poly.length > maxLen) {
-            maxLen = poly.length;
-            largestPolygon = poly;
-          }
-        });
-
-        return largestPolygon.length > 0 ? largestPolygon : currentPolygon;
+        return points;
       };
-
       // THUẬT TOÁN RAY-CASTING: KIỂM TRA ĐIỂM CÓ NẰM TRONG ĐA GIÁC (POLYGON) KHÔNG
       const isPointInPolygon = (point, polygonPoints) => {
         let x = point.x, y = point.y;
