@@ -970,10 +970,10 @@ function App() {
         return parseFloat(ha.toFixed(4));
       };
 
-    // HÀM KIỂM TRA QUY HOẠCH QUÉT TOÀN DIỆN KHÔNG ƯU TIÊN - CHÍNH XÁC 100%
+    // HÀM KIỂM TRA QUY HOẠCH TỐI ƯU SIÊU TỐC - KHÔNG BAO GIỜ ĐỨNG MÁY
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
-        const mucTieu = kiemTarForm?.mucTieuDuAn || kiemTraForm.mucTieuDuAn.trim().toLowerCase();
+        const mucTieu = kiemTraForm.mucTieuDuAn.trim().toLowerCase();
         if (!mucTieu) {
           showNotification('⚠️ Vui lòng nhập mục tiêu dự án!');
           return;
@@ -999,12 +999,16 @@ function App() {
         let bestMatchChucNang = '';
         let maxOverlapScore = -1;
 
+        // Tính khung bao và điểm tâm (centroid) của khu đất nhập vào
         const minX = Math.min(...inputPoints.map(p => p.x));
         const maxX = Math.max(...inputPoints.map(p => p.x));
         const minY = Math.min(...inputPoints.map(p => p.y));
         const maxY = Math.max(...inputPoints.map(p => p.y));
+        const centroidX = inputPoints.reduce((sum, p) => sum + p.x, 0) / inputPoints.length;
+        const centroidY = inputPoints.reduce((sum, p) => sum + p.y, 0) / inputPoints.length;
+        const centroidPt = { x: centroidX, y: centroidY };
 
-        // QUÉT TOÀN BỘ TẤT CẢ CÁC ĐỒ ÁN VÀ VÙNG KHAI BÁO BÊN DƯỚI BẢNG 3 (KHÔNG BỎ SÓT, KHÔNG ƯU TIÊN SỚM)
+        // QUÉT TẤT CẢ CÁC VÙNG KHAI BÁO BÊN DƯỚI BẢNG 3 CHỈ TRONG TÍCH TẮC
         for (const vung of (vungChucNangDaKhaiBao || [])) {
           if (Array.isArray(vung.danhSachChucNang)) {
             for (const cn of vung.danhSachChucNang) {
@@ -1014,32 +1018,35 @@ function App() {
 
               for (const zonePoints of subPolygons) {
                 if (zonePoints.length >= 3) {
-                  let overlapPointsCount = 0;
-                  let totalSamplePoints = 0;
-                  // Tăng độ mịn lưới quét lên 40x40 điểm để đạt độ chính xác tuyệt đối
-                  let stepX = (maxX - minX) / 40;
-                  let stepY = (maxY - minY) / 40;
+                  // Kiểm tra nhanh tâm khu đất có nằm trong vùng quy hoạch không
+                  let score = isPointInPolygon(centroidPt, zonePoints) ? 5 : 0;
 
-                  for (let sx = minX; sx <= maxX; sx += (stepX || 1)) {
-                    for (let sy = minY; sy <= maxY; sy += (stepY || 1)) {
+                  // Lấy mẫu nhanh 10x10 điểm để đo tỷ lệ giao cắt mà không gây đơ trình duyệt
+                  let overlapCount = 0;
+                  let sampleCount = 0;
+                  const stepX = (maxX - minX) / 10 || 1;
+                  const stepY = (maxY - minY) / 10 || 1;
+
+                  for (let sx = minX; sx <= maxX; sx += stepX) {
+                    for (let sy = minY; sy <= maxY; sy += stepY) {
                       const testPt = { x: sx, y: sy };
                       if (isPointInPolygon(testPt, inputPoints)) {
-                        totalSamplePoints++;
+                        sampleCount++;
                         if (isPointInPolygon(testPt, zonePoints)) {
-                          overlapPointsCount++;
+                          overlapCount++;
                         }
                       }
                     }
                   }
 
-                  if (totalSamplePoints > 0) {
-                    const overlapScore = overlapPointsCount / totalSamplePoints;
-                    // Lấy vùng có tỷ lệ giao cắt lớn nhất
-                    if (overlapScore > maxOverlapScore) {
-                      maxOverlapScore = overlapScore;
-                      bestMatchZone = vung;
-                      bestMatchChucNang = cn.tenChucNang;
-                    }
+                  if (sampleCount > 0) {
+                    score += (overlapCount / sampleCount) * 10;
+                  }
+
+                  if (score > maxOverlapScore) {
+                    maxOverlapScore = score;
+                    bestMatchZone = vung;
+                    bestMatchChucNang = cn.tenChucNang;
                   }
                 }
               }
@@ -1047,9 +1054,9 @@ function App() {
           }
         }
 
-        let isHoanToanNgoaiVung = maxOverlapScore <= 0.01 || !bestMatchChucNang;
+        let isHoanToanNgoaiVung = maxOverlapScore <= 0.05 || !bestMatchChucNang;
 
-        // ĐỐI CHIẾU TÍNH PHÙ HỢP CỦA MỤC TIÊU DỰ ÁN VỚI CHỨC NĂNG ĐẤT THỰC TẾ
+        // ĐỐI CHIẾU TÍNH PHÙ HỢP CỦA MỤC TIÊU DỰ ÁN
         let isChucNangPhuHop = true;
         let lyDoXungDot = '';
         const mucTieuLower = mucTieu.toLowerCase();
@@ -1068,8 +1075,6 @@ function App() {
           } else if (isQuyHoachCongNghiep && isDuAnNhaO) {
             isChucNangPhuHop = false;
             lyDoXungDot = 'Quy hoạch đất sản xuất công nghiệp / kho bãi không phù hợp để xây dựng nhà ở dân cư.';
-          } else {
-            isChucNangPhuHop = true;
           }
         } else {
           isChucNangPhuHop = false;
