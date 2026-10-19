@@ -835,9 +835,23 @@ function App() {
         danhSachChucNang: [{ id: Date.now(), tenChucNang: '1. Đất ở nông thôn', toaDoVung: 'Vùng 1: X=... Y=...' }] 
       });
 
-      useEffect(() => {
-        localStorage.setItem('gialai_vung_chuc_nang_v2', JSON.stringify(vungChucNangDaKhaiBao));
-      }, [vungChucNangDaKhaiBao]);
+      // Đồng bộ dữ liệu quy hoạch thời gian thực từ Firebase Firestore
+        useEffect(() => {
+          if (typeof db !== 'undefined') {
+            const unsubscribe = db.collection("vungQuyHoachGiaLai").onSnapshot((snapshot) => {
+              let fetchedData = [];
+              snapshot.forEach((doc) => {
+                fetchedData.push({ id: doc.id, ...doc.data() });
+              });
+              if (fetchedData.length > 0) {
+                setVungChucNangDaKhaiBao(fetchedData);
+              }
+            }, (error) => {
+              console.error("Lỗi đồng bộ Firebase: ", error);
+            });
+            return () => unsubscribe();
+          }
+        }, []);
 
       const handleFileUpload = (e) => {
         const file = e.target.files[0];
@@ -1214,25 +1228,47 @@ function App() {
         }));
       };
 
-      const handleSaveVung = (e) => {
-        e.preventDefault();
-        const id = editingVungRecord ? editingVungRecord.id : Date.now();
-        const rec = { ...vungFormData, id };
-        const nextList = editingVungRecord 
-          ? vungChucNangDaKhaiBao.map(r => r.id === id ? rec : r)
-          : [rec, ...vungChucNangDaKhaiBao];
-        setVungChucNangDaKhaiBao(nextList);
-        setIsVungModalOpen(false);
-        showNotification('✅ Đã lưu cấu trúc chức năng & đa vùng tọa độ thành công!');
-      };
+      const handleLuuDuAn = async (e) => {
+          e.preventDefault();
+          // Kiểm tra dữ liệu hợp lệ...
+          const newData = {
+            xa: formDuAn.xa,
+            huyen: formDuAn.huyen,
+            tenQuyHoach: formDuAn.tenQuyHoach,
+            danhSachChucNang: danhSachChucNangKhaiBao,
+            updatedAt: new Date().toISOString()
+          };
 
-      const handleDeleteVung = (id) => {
-        if (userRole !== 'ADMIN') return setShowLoginModal(true);
-        if (window.confirm('Xác nhận xóa đồ án và các vùng tọa độ chức năng này?')) {
-          setVungChucNangDaKhaiBao(vungChucNangDaKhaiBao.filter(r => r.id !== id));
-          showNotification('Đã xóa thành công.');
-        }
-      };
+          try {
+            if (typeof db !== 'undefined') {
+              if (editingId) {
+                // Cập nhật dữ liệu cũ trên Firebase
+                await db.collection("vungQuyHoachGiaLai").doc(editingId).set(newData);
+                showNotification('✅ Đã cập nhật vùng quy hoạch lên Đám mây thành công!');
+              } else {
+                // Thêm mới dữ liệu lên Firebase
+                await db.collection("vungQuyHoachGiaLai").add(newData);
+                showNotification('✅ Đã lưu khai báo vùng quy hoạch mới lên Đám mây thành công!');
+              }
+            }
+            // Reset form và đóng modal...
+          } catch (error) {
+            showNotification('❌ Lỗi khi lưu dữ liệu lên đám mây: ' + error.message);
+          }
+        };
+
+      const handleXoaDuAn = async (id) => {
+          if (confirm('Bạn có chắc chắn muốn xóa vùng quy hoạch này không?')) {
+            try {
+              if (typeof db !== 'undefined') {
+                await db.collection("vungQuyHoachGiaLai").doc(id).delete();
+                showNotification('🗑️ Đã xóa vùng quy hoạch khỏi hệ thống đám mây!');
+              }
+            } catch (error) {
+              showNotification('❌ Lỗi khi xóa dữ liệu: ' + error.message);
+            }
+          }
+        };
       // =========================================================================
       // 🟢 CLOUD SYNC ENGINE (HỖ TRỢ GOOGLE APPS SCRIPT / DRIVE & FIREBASE)
       // =========================================================================
