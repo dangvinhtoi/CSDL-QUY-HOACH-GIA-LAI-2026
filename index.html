@@ -3155,7 +3155,7 @@ const handleSaveVung = async (e) => {
               <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in">
                 <div className="flex justify-between items-center p-4 border-b bg-teal-50 shrink-0">
                   <h3 className="font-bold text-teal-800 uppercase text-sm">{editingVungRecord ? 'Cập nhật quy hoạch & khai báo vùng tọa độ' : 'Khai báo quy hoạch, chức năng sử dụng đất & đa vùng tọa độ'}</h3>
-                  <button onClick={() => setIsVungModalOpen(false)} className="text-slate-400 hover:text-slate-700"><X className="w-5 h-5" /></button>
+                  <button onClick={() => handleDeleteVung(vung.id)} className="p-1.5 text-red-600 hover:bg-red-100 rounded" title="Xóa"><Trash2 className="w-4 h-4"/></button>
                 </div>
                 <form onSubmit={handleSaveVung} className="p-4 flex flex-col gap-3 overflow-y-auto flex-1 custom-scrollbar">
                   <div className="grid grid-cols-2 gap-3">
