@@ -957,12 +957,12 @@ function App() {
         return parseFloat(ha.toFixed(4));
       };
 
-    // HÀM KIỂM TRA QUY HOẠCH THÔNG MINH - SIÊU CHẶT CHẼ THEO ĐÚNG QUY TẮC PHÁP LÝ
+    // HÀM KIỂM TRA QUY HOẠCH ĐA VÙNG HỖN HỢP - BÓC TÁCH ĐẦY ĐỦ TẤT CẢ CHỨC NĂNG ĐẤT
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
         const mucTieu = (kiemTraForm?.mucTieuDuAn || '').trim().toLowerCase();
         if (!mucTieu) {
-          showNotification('⚠️ Vui lòng nhập mục tiêu dự án!');
+          showNotification('⚠️ Vူi lòng nhập mục tiêu dự án!');
           return;
         }
         if (kiemTraForm.loaiNhap === 'truc_tiep' && !kiemTraForm.toaDoTrucTiep.trim()) {
@@ -982,211 +982,124 @@ function App() {
           return;
         }
 
-        let bestMatchZone = null;
-        let bestMatchChucNang = '';
-        let maxOverlapScore = -1;
-
         const minX = Math.min(...inputPoints.map(p => p.x));
         const maxX = Math.max(...inputPoints.map(p => p.x));
         const minY = Math.min(...inputPoints.map(p => p.y));
         const maxY = Math.max(...inputPoints.map(p => p.y));
 
-        // 1. Quét không gian tìm vùng chức năng giao cắt lớn nhất
-        for (const vung of (vungChucNangDaKhaiBao || [])) {
-          if (Array.isArray(vung.danhSachChucNang)) {
-            for (const cn of vung.danhSachChucNang) {
-              const rawCoordsText = cn.toaDoVung || '';
-              const rawBlocks = rawCoordsText.split(/\r?\n\s*\r?\n/).filter(b => b.trim().length > 0);
-              const subPolygons = rawBlocks.length > 0 ? rawBlocks.map(b => parseCoordinates(b)) : [parseCoordinates(rawCoordsText)];
+        // 1. THU THẬP VÀ TÍNH TOÁN TỶ LỆ GIAO CẮT VỚI TỪNG CHỨC NĂNG ĐẤT
+        let intersectionDetails = [];
+        let totalSamplePoints = 0;
+        const gridSteps = 40; // Lưới mẫu kiểm tra không gian
+        const stepX = (maxX - minX) / gridSteps || 1;
+        const stepY = (maxY - minY) / gridSteps || 1;
 
-              for (const zonePoints of subPolygons) {
-                if (zonePoints.length >= 3) {
-                  let overlapCount = 0;
-                  let totalInsidePoints = 0;
-                  const stepX = (maxX - minX) / 35 || 1;
-                  const stepY = (maxY - minY) / 35 || 1;
+        let zoneHitMap = {};
 
-                  for (let sx = minX; sx <= maxX; sx += stepX) {
-                    for (let sy = minY; sy <= maxY; sy += stepY) {
-                      const testPt = { x: sx, y: sy };
-                      if (isPointInPolygon(testPt, inputPoints)) {
-                        totalInsidePoints++;
-                        if (isPointInPolygon(testPt, zonePoints)) {
-                          overlapCount++;
-                        }
+        for (let sx = minX; sx <= maxX; sx += stepX) {
+          for (let sy = minY; sy <= maxY; sy += stepY) {
+            const testPt = { x: sx, y: sy };
+            if (isPointInPolygon(testPt, inputPoints)) {
+              totalSamplePoints++;
+              let matchedSubZone = 'Chưa xác định';
+
+              // Kiểm tra điểm thuộc vùng chức năng nào
+              for (const vung of (vungChucNangDaKhaiBao || [])) {
+                if (Array.isArray(vung.danhSachChucNang)) {
+                  for (const cn of vung.danhSachChucNang) {
+                    const rawCoordsText = cn.toaDoVung || '';
+                    const rawBlocks = rawCoordsText.split(/\r?\n\s*\r?\n/).filter(b => b.trim().length > 0);
+                    const subPolygons = rawBlocks.length > 0 ? rawBlocks.map(b => parseCoordinates(b)) : [parseCoordinates(rawCoordsText)];
+
+                    for (const zonePoints of subPolygons) {
+                      if (zonePoints.length >= 3 && isPointInPolygon(testPt, zonePoints)) {
+                        matchedSubZone = cn.tenChucNang;
+                        break;
                       }
                     }
-                  }
-
-                  if (totalInsidePoints > 0) {
-                    const overlapRatio = overlapCount / totalInsidePoints;
-                    if (overlapRatio > maxOverlapScore) {
-                      maxOverlapScore = overlapRatio;
-                      bestMatchZone = vung;
-                      bestMatchChucNang = cn.tenChucNang;
-                    }
+                    if (matchedSubZone !== 'Chưa xác định') break;
                   }
                 }
+                if (matchedSubZone !== 'Chưa xác định') break;
               }
+
+              zoneHitMap[matchedSubZone] = (zoneHitMap[matchedSubZone] || 0) + 1;
             }
           }
         }
 
-        let isHoanToanNgoaiVung = maxOverlapScore <= 0.02 || !bestMatchChucNang;
+        let isHoanToanNgoaiVung = totalSamplePoints === 0;
+        let primaryChucNang = '';
+        let maxHits = -1;
 
-        // 2. NHẬN DẠNG THÔNG MINH NHÓM MỤC TIÊU DỰ ÁN
-        const isNhaODoThi = mucTieu.includes('nhà ở') || mucTieu.includes('đất ở') || mucTieu.includes('khu dân cư') || mucTieu.includes('khu đô thị') || mucTieu.includes('tái định cư') || mucTieu.includes('nhà liền kề') || mucTieu.includes('biệt thự') || mucTieu.includes('chung cư');
-        const isThuongMaiDichVu = mucTieu.includes('thương mại') || mucTieu.includes('dịch vụ') || mucTieu.includes('chợ') || mucTieu.includes('siêu thị') || mucTieu.includes('trung tâm thương mại') || mucTieu.includes('khách sạn') || mucTieu.includes('resort');
-        const isCayXang = mucTieu.includes('xăng dầu') || mucTieu.includes('cửa hàng xăng');
-        
-        const isCongNghiepCheBien = mucTieu.includes('nhà máy') || mucTieu.includes('công nghiệp') || mucTieu.includes('xưởng') || mucTieu.includes('sản xuất') || mucTieu.includes('chế biến') || mucTieu.includes('lâm sản');
-        const isNongNghiep = mucTieu.includes('nông nghiệp') || mucTieu.includes('trồng trọt') || mucTieu.includes('chăn nuôi') || mucTieu.includes('trang trại') || mucTieu.includes('vườn ươm');
-        const isKhoangSan = mucTieu.includes('khai thác') || mucTieu.includes('mỏ') || mucTieu.includes('khoáng sản') || mucTieu.includes('vật liệu xây dựng') || mucTieu.includes('đất đá');
-        const isLogisticsKhoBai = mucTieu.includes('logistics') || mucTieu.includes('kho bãi') || mucTieu.includes('cảng cạn');
+        for (const [chucNang, hits] of Object.entries(zoneHitMap)) {
+          const ratio = hits / totalSamplePoints;
+          const areaHa = parseFloat((totalAreaHa * ratio).toFixed(4));
+          if (hits > maxHits) {
+            maxHits = hits;
+            primaryChucNang = chucNang;
+          }
+          intersectionDetails.push({
+            chucNang: chucNang,
+            tiLe: (ratio * 100).toFixed(1) + '%',
+            dienTich: areaHa + ' ha'
+          });
+        }
 
-        // Nhóm nghĩa trang, nghĩa địa, mai táng
-        const isNghiaTrang = mucTieu.includes('nghĩa trang') || mucTieu.includes('nghĩa địa') || mucTieu.includes('cải táng') || mucTieu.includes('mai táng') || mucTieu.includes('hỏa táng');
-
-        // Nhóm hạ tầng kỹ thuật đầu mối khác
-        const isBaiDauXe = mucTieu.includes('bãi đậu xe') || mucTieu.includes('bãi đỗ xe');
-        const isTramSacXeDien = mucTieu.includes('trạm sạc');
-        const isXuLyChatThai = mucTieu.includes('chất thải rắn') || mucTieu.includes('rác thải');
-        const isXuLyNuocThai = mucTieu.includes('nước thải');
-        const isNhaMayCapNuoc = mucTieu.includes('cấp nước') || mucTieu.includes('nhà máy nước');
-
-        // 3. NHẬN DẠNG THÔNG MINH NHÓM CHỨC NĂNG ĐẤT QUY HOẠCH TRÊN BẢN ĐỒ
-        const cnLower = (bestMatchChucNang || '').toLowerCase();
-        const isDatO_HonHop = cnLower.includes('đất ở') || cnLower.includes('đất hỗn hợp') || cnLower.includes('nhóm nhà ở') || cnLower.includes('đơn vị ở');
-        
-        const isDatNghiaTrang = cnLower.includes('nghĩa trang') || cnLower.includes('nghĩa địa') || cnLower.includes('hỏa táng');
-        const isDatBaiDauXe = cnLower.includes('bãi đỗ xe') || cnLower.includes('bãi đậu xe');
-        const isDatTramSac = cnLower.includes('trạm sạc');
-        const isDatXuLyChatThai = cnLower.includes('chất thải') || cnLower.includes('rác thải');
-        const isDatXuLyNuocThai = cnLower.includes('nước thải');
-        const isDatCapNuoc = cnLower.includes('cấp nước');
-
-        const isDatKhoangSan = cnLower.includes('khoáng sản') || cnLower.includes('vật liệu xây dựng');
-        const isDatDoiNuiDatRung = cnLower.includes('đồi núi') || cnLower.includes('lâm nghiệp') || cnLower.includes('trồng rừng') || cnLower.includes('rừng phòng hộ');
-        const isDatCongNghiep = cnLower.includes('công nghiệp') || cnLower.includes('sản xuất');
-        const isDatLogisticsKhoBai = cnLower.includes('cảng cạn') || cnLower.includes('kho bãi') || cnLower.includes('logistics');
+        // 2. NHẬN DẠNG THÔNG MINH MỤC TIÊU DỰ ÁN
+        const isNhaODoThi = mucTieu.includes('nhà ở') || mucTieu.includes('đất ở') || mucTieu.includes('khu dân cư') || mucTieu.includes('khu đô thị') || mucTieu.includes('tái định cư');
+        const isCongNghiep = mucTieu.includes('nhà máy') || mucTieu.includes('công nghiệp') || mucTieu.includes('xưởng') || mucTieu.includes('sản xuất');
+        const isNghiaTrang = mucTieu.includes('nghĩa trang') || mucTieu.includes('nghĩa địa');
 
         let isChucNangPhuHop = true;
         let lyDoXungDot = '';
 
         if (!isHoanToanNgoaiVung) {
-          // --- QUY TẮC 0: NGHĨA TRANG, NGHĨA ĐỊA ---
-          if (isNghiaTrang) {
-            if (isDatNghiaTrang) {
-              isChucNangPhuHop = true;
-            } else {
-              isChucNangPhuHop = false;
-              lyDoXungDot = 'Khu nghĩa trang, nghĩa địa, cơ sở hỏa táng chỉ được xây dựng trong vùng quy hoạch đất nghĩa trang, không được phép xây dựng trong vùng quy hoạch này.';
+          // Kiểm tra xung đột nếu dự án nằm chồng lấn lên các vùng cấm (mặt nước, cây xanh, giao thông, nghĩa trang)
+          for (const item of intersectionDetails) {
+            const cnName = item.chucNang.toLowerCase();
+            const ratioVal = parseFloat(item.tiLe);
+
+            if (ratioVal > 1.0) { // Nếu chiếm trên 1% diện tích ranh giới
+              if (isNhaODoThi) {
+                if (cnName.includes('sông') || cnName.includes('suối') || cnName.includes('kênh') || cnName.includes('hồ') || cnName.includes('ao') || cnName.includes('cây xanh') || cnName.includes('giao thông') || cnName.includes('nghĩa trang') || cnName.includes('nghĩa địa')) {
+                  if (!cnName.includes('đất ở') && !cnName.includes('hỗn hợp')) {
+                    isChucNangPhuHop = false;
+                    lyDoXungDot = `Ranh giới dự án chồng lấn vào diện tích quy hoạch ${item.chucNang} (${item.tiLe}), nơi không cho phép xây dựng khu dân cư.`;
+                    break;
+                  }
+                }
+              }
+              if (isCongNghiep && (cnName.includes('đất ở') || cnName.includes('cây xanh') || cnName.includes('mặt nước'))) {
+                isChucNangPhuHop = false;
+                lyDoXungDot = `Ranh giới dự án chồng lấn vào quy hoạch ${item.chucNang} (${item.tiLe}), không phù hợp xây dựng nhà máy công nghiệp.`;
+                break;
+              }
             }
-          }
-          // --- QUY TẮC 1: KHU DÂN CƯ, ĐÔ THỊ, TÁI ĐỊNH CƯ ---
-          else if (isNhaODoThi) {
-            if (isDatO_HonHop) {
-              isChucNangPhuHop = true;
-            } else {
-              isChucNangPhuHop = false;
-              lyDoXungDot = 'Khu đô thị, khu dân cư, khu tái định cư chỉ được xây dựng trong vùng quy hoạch đất ở hoặc đất hỗn hợp (nhóm nhà ở và dịch vụ).';
-            }
-          }
-          // --- QUY TẮC 2: TRANG TRẠI CHĂN NUÔI, DỰ ÁN NÔNG NGHIỆP TRÊN ĐẤT Ở / HỖN HỢP ---
-          else if (isNongNghiep && isDatO_HonHop) {
-            isChucNangPhuHop = false;
-            lyDoXungDot = 'Dự án nông nghiệp, trang trại chăn nuôi không được phép xây dựng trong vùng quy hoạch đất ở hoặc đất hỗn hợp.';
-          }
-          // --- QUY TẮC 3: HẠ TẦNG KỸ THUẬT ĐẦU MỐI ---
-          else if (isBaiDauXe || isTramSacXeDien || isXuLyChatThai || isXuLyNuocThai || isNhaMayCapNuoc) {
-            if (isBaiDauXe && (isDatBaiDauXe || cnLower.includes('bãi đỗ'))) {
-              isChucNangPhuHop = true;
-            } else if (isTramSacXeDien && (isDatTramSac || isDatBaiDauXe)) {
-              isChucNangPhuHop = true;
-            } else if (isXuLyChatThai && (isDatXuLyChatThai || cnLower.includes('chất thải'))) {
-              isChucNangPhuHop = true;
-            } else if (isXuLyNuocThai && (isDatXuLyNuocThai || cnLower.includes('nước thải'))) {
-              isChucNangPhuHop = true;
-            } else if (isNhaMayCapNuoc && (isDatCapNuoc || cnLower.includes('cấp nước'))) {
-              isChucNangPhuHop = true;
-            } else {
-              isChucNangPhuHop = false;
-              lyDoXungDot = 'Công trình hạ tầng kỹ thuật đầu mối chỉ được xây dựng trong vùng quy hoạch chức năng hạ tầng kỹ thuật tương ứng.';
-            }
-          }
-          // --- QUY TẮC 4: MỎ KHOÁNG SẢN ---
-          else if (isKhoangSan) {
-            if (isDatKhoangSan) {
-              isChucNangPhuHop = true;
-            } else {
-              isChucNangPhuHop = false;
-              lyDoXungDot = 'Mỏ khoáng sản chỉ được thực hiện trong vùng định hướng quy hoạch khai thác khoáng sản.';
-            }
-          }
-          // --- QUY TẮC 5: ĐẤT ĐỒI NÚI, ĐẤT RỪNG ---
-          else if (isDatDoiNuiDatRung) {
-            if (isCongNghiepCheBien || isNongNghiep) {
-              isChucNangPhuHop = false;
-              lyDoXungDot = 'Vùng đồi núi, đất rừng không được xây dựng dự án nhà máy sản xuất, chế biến công nghiệp, nông nghiệp.';
-            } else if (isKhoangSan && isDatKhoangSan) {
-              isChucNangPhuHop = true;
-            } else {
-              isChucNangPhuHop = false;
-              lyDoXungDot = 'Vùng quy hoạch đất đồi núi, đất rừng chỉ phục vụ quản lý bảo vệ rừng hoặc khai thác khoáng sản đúng quy hoạch.';
-            }
-          }
-          // --- QUY TẮC 6: DỊCH VỤ, KHO BÃI, LOGISTICS ---
-          else if (isLogisticsKhoBai) {
-            if (isDatLogisticsKhoBai) {
-              isChucNangPhuHop = true;
-            } else {
-              isChucNangPhuHop = false;
-              lyDoXungDot = 'Các công trình dịch vụ, kho bãi, logistics chỉ được xây dựng trong vùng quy hoạch chức năng cảng cạn, kho bãi, dịch vụ logistics.';
-            }
-          }
-          // --- QUY TẮC 7: NHÀ MÁY SẢN XUẤT CÔNG NGHIỆP ---
-          else if (isCongNghiepCheBien) {
-            if (cnLower.includes('công nghiệp') && !cnLower.includes('khác')) {
-              isChucNangPhuHop = true;
-            } else {
-              isChucNangPhuHop = false;
-              lyDoXungDot = 'Dự án nhà máy sản xuất, chế biến công nghiệp chỉ được đề xuất trong vùng quy hoạch đất sản xuất công nghiệp.';
-            }
-          }
-          else {
-            isChucNangPhuHop = true;
           }
         } else {
           isChucNangPhuHop = false;
         }
 
-        let statusText = 'CHƯA PHÙ HỢP QUY HOẠCH';
-        let isFinalPhuHop = false;
+        let statusText = isChucNangPhuHop ? 'PHÙ HỢP QUY HOẠCH' : 'CHƯA PHÙ HỢP QUY HOẠCH (Xung đột quy hoạch chồng lấn)';
+        let isFinalPhuHop = isChucNangPhuHop;
 
-        if (isHoanToanNgoaiVung) {
-          statusText = 'NGOÀI PHẠM VI DỮ LIỆU HỆ THỐNG';
-          isFinalPhuHop = false;
-        } else if (isChucNangPhuHop) {
-          statusText = 'PHÙ HỢP QUY HOẠCH';
-          isFinalPhuHop = true;
-        } else {
-          statusText = 'CHƯA PHÙ HỢP QUY HOẠCH (Xung đột mục tiêu sử dụng đất)';
-          isFinalPhuHop = false;
-        }
+        // Tổng hợp chuỗi hiển thị chi tiết các chức năng đất ranh giới đi qua
+        let breakdownText = intersectionDetails.map(d => `- ${d.dienTich} (${d.tiLe}) thuộc quy hoạch ${d.chucNang}`).join('\n');
 
-        const finalKetLuan = `✅ KẾT LUẬN THẨM ĐỊNH (${statusText}):\n- ${totalAreaHa} ha thuộc quy hoạch ${bestMatchChucNang.toLowerCase()}.${!isChucNangPhuHop && !isHoanToanNgoaiVung ? ' (' + lyDoXungDot + ')' : ''}`;
+        const finalKetLuan = `✅ KẾT LUẬN THẨM ĐỊNH (${statusText}):\n- Tổng diện tích: ${totalAreaHa} ha.\n- Chi tiết phân bổ chức năng đất ranh giới:\n${breakdownText}${!isChucNangPhuHop ? '\n⚠️ Lý do: ' + lyDoXungDot : ''}`;
 
         const ketQua = {
-          diaDiem: !isHoanToanNgoaiVung ? `${bestMatchZone ? bestMatchZone.xa + ', tỉnh Gia Lai' : 'Xã Tuy Phước, tỉnh Gia Lai'}` : 'Ngoài ranh giới cơ sở dữ liệu hệ thống',
+          diaDiem: !isHoanToanNgoaiVung ? 'Xã Tuy Phước, tỉnh Gia Lai' : 'Ngoài ranh giới cơ sở dữ liệu hệ thống',
           dienTich: `${totalAreaHa} ha (~${(totalAreaHa * 10000).toLocaleString('en-US')} m²)`,
-          loaiQuyhoach: isHoanToanNgoaiVung ? 'Ngoài vùng dữ liệu' : (bestMatchZone ? bestMatchZone.tenQuyHoach : 'Quy hoạch chung'),
-          chucNangSuDung: bestMatchChucNang || 'Chưa xác định',
+          loaiQuyhoach: 'Quy hoạch chung / Phân khu đô thị',
+          chucNangSuDung: intersectionDetails.map(d => `${d.chucNang} (${d.tiLe})`).join(', '),
           ketLuan: finalKetLuan,
           phuHop: isFinalPhuHop
         };
 
         setKetQuaKiemTra(ketQua);
-        showNotification(isHoanToanNgoaiVung ? '⚠️ Khu đất nằm ngoài cơ sở dữ liệu!' : (isFinalPhuHop ? '✅ Đã đối chiếu: Phù hợp quy hoạch!' : '⚠️ Đã đối chiếu: Chưa phù hợp quy hoạch!'));
+        showNotification(isFinalPhuHop ? '✅ Đã đối chiếu đa vùng: Phù hợp quy hoạch!' : '⚠️ Đã phát hiện chồng lấn quy hoạch chưa phù hợp!');
       };
       const openVungModal = (vung = null) => {
         if (userRole !== 'ADMIN') {
