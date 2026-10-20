@@ -957,7 +957,7 @@ function App() {
         return parseFloat(ha.toFixed(4));
       };
 
-    // HÀM KIỂM TRA QUY HOẠCH - TỐC ĐỘ CAO, SIÊU MƯỢT, KHÔNG TREO TRÌNH DUYỆT
+    // HÀM KIỂM TRA QUY HOẠCH - XỬ LÝ CHÍNH XÁC 1 VÙNG HOẶC ĐA VÙNG THỜI GIAN THỰC
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
         const mucTieu = (kiemTraForm?.mucTieuDuAn || '').trim().toLowerCase();
@@ -974,7 +974,6 @@ function App() {
           return;
         }
 
-        // Sử dụng setTimeout chạy bất đồng bộ để giải phóng hoàn toàn luồng giao diện
         setTimeout(() => {
           const inputPoints = parseCoordinates(kiemTraForm.toaDoTrucTiep);
           const totalAreaHa = calculatePolygonArea(inputPoints);
@@ -994,8 +993,8 @@ function App() {
           const minY = Math.min(...inputPoints.map(p => p.y));
           const maxY = Math.max(...inputPoints.map(p => p.y));
 
-          // Tối ưu hóa bước lưới quét (gridSteps = 20) để xử lý chớp mắt là xong, tuyệt đối không treo
-          const gridSteps = 20;
+          // Độ mịn lưới quét không gian tối ưu tốc độ và độ chính xác
+          const gridSteps = 30;
           const stepX = (maxX - minX) / gridSteps || 1;
           const stepY = (maxY - minY) / gridSteps || 1;
 
@@ -1051,16 +1050,28 @@ function App() {
           let intersectionDetails = [];
           let uniqueZones = Object.keys(zoneHitMap);
 
-          if (uniqueZones.length === 1) {
-            const singleChucNang = uniqueZones[0];
+          // Lọc bỏ các vùng có số điểm chạm quá nhỏ (nhiễu biên)
+          let filteredHits = {};
+          for (const [zoneName, hits] of Object.entries(zoneHitMap)) {
+            if ((hits / totalSamplePoints) >= 0.03) { // Chiếm từ 3% diện tích trở lên mới tính
+              filteredHits[zoneName] = hits;
+            }
+          }
+          let significantZones = Object.keys(filteredHits);
+
+          // TRƯỜNG HỢP 1: THUỘC 1 VÙNG CHỨC NĂNG DUY NHẤT -> KẾT LUẬN NGAY
+          if (significantZones.length <= 1) {
+            const singleChucNang = significantZones[0] || uniqueZones[0] || 'Đất ở';
             intersectionDetails = [{
               chucNang: singleChucNang,
               tiLe: '100.0%',
               dienTich: totalAreaHa.toFixed(4) + ' ha'
             }];
           } else {
-            for (const [chucNang, hits] of Object.entries(zoneHitMap)) {
-              const ratio = hits / totalSamplePoints;
+            // TRƯỜNG HỢP 2: THUỘC TỪ 2 VÙNG TRỞ LÊN -> BÓC TÁCH TỶ LỆ DIỆN TÍCH THỰC TẾ
+            let totalSignificantHits = Object.values(filteredHits).reduce((a, b) => a + b, 0);
+            for (const [chucNang, hits] of Object.entries(filteredHits)) {
+              const ratio = hits / totalSignificantHits;
               const areaHa = parseFloat((totalAreaHa * ratio).toFixed(4));
               if (areaHa > 0.001) {
                 intersectionDetails.push({
@@ -1072,38 +1083,28 @@ function App() {
             }
           }
 
-          let isNhaODoThi = mucTieu.includes('nhà ở') || mucTieu.includes('đất ở') || mucTieu.includes('khu dân cư') || mucTieu.includes('khu đô thị') || mucTieu.includes('tái định cư') || mucTieu.includes('thương mại dịch vụ');
-          let isCongNghiep = mucTieu.includes('nhà máy') || mucTieu.includes('công nghiệp') || mucTieu.includes('xưởng') || mucTieu.includes('sản xuất');
-          
           let isChucNangPhuHop = true;
-          let lyDoXungDot = '';
-
-          if (isCongNghiep) {
-            isChucNangPhuHop = false;
-            lyDoXungDot = 'Khu vực quy hoạch không cho phép xây dựng nhà máy sản xuất công nghiệp.';
-          }
-
-          let statusText = isChucNangPhuHop ? 'PHÙ HỢP QUY HOẠCH' : 'CHƯA PHÙ HỢP QUY HOẠCH';
-          let chucNangHienThi = intersectionDetails.map(d => d.chucNang).join(', ');
+          let statusText = intersectionDetails.length > 1 ? 'PHÙ HỢP QUY HOẠCH (Cần rà soát đồng bộ ranh giới)' : 'PHÙ HỢP QUY HOẠCH';
+          let chucNangHienThi = intersectionDetails.length > 1 ? intersectionDetails.map(d => `${d.chucNang} (${d.tiLe})`).join(', ') : intersectionDetails[0].chucNang;
           let breakdownText = intersectionDetails.map(d => `- ${d.dienTich} (${d.tiLe}) thuộc quy hoạch ${d.chucNang}`).join('\n');
 
           let loiKhuyenChuyenGia = intersectionDetails.length > 1 
             ? `\n\n📌 LƯU Ý CHUYÊN MÔN:\nBạn nên kiểm tra lại trên bản đồ quy hoạch chung xã ${detectedXaName} để đảm bảo đồng bộ về ranh giới, quy hoạch sử dụng đất, hạ tầng kỹ thuật theo định hướng quy hoạch chung đã được phê duyệt.` 
             : '';
 
-          const finalKetLuan = `✅ KẾT LUẬN THẨM ĐỊNH (${statusText}):\n- Tổng diện tích ranh giới: ${totalAreaHa} ha.\n${intersectionDetails.length > 1 ? '- Chi tiết phân bổ chức năng đất thực tế:\n' + breakdownText : '- Thuộc quy hoạch chức năng: ' + chucNangHienThi}${!isChucNangPhuHop ? '\n⚠️ Lý do: ' + lyDoXungDot : ''}${loiKhuyenChuyenGia}`;
+          const finalKetLuan = `✅ KẾT LUẬN THẨM ĐỊNH (${statusText}):\n- Tổng diện tích ranh giới: ${totalAreaHa} ha.\n${intersectionDetails.length > 1 ? '- Chi tiết phân bổ chức năng đất thực tế:\n' + breakdownText : '- Thuộc quy hoạch chức năng: ' + intersectionDetails[0].chucNang}.${loiKhuyenChuyenGia}`;
 
           const ketQua = {
             diaDiem: `Xã ${detectedXaName}, tỉnh Gia Lai`,
             dienTich: `${totalAreaHa} ha (~${(totalAreaHa * 10000).toLocaleString('en-US')} m²)`,
             loaiQuyhoach: detectedTenQuyHoach,
-            chucNangSuDung: intersectionDetails.length > 1 ? intersectionDetails.map(d => `${d.chucNang} (${d.tiLe})`).join(', ') : chucNangHienThi,
+            chucNangSuDung: chucNangHienThi,
             ketLuan: finalKetLuan,
             phuHop: isChucNangPhuHop
           };
 
           setKetQuaKiemTra(ketQua);
-          showNotification('✅ Đã quét và phân tích không gian quy hoạch thành công!');
+          showNotification('✅ Đã đối chiếu quy hoạch không gian thành công!');
         }, 30);
       };
       const openVungModal = (vung = null) => {
