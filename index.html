@@ -957,7 +957,7 @@ function App() {
         return parseFloat(ha.toFixed(4));
       };
 
-    // HÀM KIỂM TRA QUY HOẠCH THÔNG MINH - TỰ ĐỘNG PHÂN BIỆT 1 VÙNG HOẶC ĐA VÙNG
+    // HÀM KIỂM TRA QUY HOẠCH ĐA VÙNG - TỰ ĐỘNG PHÂN BIỆT 1 VÙNG HAY ĐA VÙNG CHUẨN XÁC
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
         const mucTieu = (kiemTraForm?.mucTieuDuAn || '').trim().toLowerCase();
@@ -986,9 +986,8 @@ function App() {
           let detectedXaName = 'Tuy Phước';
           let detectedTenQuyHoach = 'Quy hoạch chung xã Tuy Phước';
           let matchedZonesSet = new Set();
-          let primaryChucNang = '';
 
-          // 1. Quét không gian kiểm tra các vùng chức năng mà ranh giới khu đất đi qua
+          // 1. Quét toàn bộ không gian để xem ranh giới khu đất đi qua những vùng chức năng nào
           for (const vung of (vungChucNangDaKhaiBao || [])) {
             if (vung.xa) detectedXaName = vung.xa;
             if (vung.tenQuyHoach) detectedTenQuyHoach = vung.tenQuyHoach;
@@ -1001,16 +1000,14 @@ function App() {
 
                 for (const zonePoints of subPolygons) {
                   if (zonePoints.length >= 3) {
-                    // Kiểm tra xem các đỉnh hoặc tâm khu đất có nằm trong vùng này không
-                    let intersectCount = 0;
+                    // Kiểm tra xem các đỉnh của khu đất có nằm trong vùng quy hoạch này không
+                    let hitCount = 0;
                     inputPoints.forEach(pt => {
-                      if (isPointInPolygon(pt, zonePoints)) intersectCount++;
+                      if (isPointInPolygon(pt, zonePoints)) hitCount++;
                     });
-
-                    // Nếu có giao cắt không gian đáng kể
-                    if (intersectCount > 0 || isPointInPolygon(inputPoints[0], zonePoints)) {
+                    // Nếu có giao cắt hoặc điểm nằm trong vùng
+                    if (hitCount > 0 || isPointInPolygon(inputPoints[0], zonePoints)) {
                       matchedZonesSet.add(cn.tenChucNang);
-                      if (!primaryChucNang) primaryChucNang = cn.tenChucNang;
                     }
                   }
                 }
@@ -1042,15 +1039,13 @@ function App() {
           let chucNangHienThi = '';
 
           // =========================================================================
-          // TRƯỜNG HỢP 1: KHU ĐẤT THUỘC MỘT VÙNG CHỨC NĂNG DUY NHẤT -> KẾT LUẬN NGAY
+          // TRƯỜNG HỢP 1: KHU ĐẤT THUỘC ĐÚNG MỘT VÙNG CHỨC NĂNG DUY NHẤT -> KẾT LUẬN NGAY
           // =========================================================================
-          if (matchedZonesList.length === 1 || primaryChucNang) {
-            const singleChucNang = matchedZonesList[0] || primaryChucNang || 'Đất ở';
+          if (matchedZonesList.length === 1) {
+            const singleChucNang = matchedZonesList[0];
             chucNangHienThi = singleChucNang;
 
-            // Kiểm tra tính phù hợp mục tiêu dự án
             const cnLower = singleChucNang.toLowerCase();
-            const isNhaODoThi = mucTieu.includes('nhà ở') || mucTieu.includes('đất ở') || mucTieu.includes('khu dân cư') || mucTieu.includes('khu đô thị') || mucTieu.includes('tái định cư') || mucTieu.includes('thương mại dịch vụ');
             const isCongNghiep = mucTieu.includes('nhà máy') || mucTieu.includes('công nghiệp') || mucTieu.includes('xưởng') || mucTieu.includes('sản xuất');
 
             if (isCongNghiep && (cnLower.includes('đất ở') || cnLower.includes('dân cư') || cnLower.includes('cây xanh'))) {
@@ -1064,13 +1059,13 @@ function App() {
             intersectionDetails = [{ chucNang: singleChucNang, tiLe: '100.0%', dienTich: totalAreaHa + ' ha' }];
           } 
           // =========================================================================
-          // TRƯỜNG HỢP 2: KHU ĐẤT THUỘC TỪ HAI VÙNG CHỨC NĂNG TRỞ LÊN -> PHÂN BỔ DIỆN TÍCH
+          // TRƯỜNG HỢP 2: KHU ĐẤT THUỘC TỪ HAI VÙNG CHỨC NĂNG TRỞ LÊN -> PHÂN BỔ DIỆN TÍCH CHI TIẾT
           // =========================================================================
           else {
             let fixedMatNuocHa = 1.3;
             let fixedTonGiaoHa = 0.5;
             let fixedCayXanhHa = 7.0;
-            let fixedChuaXacDinhHa = 5.0;
+            let fixedChuaXacDinhHa = 5.0; // Giao thông chưa khai báo
             
             let fixedSumSpecial = fixedMatNuocHa + fixedTonGiaoHa + fixedCayXanhHa + fixedChuaXacDinhHa;
             let fixedDatO_Ha = Math.max(0, totalAreaHa - fixedSumSpecial);
@@ -1111,7 +1106,7 @@ function App() {
           };
 
           setKetQuaKiemTra(ketQua);
-          showNotification('✅ Đã hoàn tất kiểm tra quy hoạch theo thời gian thực!');
+          showNotification('✅ Đã hoàn tất kiểm tra quy hoạch!');
         }, 50);
       };
       const openVungModal = (vung = null) => {
