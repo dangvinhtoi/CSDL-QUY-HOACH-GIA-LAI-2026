@@ -1070,7 +1070,7 @@ function App() {
     ];
 
     // =========================================================================
-    // 🟢 HÀM ĐÁNH GIÁ SỰ PHÙ HỢP THÔNG MINH (KIỂM SOÁT NGHIÊM NGẶT THEO QUY CHUẨN)
+    // 🟢 HÀM ĐÁNH GIÁ SỰ PHÙ HỢP THÔNG MINH (XỬ LÝ AN TOÀN, KHÔNG LỖI KỊCH BẢN)
     // =========================================================================
     function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
       if (!chucNangDat || !mucTieuDuAn) {
@@ -1105,16 +1105,16 @@ function App() {
       // 3. Phân loại mục tiêu dự án của người dùng
       const isMucTieuCongNghiepNang = queryMucTieu.includes("nhà máy") || queryMucTieu.includes("xưởng") || queryMucTieu.includes("sản xuất") || queryMucTieu.includes("chế biến") || queryMucTieu.includes("kho bãi") || queryMucTieu.includes("logistic") || queryMucTieu.includes("xử lý chất thải") || queryMucTieu.includes("xử lý nước thải");
       const isMucTieuGiaoThong = queryMucTieu.includes("bãi đỗ") || queryMucTieu.includes("bãi đậu") || queryMucTieu.includes("giao thông");
-      const isMucTieuNhaO = queryMucTieu.includes("nhà ở") || queryMucTieu.includes("khu dân cư") || queryMucTieu.includes("khu đô thị");
+      const isMucTieuNhaO = queryMucTieu.includes("nhà ở") || queryMucTieu.includes("khu dân cư") || queryMucTieu.includes("khu đô thị") || queryMucTieu.includes("đất ở");
       const isMucTieuNongLam = queryMucTieu.includes("trồng rừng") || queryMucTieu.includes("lâm nghiệp") || queryMucTieu.includes("nông nghiệp") || queryMucTieu.includes("trang trại");
 
-      // --- 4. MA TRẬN ĐỐI CHÍNH XÁC PHÁP LÝ QUY HOẠCH ---
+      // --- 4. MA TRẬN ĐỐI CHIẾU PHÁP LÝ QUY HOẠCH ---
       if (isDatNongLamNghiep) {
         if (isMucTieuNongLam || queryMucTieu.includes("bảo vệ") || queryMucTieu.includes("sinh thái")) {
           isPhuHop = true;
         } else {
           isPhuHop = false;
-          lyDoKhongPhuHop = `Khu vực quy hoạch "${tenChucNangDat}" là đất lâm nghiệp/rừng phòng hộ, tuyệt đối không cho phép xây dựng nhà máy sản xuất, khu công nghiệp, trạm xử lý hay bãi đậu xe thương mại.`;
+          lyDoKhongPhuHop = `Khu vực quy hoạch "${tenChucNangDat}" là đất lâm nghiệp/rừng phòng hộ, không cho phép xây dựng nhà máy sản xuất, khu công nghiệp hay trạm xử lý.`;
         }
       } else if (isDatQPAnNinh) {
         if (queryMucTieu.includes("quốc phòng") || queryMucTieu.includes("quân sự") || queryMucTieu.includes("an ninh") || queryMucTieu.includes("công an")) {
@@ -1131,18 +1131,17 @@ function App() {
           lyDoKhongPhuHop = `Khu vực quy hoạch "${tenChucNangDat}" định hướng cho sản xuất công nghiệp và kho bãi.`;
         }
       } else if (isDatOhoacHonHop) {
-        if (isMucTieuNhaO || isMucTieuGiaoThong || queryMucTieu.includes("thương mại") || queryMucTieu.includes("dịch vụ")) {
+        if (isMucTieuNhaO || isMucTieuGiaoThong || queryMucTieu.includes("thương mại") || queryMucTieu.includes("dịch vụ") || queryMucTieu.includes("hạ tầng")) {
           isPhuHop = true;
         } else {
           isPhuHop = false;
-          lyDoKhungPhuHop = `Khu vực quy hoạch "${tenChucNangDat}" không phù hợp để phát triển nhà máy sản xuất công nghiệp nặng hoặc khu vực xử lý chất thải.`;
+          lyDoKhongPhuHop = `Khu vực quy hoạch "${tenChucNangDat}" không phù hợp để phát triển nhà máy sản xuất công nghiệp nặng hoặc khu vực xử lý chất thải.`;
         }
       } else {
-        // Đối chiếu từ khóa trong danh mục
         isPhuHop = congTrinhPhep.some(ct => {
           const ctLower = ct.toLowerCase();
           return queryMucTieu.includes(ctLower) || ctLower.includes(queryMucTieu);
-        });
+        }) || queryMucTieu.includes(tenChucNangDat.toLowerCase());
       }
 
       return {
