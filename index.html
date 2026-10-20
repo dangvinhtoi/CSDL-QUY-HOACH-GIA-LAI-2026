@@ -957,10 +957,10 @@ function App() {
         return parseFloat(ha.toFixed(4));
       };
 
-    // HÀM KIỂM TRA QUY HOẠCH THÔNG MINH - ĐỐI CHIẾU CHUẨN XÁC 100%
+    // HÀM KIỂM TRA QUY HOẠCH THÔNG MINH - CHUẨN XÁC 100%
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
-        const mucTieu = (kiemTarForm?.mucTieuDuAn || kiemTraForm.mucTieuDuAn || '').trim().toLowerCase();
+        const mucTieu = (kiemTraForm?.mucTieuDuAn || '').trim().toLowerCase();
         if (!mucTieu) {
           showNotification('⚠️ Vui lòng nhập mục tiêu dự án!');
           return;
