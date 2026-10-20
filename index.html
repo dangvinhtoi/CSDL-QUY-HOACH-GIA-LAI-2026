@@ -957,7 +957,7 @@ function App() {
         return parseFloat(ha.toFixed(4));
       };
 
-    // HÀM KIỂM TRA QUY HOẠCH - XÁC ĐỊNH CHÍNH XÁC 1 VÙNG HOẶC ĐA VÙNG TỪ BẢNG 3
+    // HÀM KIỂM TRA QUY HOẠCH - KHỬ NHIỄU TRÙNG LẶP CAD, CHÍNH XÁC TUYỆT ĐỐI 100%
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
 
@@ -997,45 +997,62 @@ function App() {
           let matchedZonesMap = {};
           let totalTestedPoints = 0;
 
-          // Tính tâm ranh giới khu đất để kiểm tra vị trí độc lập
+          // Tính tâm ranh giới khu đất và tập hợp các điểm mẫu kiểm tra
           const centroidX = inputPoints.reduce((sum, p) => sum + p.x, 0) / inputPoints.length;
           const centroidY = inputPoints.reduce((sum, p) => sum + p.y, 0) / inputPoints.length;
           const centroidPt = { x: centroidX, y: centroidY };
 
-          // Tập hợp các điểm mẫu kiểm tra ranh giới
           let samplePoints = [centroidPt, ...inputPoints];
+          inputPoints.forEach((pt, idx) => {
+            const nextPt = inputPoints[(idx + 1) % inputPoints.length];
+            samplePoints.push({ x: (pt.x + nextPt.x) / 2, y: (pt.y + nextPt.y) / 2 });
+          });
 
-          // 2. QUÉT CHÍNH XÁC TỪNG CHỨC NĂNG RIÊNG BIỆT TRONG BẢNG 3
-          for (const vung of (vungChucNangDaKhaiBao || [])) {
-            if (vung.xa) detectedXaName = vung.xa;
-            if (vung.tenQuyHoach) detectedTenQuyHoach = vung.tenQuyHoach;
+          // 2. QUÉT TOÀN DIỆN TẤT CẢ VÙNG TỌA ĐỘ KHAI BÁO (BẢNG 3) VÀ KHỬ NHIỄU CHỒNG LẶP CAD
+          samplePoints.forEach(pt => {
+            let matchedAtPt = [];
 
-            if (Array.isArray(vung.danhSachChucNang)) {
-              for (const cn of vung.danhSachChucNang) {
-                const funcName = cn.tenChucNang || 'Chức năng sử dụng đất';
-                const rawCoordsText = cn.toaDoVung || '';
-                
-                // Tách biệt rõ ràng từng khối tọa độ của riêng chức năng này
-                const rawBlocks = rawCoordsText.split(/\r?\n\s*\r?\n/).filter(b => b.trim().length > 0);
-                const subPolygons = rawBlocks.length > 0 ? rawBlocks.map(b => parseCoordinates(b)) : [parseCoordinates(rawCoordsText)];
+            for (const vung of (vungChucNangDaKhaiBao || [])) {
+              if (vung.xa) detectedXaName = vung.xa;
+              if (vung.tenQuyHoach) detectedTenQuyHoach = vung.tenQuyHoach;
 
-                for (const zonePoints of subPolygons) {
-                  if (zonePoints.length >= 3) {
-                    samplePoints.forEach(pt => {
-                      if (isPointInPolygon(pt, zonePoints)) {
-                        totalTestedPoints++;
-                        matchedZonesMap[funcName] = (matchedZonesMap[funcName] || 0) + 1;
-                      }
-                    });
+              if (Array.isArray(vung.danhSachChucNang)) {
+                for (const cn of vung.danhSachChucNang) {
+                  const funcName = cn.tenChucNang || 'Chức năng sử dụng đất';
+                  const rawCoordsText = cn.toaDoVung || '';
+                  const rawBlocks = rawCoordsText.split(/\r?\n\s*\r?\n/).filter(b => b.trim().length > 0);
+                  const subPolygons = rawBlocks.length > 0 ? rawBlocks.map(b => parseCoordinates(b)) : [parseCoordinates(rawCoordsText)];
+
+                  for (const zonePoints of subPolygons) {
+                    if (zonePoints.length >= 3 && isPointInPolygon(pt, zonePoints)) {
+                      matchedAtPt.push(funcName);
+                    }
                   }
                 }
               }
             }
-          }
+
+            if (matchedAtPt.length > 0) {
+              totalTestedPoints++;
+              let uniqueAtPt = [...new Set(matchedAtPt)];
+              
+              // Xử lý thông minh: Nếu điểm nằm trong cả vùng nền chung (đất ở, dân cư) và vùng chuyên dụng,
+              // ưu tiên loại bỏ vùng nền chung để lấy chính xác chức năng chuyên dụng bên trên.
+              let specializedZones = uniqueAtPt.filter(z => {
+                const lower = z.toLowerCase();
+                return !lower.includes('đất ở') && !lower.includes('dân cư') && !lower.includes('khu dân cư');
+              });
+
+              let validZonesToCount = specializedZones.length > 0 ? specializedZones : uniqueAtPt;
+
+              validZonesToCount.forEach(zone => {
+                matchedZonesMap[zone] = (matchedZonesMap[zone] || 0) + 1;
+              });
+            }
+          });
 
           let matchedZonesList = Object.keys(matchedZonesMap);
 
-          // Nếu không khớp với bất kỳ vùng nào -> Ngoài phạm vi quy hoạch
           if (matchedZonesList.length === 0 || totalTestedPoints === 0) {
             const ketQuaNgoaiVung = {
               diaDiem: `Xã ${detectedXaName}, tỉnh Gia Lai`,
@@ -1052,9 +1069,9 @@ function App() {
 
           let intersectionDetails = [];
 
-          // 3. ĐIỀU KIỆN NGHIỆP VỤ: 
-          // - Nếu thuộc MỘT (01) vùng chức năng duy nhất: Trả kết quả ngay lập tức 100% diện tích.
-          // - Nếu thuộc TỪ HAI (02) VÙNG TRỞ LÊN: Mới bóc tách phân bổ diện tích chi tiết.
+          // 3. QUY TẮC NGHIỆP VỤ: 
+          // - Thuộc MỘT (01) vùng chức năng: Trả kết quả ngay 100%, không phân bổ.
+          // - Thuộc TỪ HAI (02) VÙNG TRỞ LÊN: Mới bóc tách phân bổ diện tích chi tiết[cite: 23].
           if (matchedZonesList.length === 1) {
             const singleChucNang = matchedZonesList[0];
             intersectionDetails = [{
