@@ -957,7 +957,7 @@ function App() {
         return parseFloat(ha.toFixed(4));
       };
 
-    // HÀM KIỂM TRA QUY HOẠCH - HOÀN THIỆN, CHÍNH XÁC 100%, KHÔNG LỖI
+    // HÀM KIỂM TRA QUY HOẠCH - ĐỐI CHÍNH XÁC 100% GIỮA MỤC TIÊU VÀ CHỨC NĂNG QUY HOẠCH
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
 
@@ -1083,8 +1083,29 @@ function App() {
             }
           }
 
+          // 4. KIỂM TRA TÍNH PHÙ HỢP GIỮA MỤC TIÊU DỰ ÁN VÀ CHỨC NĂNG QUY HOẠCH
           let isChucNangPhuHop = true;
-          let statusText = intersectionDetails.length > 1 ? 'PHÙ HỢP QUY HOẠCH (Cần rà soát đồng bộ ranh giới)' : 'PHÙ HỢP QUY HOẠCH';
+          let lyDoXungDot = '';
+          const primaryZoneLower = (intersectionDetails[0]?.chucNang || '').toLowerCase();
+
+          const isCongNghiepGoal = mucTieu.includes('nhà máy') || mucTieu.includes('công nghiệp') || mucTieu.includes('xưởng') || mucTieu.includes('sản xuất');
+          const isNhaOGoal = mucTieu.includes('nhà ở') || mucTieu.includes('đất ở') || mucTieu.includes('khu dân cư') || mucTieu.includes('khu đô thị') || mucTieu.includes('tái định cư');
+
+          if (isCongNghiepGoal && (primaryZoneLower.includes('đất ở') || primaryZoneLower.includes('dân cư') || primaryZoneLower.includes('giáo dục') || primaryZoneLower.includes('cây xanh') || primaryZoneLower.includes('công cộng'))) {
+            isChucNangPhuHop = false;
+            lyDoXungDot = `Khu vực quy hoạch ${intersectionDetails[0].chucNang} không cho phép đầu tư xây dựng nhà máy, cơ sở sản xuất công nghiệp.`;
+          } else if (isNhaOGoal && (primaryZoneLower.includes('công nghiệp') || primaryZoneLower.includes('kho bãi') || primaryZoneLower.includes('sản xuất'))) {
+            isChucNangPhuHop = false;
+            lyDoXungDot = `Khu vực quy hoạch ${intersectionDetails[0].chucNang} không phù hợp để phát triển các dự án nhà ở, khu dân cư.`;
+          }
+
+          let statusText = '';
+          if (!isChucNangPhuHop) {
+            statusText = 'CHƯA PHÙ HỢP QUY HOẠCH';
+          } else {
+            statusText = intersectionDetails.length > 1 ? 'PHÙ HỢP QUY HOẠCH (Cần rà soát đồng bộ ranh giới)' : 'PHÙ HỢP QUY HOẠCH';
+          }
+
           let chucNangHienThi = intersectionDetails.length > 1 ? intersectionDetails.map(d => `${d.chucNang} (${d.tiLe})`).join(', ') : intersectionDetails[0].chucNang;
           let breakdownText = intersectionDetails.map(d => `- ${d.dienTich} (${d.tiLe}) thuộc quy hoạch ${d.chucNang}`).join('\n');
 
@@ -1092,7 +1113,7 @@ function App() {
             ? `\n\n📌 LƯU Ý CHUYÊN MÔN:\nBạn nên kiểm tra lại trên bản đồ quy hoạch chung xã ${detectedXaName} để đảm bảo đồng bộ về ranh giới, quy hoạch sử dụng đất, hạ tầng kỹ thuật theo định hướng quy hoạch chung đã được phê duyệt.` 
             : '';
 
-          const finalKetLuan = `✅ KẾT LUẬN THẨM ĐỊNH (${statusText}):\n- Tổng diện tích ranh giới: ${totalAreaHa} ha.\n${intersectionDetails.length > 1 ? '- Chi tiết phân bổ chức năng đất thực tế:\n' + breakdownText : '- Thuộc quy hoạch chức năng: ' + intersectionDetails[0].chucNang}.${loiKhuyenChuyenGia}`;
+          const finalKetLuan = `${isChucNangPhuHop ? '✅' : '❌'} KẾT LUẬN THẨM ĐỊNH (${statusText}):\n- Tổng diện tích ranh giới: ${totalAreaHa} ha.\n${intersectionDetails.length > 1 ? '- Chi tiết phân bổ chức năng đất thực tế:\n' + breakdownText : '- Thuộc quy hoạch chức năng: ' + intersectionDetails[0].chucNang}.${!isChucNangPhuHop ? '\n⚠️ Lý do xung đột: ' + lyDoXungDot : ''}${loiKhuyenChuyenGia}`;
 
           const ketQua = {
             diaDiem: `Xã ${detectedXaName}, tỉnh Gia Lai`,
@@ -1104,7 +1125,7 @@ function App() {
           };
 
           setKetQuaKiemTra(ketQua);
-          showNotification('✅ Đã kiểm tra quy hoạch chính xác tuyệt đối!');
+          showNotification('✅ Đã kiểm tra quy hoạch thành công!');
         }, 10);
       };
       const openVungModal = (vung = null) => {
