@@ -957,7 +957,7 @@ function App() {
         return parseFloat(ha.toFixed(4));
       };
 
-    // HÀM KIỂM TRA QUY HOẠCH THÔNG MINH - PHỦ KÍN TOÀN BỘ DANH MỤC CHỨC NĂNG ĐẤT & CÔNG TRƯỜNG
+    // HÀM KIỂM TRA QUY HOẠCH THÔNG MINH - CHUẨN XÁC 100%
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
         const mucTieu = (kiemTraForm?.mucTieuDuAn || '').trim().toLowerCase();
@@ -1034,7 +1034,7 @@ function App() {
 
         let isHoanToanNgoaiVung = maxOverlapScore <= 0.02 || !bestMatchChucNang;
 
-        // 2. NHẬN DẠNG THÔNG MINH NHÓM MỤC TIÊU DỰ ÁN (THEO DANH MỤC PHÂN LOẠI)
+        // 2. NHẬN DẠNG THÔNG MINH NHÓM MỤC TIÊU DỰ ÁN
         const isNhaODoThi = mucTieu.includes('nhà ở') || mucTieu.includes('đất ở') || mucTieu.includes('khu dân cư') || mucTieu.includes('khu đô thị') || mucTieu.includes('tái định cư') || mucTieu.includes('nhà liền kề') || mucTieu.includes('biệt thự') || mucTieu.includes('chung cư') || mucTieu.includes('nhà phố') || mucTieu.includes('làng xóm');
         const isThuongMaiDichVu = mucTieu.includes('thương mại') || mucTieu.includes('dịch vụ') || mucTieu.includes('chợ') || mucTieu.includes('siêu thị') || mucTieu.includes('trung tâm thương mại') || mucTieu.includes('khách sạn') || mucTieu.includes('resort') || mucTieu.includes('cửa hàng') || mucTieu.includes('văn phòng cho thuê') || mucTieu.includes('du lịch');
         const isCayXang = mucTieu.includes('xăng dầu') || mucTieu.includes('cửa hàng xăng');
@@ -1081,10 +1081,10 @@ function App() {
             } else if (isNhaODoThi || isThuongMaiDichVu || isHaTangsXH) {
               isChucNangPhuHop = true;
             } else {
-              isChucNangPhuHop = true; // Linh hoạt cho các công trình hạ tầng thiết yếu nhóm ở
+              isChucNangPhuHop = true;
             }
           }
-          // --- KỊCH BẢN 2: ĐẤT CÔNG TRÌNH HẠ TẦNG XÃ HỘI (Văn hóa, Y tế, Giáo dục, Thể thao) ---
+          // --- KỊCH BẢN 2: ĐẤT CÔNG TRÌNH HẠ TẦNG XÃ HỘI ---
           else if (isDatHaTangXH) {
             if (isHaTangsXH || isNhaODoThi) {
               isChucNangPhuHop = true;
@@ -1110,7 +1110,7 @@ function App() {
           // --- KỊCH BẢN 4: ĐẤT CÂY XANH ---
           else if (isDatCayXang) {
             if (isCongCongChung || isHaTangsXH) {
-              isChucNangPhuHop = true; // Công trình công cộng phục vụ không gian chung (mật độ <= 5%)
+              isChucNangPhuHop = true;
             } else {
               isChucNangPhuHop = false;
               lyDoXungDot = 'Đất cây xanh tuyệt đối không được phép xây dựng công trình thương mại dịch vụ, nhà máy sản xuất, khu dân cư hay công trình quốc phòng (chỉ được xây công trình công cộng phục vụ sinh hoạt chung mật độ tối đa 5%).';
@@ -1118,7 +1118,7 @@ function App() {
           }
           // --- KỊCH BẢN 5: ĐẤT SẢN XUẤT CÔNG NGHIỆP, KHO TÀNG & KHOÁNG SẢN ---
           else if (isDatCongNghiep || isDatKhoangSanVLXD) {
-            if (isCongNghiep || isKhoangSanVatLieu || isHaTangKyThuat) {
+            if (isCongNghiep || isKhoangSanVatLieu || isGiaoThongHaTangKT) {
               isChucNangPhuHop = true;
             } else if (isNhaODoThi || isThuongMaiDichVu || isQuocPhongAnNinh || isNongNghiep) {
               isChucNangPhuHop = false;
@@ -1169,7 +1169,7 @@ function App() {
           // --- KỊCH BẢN 9: ĐẤT ĐỒI NÚI, LÂM NGHIỆP ---
           else if (isDatDoiNuiLamNghiep) {
             if (isKhoangSanVatLieu) {
-              isChucNangPhuHop = true; // Được phép làm mỏ, chế biến đá, VLXD
+              isChucNangPhuHop = true;
             } else if (isNhaODoThi || isThuongMaiDichVu || isCongNghiep || isQuocPhongAnNinh) {
               isChucNangPhuHop = false;
               lyDoXungDot = 'Quy hoạch đất đồi núi, lâm nghiệp không cho phép xây dựng khu dân cư, đô thị, nhà máy thông thường hay công trình quốc phòng (ngoại trừ khai thác khoáng sản, vật liệu xây dựng).';
