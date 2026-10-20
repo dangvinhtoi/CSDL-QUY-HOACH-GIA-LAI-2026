@@ -1048,13 +1048,29 @@ function App() {
         const isDuAnCongNghiep = mucTieuLower.includes('nhà máy') || mucTieuLower.includes('công nghiệp') || mucTieuLower.includes('xưởng') || mucTieuLower.includes('sản xuất') || mucTieuLower.includes('chế biến') || mucTieuLower.includes('kho bãi') || mucTieuLower.includes('logistic');
         const isDuAnNongNghiep = mucTieuLower.includes('nông nghiệp') || mucTieuLower.includes('trồng trọt') || mucTieuLower.includes('chăn nuôi') || mucTieuLower.includes('trang trại') || mucTieuLower.includes('vườn ươm');
         const isDuAnKhoangSanVatLieu = mucTieuLower.includes('khai thác') || mucTieuLower.includes('mỏ') || mucTieuLower.includes('chế biến đá') || mucTieuLower.includes('vật liệu xây dựng') || mucTieuLower.includes('khoáng sản');
+        
+        // Nhóm công trình công cộng phục vụ không gian chung (được phép với mật độ tối đa 5%)
+        const isDuAnCongCongChung = mucTieuLower.includes('công cộng') || mucTieuLower.includes('sinh hoạt chung') || mucTieuLower.includes('nhà văn hóa') || mucTieuLower.includes('công viên');
 
         const isQuyHoachDatDoiNui = cnLower.includes('đồi núi') || cnLower.includes('lâm nghiệp') || cnLower.includes('trồng rừng');
         const isQuyHoachDatO_HonHop = cnLower.includes('đất ở') || cnLower.includes('đất hỗn hợp') || cnLower.includes('nhóm nhà ở');
+        const isQuyHoachCayXanh = cnLower.includes('cây xanh');
 
         if (!isHoanToanNgoaiVung) {
+          // Quy tắc 0: Đất cây xanh (công cộng, hạn chế, chuyên dụng)
+          if (isQuyHoachCayXanh) {
+            if (isDuAnThuongMaiDichVu || isDuAnCongNghiep || isDuAnNongNghiep || isDuAnNhaO_DoThi || isDuAnCayXang) {
+              isChucNangPhuHop = false;
+              lyDoXungDot = 'Đất cây xanh không được phép xây dựng các công trình thương mại dịch vụ, nhà máy sản xuất công nghiệp, nông nghiệp hay khu dân cư.';
+            } else if (isDuAnCongCongChung) {
+              isChucNangPhuHop = true; // Được phép phục vụ không gian sinh hoạt chung (mật độ <= 5%)
+            } else {
+              isChucNangPhuHop = false;
+              lyDoXungDot = 'Vùng quy hoạch đất cây xanh chỉ được xây dựng các công trình công cộng phục vụ không gian sinh hoạt chung (mật độ tối đa 5%).';
+            }
+          } 
           // Quy tắc 1: Đất ở, đất hỗn hợp (nhóm nhà ở và dịch vụ)
-          if (isQuyHoachDatO_HonHop) {
+          else if (isQuyHoachDatO_HonHop) {
             if (isDuAnCongNghiep || isDuAnNongNghiep) {
               isChucNangPhuHop = false;
               lyDoXungDot = 'Vùng quy hoạch đất ở hoặc đất hỗn hợp không được phép xây dựng nhà máy sản xuất, chế biến, công nghiệp, dự án nông nghiệp, trang trại hay vườn ươm.';
@@ -1064,7 +1080,6 @@ function App() {
             } else if (isDuAnNhaO_DoThi || isDuAnThuongMaiDichVu) {
               isChucNangPhuHop = true;
             } else {
-              // Các mục tiêu chung chung không thuộc nhóm ở/dịch vụ/đô thị
               isChucNangPhuHop = false;
               lyDoXungDot = 'Vùng quy hoạch đất ở hoặc đất hỗn hợp chỉ cho phép xây dựng khu dân cư, khu đô thị, tái định cư, thương mại dịch vụ.';
             }
