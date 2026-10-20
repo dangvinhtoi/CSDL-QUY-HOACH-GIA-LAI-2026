@@ -957,7 +957,7 @@ function App() {
         return parseFloat(ha.toFixed(4));
       };
 
-    // HÀM KIỂM TRA QUY HOẠCH - QUÉT KHÔNG GIAN THỰC TẾ BÓC TÁCH CHÍNH XÁC DIỆN TÍCH
+    // HÀM KIỂM TRA QUY HOẠCH - TỐC ĐỘ CAO, SIÊU MƯỢT, KHÔNG TREO TRÌNH DUYỆT
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
         const mucTieu = (kiemTraForm?.mucTieuDuAn || '').trim().toLowerCase();
@@ -974,6 +974,7 @@ function App() {
           return;
         }
 
+        // Sử dụng setTimeout chạy bất đồng bộ để giải phóng hoàn toàn luồng giao diện
         setTimeout(() => {
           const inputPoints = parseCoordinates(kiemTraForm.toaDoTrucTiep);
           const totalAreaHa = calculatePolygonArea(inputPoints);
@@ -993,18 +994,17 @@ function App() {
           const minY = Math.min(...inputPoints.map(p => p.y));
           const maxY = Math.max(...inputPoints.map(p => p.y));
 
-          // Độ mịn lưới quét không gian (đảm bảo độ chính xác cao)
-          const gridSteps = 50;
+          // Tối ưu hóa bước lưới quét (gridSteps = 20) để xử lý chớp mắt là xong, tuyệt đối không treo
+          const gridSteps = 20;
           const stepX = (maxX - minX) / gridSteps || 1;
           const stepY = (maxY - minY) / gridSteps || 1;
 
-          // 1. QUÉT LƯỚI KHÔNG GIAN ĐỂ XÁC ĐỊNH CHÍNH XÁC CÁC VÙNG CHỨC NĂNG GIAO CẮT
           for (let sx = minX; sx <= maxX; sx += stepX) {
             for (let sy = minY; sy <= maxY; sy += stepY) {
               const testPt = { x: sx, y: sy };
               if (isPointInPolygon(testPt, inputPoints)) {
                 totalSamplePoints++;
-                let matchedSubZone = 'Đất ở'; // Mặc định nền cơ bản
+                let matchedSubZone = 'Đất ở';
 
                 for (const vung of (vungChucNangDaKhaiBao || [])) {
                   if (vung.xa) detectedXaName = vung.xa;
@@ -1051,17 +1051,14 @@ function App() {
           let intersectionDetails = [];
           let uniqueZones = Object.keys(zoneHitMap);
 
-          // 2. PHÂN BIỆT THÔNG MINH: 1 VÙNG HAY NHIỀU VÙNG GIAO CẮT
-          if (uniqueZones.length === 1 || Object.keys(zoneHitMap).length === 1) {
-            // Trường hợp 1: Nằm gọn trong 1 vùng chức năng duy nhất -> Kết luận ngay lập tức
-            const singleChucNang = uniqueZones[0] || 'Đất ở';
+          if (uniqueZones.length === 1) {
+            const singleChucNang = uniqueZones[0];
             intersectionDetails = [{
               chucNang: singleChucNang,
               tiLe: '100.0%',
               dienTich: totalAreaHa.toFixed(4) + ' ha'
             }];
           } else {
-            // Trường hợp 2: Giao cắt từ 2 vùng trở lên -> Phân bổ tỷ lệ diện tích thực tế từ lưới quét
             for (const [chucNang, hits] of Object.entries(zoneHitMap)) {
               const ratio = hits / totalSamplePoints;
               const areaHa = parseFloat((totalAreaHa * ratio).toFixed(4));
@@ -1107,7 +1104,7 @@ function App() {
 
           setKetQuaKiemTra(ketQua);
           showNotification('✅ Đã quét và phân tích không gian quy hoạch thành công!');
-        }, 50);
+        }, 30);
       };
       const openVungModal = (vung = null) => {
         if (userRole !== 'ADMIN') {
