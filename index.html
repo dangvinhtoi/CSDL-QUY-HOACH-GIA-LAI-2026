@@ -957,7 +957,7 @@ function App() {
         return parseFloat(ha.toFixed(4));
       };
 
-    // HÀM KIỂM TRA QUY HOẠCH - XỬ LÝ CHÍNH XÁC 1 VÙNG HOẶC ĐA VÙNG THỜI GIAN THỰC
+    // HÀM KIỂM TRA QUY HOẠCH - NHẬN DIỆN CHÍNH XÁC TUYỆT ĐỐI KHU ĐẤT TRONG 1 HOẶC NHIỀU VÙNG
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
         const mucTieu = (kiemTraForm?.mucTieuDuAn || '').trim().toLowerCase();
@@ -993,8 +993,8 @@ function App() {
           const minY = Math.min(...inputPoints.map(p => p.y));
           const maxY = Math.max(...inputPoints.map(p => p.y));
 
-          // Độ mịn lưới quét không gian tối ưu tốc độ và độ chính xác
-          const gridSteps = 30;
+          // Tăng độ phân giải lưới quét và tập trung vào tâm polygon để chống nhiễu biên
+          const gridSteps = 40;
           const stepX = (maxX - minX) / gridSteps || 1;
           const stepY = (maxY - minY) / gridSteps || 1;
 
@@ -1003,7 +1003,8 @@ function App() {
               const testPt = { x: sx, y: sy };
               if (isPointInPolygon(testPt, inputPoints)) {
                 totalSamplePoints++;
-                let matchedSubZone = 'Đất ở';
+                // Mặc định ban đầu kiểm tra xem điểm thuộc vùng nào trong các vùng đã khai báo
+                let matchedSubZone = '';
 
                 for (const vung of (vungChucNangDaKhaiBao || [])) {
                   if (vung.xa) detectedXaName = vung.xa;
@@ -1021,18 +1022,21 @@ function App() {
                           break;
                         }
                       }
-                      if (matchedSubZone !== 'Đất ở') break;
+                      if (matchedSubZone) break;
                     }
                   }
-                  if (matchedSubZone !== 'Đất ở') break;
+                  if (matchedSubZone) break;
                 }
 
-                zoneHitMap[matchedSubZone] = (zoneHitMap[matchedSubZone] || 0) + 1;
+                // Nếu điểm nằm trong ranh giới các vùng đã khai báo thì ghi nhận
+                if (matchedSubZone) {
+                  zoneHitMap[matchedSubZone] = (zoneHitMap[matchedSubZone] || 0) + 1;
+                }
               }
             }
           }
 
-          let isHoanToanNgoaiVung = totalSamplePoints === 0;
+          let isHoanToanNgoaiVung = totalSamplePoints === 0 || Object.keys(zoneHitMap).length === 0;
           if (isHoanToanNgoaiVung) {
             const ketQuaNgoaiVung = {
               diaDiem: 'Ngoài ranh giới cơ sở dữ liệu quy hoạch',
@@ -1047,31 +1051,34 @@ function App() {
             return;
           }
 
-          let intersectionDetails = [];
-          let uniqueZones = Object.keys(zoneHitMap);
-
-          // Lọc bỏ các vùng có số điểm chạm quá nhỏ (nhiễu biên)
-          let filteredHits = {};
+          // Lọc bỏ các vùng có tỷ lệ xuất hiện quá nhỏ (< 15% tổng số điểm quét) để chống nhiễu biên ranh giới
+          let validZonesHits = {};
           for (const [zoneName, hits] of Object.entries(zoneHitMap)) {
-            if ((hits / totalSamplePoints) >= 0.03) { // Chiếm từ 3% diện tích trở lên mới tính
-              filteredHits[zoneName] = hits;
+            if ((hits / totalSamplePoints) >= 0.15) {
+              validZonesHits[zoneName] = hits;
             }
           }
-          let significantZones = Object.keys(filteredHits);
 
-          // TRƯỜNG HỢP 1: THUỘC 1 VÙNG CHỨC NĂNG DUY NHẤT -> KẾT LUẬN NGAY
-          if (significantZones.length <= 1) {
-            const singleChucNang = significantZones[0] || uniqueZones[0] || 'Đất ở';
+          let significantZones = Object.keys(validZonesHits);
+          if (significantZones.length === 0) {
+            significantZones = Object.keys(zoneHitMap); // Fallback nếu tất cả đều nhỏ
+          }
+
+          let intersectionDetails = [];
+
+          // TRƯỜNG HỢP 1: NẰM TRỌN TRONG 1 VÙNG CHỨC NĂNG DUY NHẤT -> KẾT LUẬN NGAY 100%
+          if (significantZones.length === 1) {
+            const singleChucNang = significantZones[0];
             intersectionDetails = [{
               chucNang: singleChucNang,
               tiLe: '100.0%',
               dienTich: totalAreaHa.toFixed(4) + ' ha'
             }];
           } else {
-            // TRƯỜNG HỢP 2: THUỘC TỪ 2 VÙNG TRỞ LÊN -> BÓC TÁCH TỶ LỆ DIỆN TÍCH THỰC TẾ
-            let totalSignificantHits = Object.values(filteredHits).reduce((a, b) => a + b, 0);
-            for (const [chucNang, hits] of Object.entries(filteredHits)) {
-              const ratio = hits / totalSignificantHits;
+            // TRƯỜNG HỢP 2: GIAO CẮT TỪ 2 VÙNG TRỞ LÊN -> PHÂN BỔ TỶ LỆ DIỆN TÍCH THỰC TẾ
+            let totalValidHits = Object.values(validZonesHits).reduce((a, b) => a + b, 0);
+            for (const [chucNang, hits] of Object.entries(validZonesHits)) {
+              const ratio = hits / totalValidHits;
               const areaHa = parseFloat((totalAreaHa * ratio).toFixed(4));
               if (areaHa > 0.001) {
                 intersectionDetails.push({
@@ -1104,7 +1111,7 @@ function App() {
           };
 
           setKetQuaKiemTra(ketQua);
-          showNotification('✅ Đã đối chiếu quy hoạch không gian thành công!');
+          showNotification('✅ Đã kiểm tra quy hoạch thành công!');
         }, 30);
       };
       const openVungModal = (vung = null) => {
