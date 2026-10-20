@@ -957,7 +957,7 @@ function App() {
         return parseFloat(ha.toFixed(4));
       };
 
-    // HÀM KIỂM TRA QUY HOẠCH THÔNG MINH - SIÊU CHẶT CHẼ THEO ĐÚNG QUY TẮC NGHIỆP VỤ
+    // HÀM KIỂM TRA QUY HOẠCH THÔNG MINH - SIÊU CHẶT CHẼ CHO HẠ TẦNG KỸ THUẬT & CÁC QUY TẮC TRƯỚC
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
         const mucTieu = (kiemTraForm?.mucTieuDuAn || '').trim().toLowerCase();
@@ -1035,48 +1035,82 @@ function App() {
         let isHoanToanNgoaiVung = maxOverlapScore <= 0.02 || !bestMatchChucNang;
 
         // 2. NHẬN DẠNG THÔNG MINH NHÓM MỤC TIÊU DỰ ÁN
-        const isNhaODoThi = mucTieu.includes('nhà ở') || mucTieu.includes('đất ở') || mucTieu.includes('khu dân cư') || mucTieu.includes('khu đô thị') || mucTieu.includes('tái định cư') || mucTieu.includes('nhà liền kề') || mucTieu.includes('biệt thự') || mucTieu.includes('chung cư') || mucTieu.includes('nhà phố') || mucTieu.includes('làng xóm');
-        const isThuongMaiDichVu = mucTieu.includes('thương mại') || mucTieu.includes('dịch vụ') || mucTieu.includes('chợ') || mucTieu.includes('siêu thị') || mucTieu.includes('trung tâm thương mại') || mucTieu.includes('khách sạn') || mucTieu.includes('resort') || mucTieu.includes('cửa hàng') || mucTieu.includes('văn phòng cho thuê') || mucTieu.includes('du lịch');
+        const isNhaODoThi = mucTieu.includes('nhà ở') || mucTieu.includes('đất ở') || mucTieu.includes('khu dân cư') || mucTieu.includes('khu đô thị') || mucTieu.includes('tái định cư') || mucTieu.includes('nhà liền kề') || mucTieu.includes('biệt thự') || mucTieu.includes('chung cư');
+        const isThuongMaiDichVu = mucTieu.includes('thương mại') || mucTieu.includes('dịch vụ') || mucTieu.includes('chợ') || mucTieu.includes('siêu thị') || mucTieu.includes('trung tâm thương mại') || mucTieu.includes('khách sạn') || mucTieu.includes('resort');
         const isCayXang = mucTieu.includes('xăng dầu') || mucTieu.includes('cửa hàng xăng');
         
-        // Nhà máy sản xuất, chế biến công nghiệp, nông nghiệp, lâm sản
-        const isCongNghiepCheBien = mucTieu.includes('nhà máy') || mucTieu.includes('công nghiệp') || mucTieu.includes('xưởng') || mucTieu.includes('sản xuất') || mucTieu.includes('chế biến') || mucTieu.includes('lâm sản') || mucTieu.includes('tiểu thủ công nghiệp') || mucTieu.includes('cụm công nghiệp') || mucTieu.includes('khu chế xuất');
-        const isNongNghiep = mucTieu.includes('nông nghiệp') || mucTieu.includes('trồng trọt') || mucTieu.includes('chăn nuôi') || mucTieu.includes('trang trại') || mucTieu.includes('vườn ươm') || mucTieu.includes('thủy sản') || mucTieu.includes('nuôi trồng');
-        
-        // Mỏ khoáng sản
+        const isCongNghiepCheBien = mucTieu.includes('nhà máy') || mucTieu.includes('công nghiệp') || mucTieu.includes('xưởng') || mucTieu.includes('sản xuất') || mucTieu.includes('chế biến') || mucTieu.includes('lâm sản') || mucTieu.includes('tiểu thủ công nghiệp');
+        const isNongNghiep = mucTieu.includes('nông nghiệp') || mucTieu.includes('trồng trọt') || mucTieu.includes('chăn nuôi') || mucTieu.includes('trang trại') || mucTieu.includes('vườn ươm');
         const isKhoangSan = mucTieu.includes('khai thác') || mucTieu.includes('mỏ') || mucTieu.includes('khoáng sản') || mucTieu.includes('vật liệu xây dựng') || mucTieu.includes('đất đá');
-        
-        // Dịch vụ, kho bãi, logistics, cảng cạn
-        const isLogisticsKhoBai = mucTieu.includes('logistics') || mucTieu.includes('kho bãi') || mucTieu.includes('cảng cạn') || mucTieu.includes('dịch vụ logistics');
-        
-        const isHaTangsXH = mucTieu.includes('văn hóa') || mucTieu.includes('sinh hoạt cộng đồng') || mucTieu.includes('thư viện') || mucTieu.includes('bệnh viện') || mucTieu.includes('trường') || mucTieu.includes('giáo dục') || mucTieu.includes('thể dục thể thao') || mucTieu.includes('công viên') || mucTieu.includes('công cộng');
-        const isQuocPhongAnNinh = mucTieu.includes('quốc phòng') || mucTieu.includes('an ninh') || mucTieu.includes('doanh trại') || mucTieu.includes('quân sự');
+        const isLogisticsKhoBai = mucTieu.includes('logistics') || mucTieu.includes('kho bãi') || mucTieu.includes('cảng cạn');
+
+        // Nhóm hạ tầng kỹ thuật đầu mối chi tiết
+        const isBaiDauXe = mucTieu.includes('bãi đậu xe') || mucTieu.includes('bãi đỗ xe');
+        const isTramSacXeDien = mucTieu.includes('trạm sạc') || mucTieu.includes('trạm sạc xe điện');
+        const isXuLyChatThai = mucTieu.includes('chất thải rắn') || mucTieu.includes('rác thải') || mucTieu.includes('xử lý rác');
+        const isXuLyNuocThai = mucTieu.includes('nước thải') || mucTieu.includes('trạm xử lý nước thải');
+        const isNhaMayCapNuoc = mucTieu.includes('cấp nước') || mucTieu.includes('nhà máy nước');
 
         // 3. NHẬN DẠNG THÔNG MINH NHÓM CHỨC NĂNG ĐẤT QUY HOẠCH TRÊN BẢN ĐỒ
         const cnLower = (bestMatchChucNang || '').toLowerCase();
-        const isDatO = cnLower.includes('đất ở') || cnLower.includes('nhà ở') || cnLower.includes('đơn vị ở');
-        const isDatHonHop = cnLower.includes('hỗn hợp');
-        const isDatCayXang = cnLower.includes('cây xanh');
-        
-        // Đất sản xuất công nghiệp, kho tàng, logistics, cảng cạn
-        const isDatCongNghiep = cnLower.includes('công nghiệp') || cnLower.includes('sản xuất') || cnLower.includes('tiểu thủ công nghiệp');
+        const isDatBaiDauXe = cnLower.includes('bãi đỗ xe') || cnLower.includes('bãi đậu xe');
+        const isDatTramSac = cnLower.includes('trạm sạc');
+        const isDatXuLyChatThai = cnLower.includes('chất thải') || cnLower.includes('rác thải');
+        const isDatXuLyNuocThai = cnLower.includes('nước thải');
+        const isDatCapNuoc = cnLower.includes('cấp nước');
+        const isDatHTKTChung = cnLower.includes('hạ tầng kỹ thuật') || cnLower.includes('htkt');
+
+        const isDatKhoangSan = cnLower.includes('khoáng sản') || cnLower.includes('vật liệu xây dựng');
+        const isDatDoiNuiDatRung = cnLower.includes('đồi núi') || cnLower.includes('lâm nghiệp') || cnLower.includes('trồng rừng') || cnLower.includes('rừng phòng hộ');
+        const isDatCongNghiep = cnLower.includes('công nghiệp') || cnLower.includes('sản xuất');
         const isDatLogisticsKhoBai = cnLower.includes('cảng cạn') || cnLower.includes('kho bãi') || cnLower.includes('logistics');
-        
-        // Đất định hướng khai thác khoáng sản
-        const isDatKhoangSan = cnLower.includes('khoáng sản') || cnLower.includes('vật liệu xây dựng') || cnLower.includes('khai thác');
-        
-        // Đất đồi núi, đất rừng
-        const isDatDoiNuiDatRung = cnLower.includes('đồi núi') || cnLower.includes('lâm nghiệp') || cnLower.includes('trồng rừng') || cnLower.includes('rừng phòng hộ') || cnLower.includes('rừng đặc dụng');
-        
-        const isDatNongNghiepThuySan = cnLower.includes('nông nghiệp') || cnLower.includes('thủy sản') || cnLower.includes('mặt nước');
-        const isDatQuocPhongAnNinh = cnLower.includes('quốc phòng') || cnLower.includes('an ninh');
 
         let isChucNangPhuHop = true;
         let lyDoXungDot = '';
 
         if (!isHoanToanNgoaiVung) {
+          // --- QUY TẮC ĐẶC BIỆT: HẠ TẦNG KỸ THUẬT ĐẦU MỐI ---
+          if (isBaiDauXe || isTramSacXeDien || isXuLyChatThai || isXuLyNuocThai || isNhaMayCapNuoc) {
+            if (isBaiDauXe) {
+              if (isDatBaiDauXe || isDatTramSac || (isDatHTKTChung && cnLower.includes('bãi đỗ'))) {
+                isChucNangPhuHop = true;
+              } else {
+                isChucNangPhuHop = false;
+                lyDoXungDot = 'Bãi đậu xe chỉ được xây dựng trong vùng quy hoạch chức năng bãi đậu xe / bãi đỗ xe.';
+              }
+            } else if (isTramSacXeDien) {
+              // Bãi đậu xe có thể bố trí trạm sạc xe điện, hoặc vùng quy hoạch trạm sạc
+              if (isDatTramSac || isDatBaiDauXe || (isDatHTKTChung && (cnLower.includes('trạm sạc') || cnLower.includes('bãi đỗ')))) {
+                isChucNangPhuHop = true;
+              } else {
+                isChucNangPhuHop = false;
+                lyDoXungDot = 'Trạm sạc xe điện chỉ được xây dựng trong vùng quy hoạch trạm sạc hoặc bãi đậu xe.';
+              }
+            } else if (isXuLyChatThai) {
+              if (isDatXuLyChatThai || (isDatHTKTChung && cnLower.includes('chất thải'))) {
+                isChucNangPhuHop = true;
+              } else {
+                isChucNangPhuHop = false;
+                lyDoXungDot = 'Nhà máy xử lý chất thải rắn chỉ được xây dựng trong vùng quy hoạch chức năng xử lý chất thải rắn.';
+              }
+            } else if (isXuLyNuocThai) {
+              if (isDatXuLyNuocThai || (isDatHTKTChung && cnLower.includes('nước thải'))) {
+                isChucNangPhuHop = true;
+              } else {
+                isChucNangPhuHop = false;
+                lyDoXungDot = 'Nhà máy xử lý nước thải chỉ được xây dựng trong vùng quy hoạch chức năng xử lý nước thải.';
+              }
+            } else if (isNhaMayCapNuoc) {
+              if (isDatCapNuoc || (isDatHTKTChung && cnLower.includes('cấp nước'))) {
+                isChucNangPhuHop = true;
+              } else {
+                isChucNangPhuHop = false;
+                lyDoXungDot = 'Nhà máy cấp nước chỉ được xây dựng trong vùng quy hoạch chức năng nhà máy cấp nước.';
+              }
+            }
+          }
           // --- QUY TẮC 1: MỎ KHOÁNG SẢN ---
-          if (isKhoangSan) {
+          else if (isKhoangSan) {
             if (isDatKhoangSan) {
               isChucNangPhuHop = true;
             } else {
@@ -1088,7 +1122,7 @@ function App() {
           else if (isDatDoiNuiDatRung) {
             if (isCongNghiepCheBien || isNongNghiep) {
               isChucNangPhuHop = false;
-              lyDoXungDot = 'Vùng đồi núi, đất rừng không được xây dựng dự án nhà máy sản xuất, chế biến công nghiệp, nông nghiệp (dự án nhà máy sản xuất, chế biến công nghiệp, nông nghiệp, lâm sản,... chỉ được đề xuất trong vùng quy hoạch đất sản xuất công nghiệp).';
+              lyDoXungDot = 'Vùng đồi núi, đất rừng không được xây dựng dự án nhà máy sản xuất, chế biến công nghiệp, nông nghiệp (chỉ được đề xuất trong vùng quy hoạch đất sản xuất công nghiệp).';
             } else if (isKhoangSan && isDatKhoangSan) {
               isChucNangPhuHop = true;
             } else {
@@ -1105,30 +1139,13 @@ function App() {
               lyDoXungDot = 'Các công trình dịch vụ, kho bãi, logistics chỉ được xây dựng trong vùng quy hoạch chức năng cảng cạn, kho bãi, dịch vụ logistics.';
             }
           }
-          // --- QUY TẮC 4: NHÀ MÁY SẢN XUẤT, CHẾ BIẾN CÔNG NGHIỆP, LÂM SẢN ---
+          // --- QUY TẮC 4: NHÀ MÁY SẢN XUẤT, CHẾ BIẾN CÔNG NGHIỆP ---
           else if (isCongNghiepCheBien) {
             if (isDatCongNghiep) {
               isChucNangPhuHop = true;
             } else {
               isChucNangPhuHop = false;
               lyDoXungDot = 'Dự án nhà máy sản xuất, chế biến công nghiệp, nông nghiệp, lâm sản,... chỉ được đề xuất trong vùng quy hoạch đất sản xuất công nghiệp.';
-            }
-          }
-          // --- CÁC KỊCH BẢN KHÁC (ĐẤT Ở, CÂY XANH, QUỐC PHÒNG,...) ---
-          else if (isDatO || isDatHonHop) {
-            if (isCongNghiepCheBien || isNongNghiep || isKhoangSan || isLogisticsKhoBai) {
-              isChucNangPhuHop = false;
-              lyDoXungDot = 'Vùng quy hoạch đất ở, đất hỗn hợp không phù hợp để xây dựng nhà máy, kho bãi logistics hay khai thác mỏ.';
-            } else {
-              isChucNangPhuHop = true;
-            }
-          }
-          else if (isDatQuocPhongAnNinh) {
-            if (isQuocPhongAnNinh) {
-              isChucNangPhuHop = true;
-            } else {
-              isChucNangPhuHop = false;
-              lyDoXungDot = 'Đất quốc phòng, an ninh chỉ phục vụ các công trình quân sự, quốc phòng.';
             }
           }
           else {
