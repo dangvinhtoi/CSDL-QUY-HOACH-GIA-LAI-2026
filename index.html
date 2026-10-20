@@ -1061,6 +1061,11 @@ function App() {
         loaiChucNang: "Đất nông nghiệp và mặt nước",
         congTrinhDuocPhep: ["Đất sản xuất nông nghiệp", "trang trại", "trang trại chăn nuôi", "nuôi trồng thủy sản", "sông suối", "kênh rạch", "hồ ao"]
       },
+      {
+    nhom: "Đất hạ tầng kỹ thuật",
+    loaiChucNang: "Đất HTKT khác (nghĩa địa, nghĩa trang)",
+    congTrinhDuocPhep: ["Nghĩa địa", "nghĩa trang", "nhà tang lễ", "cơ sở hỏa táng", "khu mai táng", "cải táng"]
+  },
       // --- CẤP 2 & CẤP 3: KHU VỰC NÔNG THÔN VÀ QUY HOẠCH CHUNG ---
       {
         nhom: "Khu đất dân dụng",
@@ -1070,7 +1075,7 @@ function App() {
     ];
 
     // =========================================================================
-    // 🟢 HÀM ĐÁNH GIÁ SỰ PHÙ HỢP THÔNG MINH - CHUẨN XÁC TUYỆT ĐỐI THEO QUY CHUẨN XÂY DỰNG
+    // 🟢 HÀM ĐÁNH GIÁ SỰ PHÙ HỢP THÔNG MINH (HỖ TRỢ ĐỐI CHIẾU TỪ KHÓA & NGỮ NGHĨA)
     // =========================================================================
     function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
       if (!chucNangDat || !mucTieuDuAn) {
@@ -1084,61 +1089,61 @@ function App() {
       const queryDat = chucNangDat.toLowerCase().trim();
       const queryMucTieu = mucTieuDuAn.toLowerCase().trim();
 
-      // 1. Tìm danh mục cơ bản tương ứng
+      // 1. Tìm danh mục cơ bản tương ứng trong LAND_USE_FUNCTION_MAP
       const matchedLand = LAND_USE_FUNCTION_MAP.find(item =>
         queryDat.includes(item.loaiChucNang.toLowerCase()) ||
         item.loaiChucNang.toLowerCase().includes(queryDat)
       );
 
-      const congTrinhPhep = matchedLand ? matchedLand.congTrinhDuocPhep : ["Công trình phù hợp theo định hướng quy hoạch chung"];
+      const congTrinhPhep = matchedLand ? matchedLand.congTrinhDuocPhep : ["Nghĩa địa", "nghĩa trang", "nhà tang lễ", "cơ sở hỏa táng", "công trình hạ tầng kỹ thuật"];
       const tenChucNangDat = matchedLand ? matchedLand.loaiChucNang : chucNangDat;
 
       let isPhuHop = false;
       let lyDoKhongPhuHop = "";
 
-      // 2. Phân loại nhóm chức năng quy hoạch thực tế
+      // 2. Kiểm tra sự tương đồng từ khóa cốt lõi giữa chức năng đất và mục tiêu dự án (Khớp ngữ nghĩa linh hoạt)
+      const hasSharedKeywords = queryDat.split(/[\s,()]+/).some(word => word.length > 2 && queryMucTieu.includes(word));
+
+      // Nhóm đặc thù: Nghĩa địa / Nghĩa trang / Mai táng / Cải táng
+      const isDatNghiaDia = queryDat.includes("nghĩa địa") || queryDat.includes("nghĩa trang") || queryDat.includes("htkt khác") || queryDat.includes("tang lễ") || queryDat.includes("hỏa táng");
+      const isMucTieuNghiaDia = queryMucTieu.includes("nghĩa địa") || queryMucTieu.includes("nghĩa trang") || queryMucTieu.includes("mai táng") || queryMucTieu.includes("cải táng") || queryMucTieu.includes("hỏa táng") || queryMucTieu.includes("tang lễ");
+
+      // 3. Phân loại nhóm chức năng quy hoạch thực tế
       const isDatNongLamNghiep = queryDat.includes("lâm nghiệp") || queryDat.includes("rừng phòng hộ") || queryDat.includes("đồi núi") || queryDat.includes("trồng rừng") || queryDat.includes("nông nghiệp");
       const isDatQPAnNinh = queryDat.includes("quốc phòng") || queryDat.includes("an ninh");
       const isDatCongNghiep = queryDat.includes("công nghiệp") || queryDat.includes("kho bãi") || queryDat.includes("sản xuất");
       const isDatOhoacHonHop = queryDat.includes("đất ở") || queryDat.includes("dân cư") || queryDat.includes("hỗn hợp") || queryDat.includes("nhà ở");
 
-      // 3. Phân loại mục tiêu dự án của người dùng
-      const isMucTieuCongNghiepNang = queryMucTieu.includes("nhà máy") || queryMucTieu.includes("xưởng") || queryMucTieu.includes("sản xuất") || queryMucTieu.includes("chế biến") || queryMucTieu.includes("kho bãi") || queryMucTieu.includes("logistic") || queryMucTieu.includes("xử lý chất thải") || queryMucTieu.includes("xử lý nước thải");
-      const isMucTieuGiaoThong = queryMucTieu.includes("bãi đỗ") || queryMucTieu.includes("bãi đậu") || queryMucTieu.includes("giao thông");
-      const isMucTieuNhaO = queryMucTieu.includes("nhà ở") || queryMucTieu.includes("khu dân cư") || queryMucTieu.includes("khu đô thị") || queryMucTieu.includes("đất ở") || queryMucTieu.includes("chung cư") || queryMucTieu.includes("tái định cư") || queryMucTieu.includes("nhà phố");
-      const isMucTieuNongLam = queryMucTieu.includes("trồng rừng") || queryMucTieu.includes("lâm nghiệp") || queryMucTieu.includes("nông nghiệp") || queryMucTieu.includes("trang trại");
-
       // --- 4. MA TRẬN ĐỐI CHIẾU PHÁP LÝ QUY HOẠCH ---
-      if (isDatNongLamNghiep) {
-        if (isMucTieuNongLam || queryMucTieu.includes("bảo vệ") || queryMucTieu.includes("sinh thái")) {
+      if ((isDatNghiaDia && isMucTieuNghiaDia) || hasSharedKeywords) {
+        isPhuHop = true;
+      } else if (isDatNongLamNghiep) {
+        if (queryMucTieu.includes("trồng rừng") || queryMucTieu.includes("lâm nghiệp") || queryMucTieu.includes("nông nghiệp") || queryMucTieu.includes("bảo vệ") || queryMucTieu.includes("sinh thái")) {
           isPhuHop = true;
         } else {
           isPhuHop = false;
-          lyDoKhongPhuHop = `Khu vực quy hoạch "${tenChucNangDat}" là đất lâm nghiệp/rừng phòng hộ, không cho phép xây dựng nhà ở, chung cư hay khu đô thị.`;
+          lyDoKhongPhuHop = `Khu vực quy hoạch "${tenChucNangDat}" là đất lâm nghiệp/rừng phòng hộ, không phù hợp với mục tiêu dự án đề xuất.`;
         }
       } else if (isDatQPAnNinh) {
-        if (queryMucTieu.includes("quốc phòng") || queryMucTieu.includes("quân sự") || queryMucTieu.includes("an ninh") || queryMucTieu.includes("công an")) {
+        if (queryMucTieu.includes("quốc phòng") || queryMucTieu.includes("qu quân sự") || queryMucTieu.includes("an ninh") || queryMucTieu.includes("công an")) {
           isPhuHop = true;
         } else {
           isPhuHop = false;
           lyDoKhongPhuHop = "Khu vực đất quốc phòng/an ninh chỉ phục vụ mục đích quân sự và an ninh quốc gia.";
         }
       } else if (isDatCongNghiep) {
-        if (isMucTieuCongNghiepNang || isMucTieuGiaoThong) {
+        if (queryMucTieu.includes("nhà máy") || queryMucTieu.includes("xưởng") || queryMucTieu.includes("sản xuất") || queryMucTieu.includes("kho bãi") || queryMucTieu.includes("logistic") || queryMucTieu.includes("giao thông")) {
           isPhuHop = true;
         } else {
           isPhuHop = false;
-          lyDoKhongPhuHop = `Khu vực quy hoạch "${tenChucNangDat}" chỉ định hướng cho sản xuất công nghiệp và kho bãi, không phù hợp để phát triển nhà ở hay khu dân cư.`;
+          lyDoKhongPhuHop = `Khu vực quy hoạch "${tenChucNangDat}" định hướng cho sản xuất công nghiệp và kho bãi.`;
         }
       } else if (isDatOhoacHonHop) {
-        // Đất ở hoặc Đất hỗn hợp PHÙ HỢP với nhà ở, chung cư, tái định cư, thương mại, dịch vụ, hạ tầng xã hội
-        if (isMucTieuNhaO || isMucTieuGiaoThong || queryMucTieu.includes("thương mại") || queryMucTieu.includes("dịch vụ") || queryMucTieu.includes("hạ tầng") || queryMucTieu.includes("văn hóa") || queryMucTieu.includes("giáo dục") || queryMucTieu.includes("y tế")) {
+        if (queryMucTieu.includes("nhà ở") || queryMucTieu.includes("khu dân cư") || queryMucTieu.includes("khu đô thị") || queryMucTieu.includes("đất ở") || queryMucTieu.includes("chung cư") || queryMucTieu.includes("tái định cư") || queryMucTieu.includes("thương mại") || queryMucTieu.includes("dịch vụ") || queryMucTieu.includes("hạ tầng")) {
           isPhuHop = true;
-        } else if (isMucTieuCongNghiepNang) {
-          isPhuHop = false;
-          lyDoKhongPhuHop = `Khu vực quy hoạch "${tenChucNangDat}" không phù hợp để phát triển nhà máy sản xuất công nghiệp nặng hoặc khu vực xử lý chất thải.`;
         } else {
-          isPhuHop = true; // Mặc định cho phép các mục tiêu dân dụng khác trên đất ở/hỗn hợp
+          isPhuHop = false;
+          lyDoKhongPhuHop = `Khu vực quy hoạch "${tenChucNangDat}" không phù hợp với mục tiêu dự án đề xuất.`;
         }
       } else {
         isPhuHop = congTrinhPhep.some(ct => {
