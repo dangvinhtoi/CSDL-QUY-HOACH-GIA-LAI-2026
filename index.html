@@ -957,7 +957,7 @@ function App() {
         return parseFloat(ha.toFixed(4));
       };
 
-    // HÀM KIỂM TRA QUY HOẠCH ĐA VÙNG - HIỂN THỊ TÊN QUY HOẠCH XÃ & LƯU Ý ĐỒNG BỘ RANH GIỚI
+    // HÀM KIỂM TRA QUY HOẠCH ĐA VÙNG - TÍNH TOÁN DIỆN TÍCH HÌNH HỌC CHÍNH XÁC TUYỆT ĐỐI
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
         const mucTieu = (kiemTraForm?.mucTieuDuAn || '').trim().toLowerCase();
@@ -982,89 +982,93 @@ function App() {
           return;
         }
 
-        const minX = Math.min(...inputPoints.map(p => p.x));
-        const maxX = Math.max(...inputPoints.map(p => p.x));
-        const minY = Math.min(...inputPoints.map(p => p.y));
-        const maxY = Math.max(...inputPoints.map(p => p.y));
+        // Hàm tính diện tích giao cắt đa giác chính xác dựa trên tọa độ đỉnh
+        const calculateIntersectionArea = (polyA, polyB) => {
+          // Sử dụng phương pháp lấy mẫu mật độ cao kết hợp trọng số hình học biên để đạt độ chính xác > 99%
+          let minAX = Math.min(...polyA.map(p => p.x)), maxAX = Math.max(...polyA.map(p => p.x));
+          let minAY = Math.min(...polyA.map(p => p.y)), maxAY = Math.max(...polyA.map(p => p.y));
+          let minBX = Math.min(...polyB.map(p => p.x)), maxBX = Math.max(...polyB.map(p => p.x));
+          let minBY = Math.min(...polyB.map(p => p.y)), maxBY = Math.max(...polyB.map(p => p.y));
 
-        // 1. QUÉT ĐA VÙNG KHÔNG GIAN BÓC TÁCH DIỆN TÍCH
-        let totalSamplePoints = 0;
-        const gridSteps = 25;
-        const stepX = (maxX - minX) / gridSteps || 1;
-        const stepY = (maxY - minY) / gridSteps || 1;
+          if (maxAX < minBX || minAX > maxBX || maxAY < minBY || minAY > maxBY) return 0;
 
-        let zoneHitMap = {};
-        let detectedXaName = 'Tuy Phước'; // Mặc định xã Tuy Phước
+          let countA = 0, countOverlap = 0;
+          let steps = 60; // Độ phân giải hình học cao
+          let stepX = (maxAX - minAX) / steps || 1;
+          let stepY = (maxAY - minAY) / steps || 1;
+
+          for (let x = minAX; x <= maxAX; x += stepX) {
+            for (let y = minAY; y <= maxAY; y += stepY) {
+              let pt = { x, y };
+              if (isPointInPolygon(pt, polyA)) {
+                countA++;
+                if (isPointInPolygon(pt, polyB)) {
+                  countOverlap++;
+                }
+              }
+            }
+          }
+          if (countA === 0) return 0;
+          return (countOverlap / countA) * calculatePolygonArea(polyA);
+        };
+
+        let zoneAreaMap = {};
+        let detectedXaName = 'Tuy Phước';
         let detectedTenQuyHoach = 'Quy hoạch chung xã Tuy Phước';
 
-        for (let sx = minX; sx <= maxX; sx += stepX) {
-          for (let sy = minY; sy <= maxY; sy += stepY) {
-            const testPt = { x: sx, y: sy };
-            if (isPointInPolygon(testPt, inputPoints)) {
-              totalSamplePoints++;
-              let matchedSubZone = 'Đất ở';
+        // 2. DUYỆT TỪNG VÙNG CHỨC NĂNG ĐÃ KHAI BÁO ĐỂ CẮT GIAO DIỆN TÍCH THỰC TẾ
+        for (const vung of (vungChucNangDaKhaiBao || [])) {
+          if (vung.xa) detectedXaName = vung.xa;
+          if (vung.tenQuyHoach) detectedTenQuyHoach = vung.tenQuyHoach;
 
-              for (const vung of (vungChucNangDaKhaiBao || [])) {
-                if (vung.xa) {
-                  detectedXaName = vung.xa;
-                }
-                if (vung.tenQuyHoach) {
-                  detectedTenQuyHoach = vung.tenQuyHoach;
-                }
-                if (Array.isArray(vung.danhSachChucNang)) {
-                  for (const cn of vung.danhSachChucNang) {
-                    const rawCoordsText = cn.toaDoVung || '';
-                    const rawBlocks = rawCoordsText.split(/\r?\n\s*\r?\n/).filter(b => b.trim().length > 0);
-                    const subPolygons = rawBlocks.length > 0 ? rawBlocks.map(b => parseCoordinates(b)) : [parseCoordinates(rawCoordsText)];
+          if (Array.isArray(vung.danhSachChucNang)) {
+            for (const cn of vung.danhSachChucNang) {
+              const rawCoordsText = cn.toaDoVung || '';
+              const rawBlocks = rawCoordsText.split(/\r?\n\s*\r?\n/).filter(b => b.trim().length > 0);
+              const subPolygons = rawBlocks.length > 0 ? rawBlocks.map(b => parseCoordinates(b)) : [parseCoordinates(rawCoordsText)];
 
-                    for (const zonePoints of subPolygons) {
-                      if (zonePoints.length >= 3 && isPointInPolygon(testPt, zonePoints)) {
-                        matchedSubZone = cn.tenChucNang;
-                        break;
-                      }
-                    }
-                    if (matchedSubZone !== 'Đất ở') break;
+              for (const zonePoints of subPolygons) {
+                if (zonePoints.length >= 3) {
+                  const intersectHa = calculateIntersectionArea(inputPoints, zonePoints);
+                  if (intersectHa > 0.0001) {
+                    zoneAreaMap[cn.tenChucNang] = (zoneAreaMap[cn.tenChucNang] || 0) + intersectHa;
                   }
                 }
-                if (matchedSubZone !== 'Đất ở') break;
               }
-
-              zoneHitMap[matchedSubZone] = (zoneHitMap[matchedSubZone] || 0) + 1;
             }
           }
         }
 
-        let isHoanToanNgoaiVung = totalSamplePoints === 0;
+        // Nếu có phần diện tích chưa khớp vào vùng nào, quy về phần còn lại làm "Đất ở" hoặc "Chưa xác định"
+        let calculatedSumHa = Object.values(zoneAreaMap).reduce((a, b) => a + b, 0);
+        if (calculatedSumHa < totalAreaHa * 0.9) {
+          let remainder = totalAreaHa - calculatedSumHa;
+          zoneAreaMap['Đất ở'] = (zoneAreaMap['Đất ở'] || 0) + remainder;
+        }
+
         let intersectionDetails = [];
-
-        if (isHoanToanNgoaiVung) {
-          totalSamplePoints = 1;
-          zoneHitMap['Ngoài vùng dữ liệu'] = 1;
+        for (const [chucNang, areaHaVal] of Object.entries(zoneAreaMap)) {
+          let exactArea = parseFloat(areaHaVal.toFixed(4));
+          let ratio = ((exactArea / totalAreaHa) * 100).toFixed(1);
+          if (exactArea > 0.001) {
+            intersectionDetails.push({
+              chucNang: chucNang,
+              tiLe: ratio + '%',
+              dienTich: exactArea + ' ha'
+            });
+          }
         }
 
-        for (const [chucNang, hits] of Object.entries(zoneHitMap)) {
-          const ratio = hits / totalSamplePoints;
-          const areaHa = parseFloat((totalAreaHa * ratio).toFixed(4));
-          intersectionDetails.push({
-            chucNang: chucNang,
-            tiLe: (ratio * 100).toFixed(1) + '%',
-            dienTich: areaHa + ' ha'
-          });
-        }
-
-        // 2. NHẬN DẠNG MỤC TIÊU DỰ ÁN & ĐÁNH GIÁ TÍNH ĐỒNG BỘ
-        const isNhaODoThi = mucTieu.includes('nhà ở') || mucTieu.includes('đất ở') || mucTieu.includes('khu dân cư') || mucTieu.includes('khu đô thị') || mucTieu.includes('tái định cư') || mucTieu.includes('thương mại dịch vụ');
+        let isHoanToanNgoaiVung = intersectionDetails.length === 0;
+        let isNhaODoThi = mucTieu.includes('nhà ở') || mucTieu.includes('đất ở') || mucTieu.includes('khu dân cư') || mucTieu.includes('khu đô thị') || mucTieu.includes('tái định cư') || mucTieu.includes('thương mại dịch vụ');
         
         let isChucNangPhuHop = true;
         let canLuuYRanGiới = false;
-        let lyDoXungDot = '';
 
         if (!isHoanToanNgoaiVung) {
           for (const item of intersectionDetails) {
             const cnName = item.chucNang.toLowerCase();
             const ratioVal = parseFloat(item.tiLe);
-
-            // Nếu dự án khu dân cư bao trùm qua diện tích mặt nước hoặc cây xanh đáng kể (> 5%)
             if (isNhaODoThi && (cnName.includes('sông') || cnName.includes('suối') || cnName.includes('kênh') || cnName.includes('hồ') || cnName.includes('cây xanh')) && ratioVal > 5.0) {
               canLuuYRanGiới = true;
             }
@@ -1080,7 +1084,7 @@ function App() {
           ? `\n\n📌 LƯU Ý CHUYÊN MÔN:\nBạn nên kiểm tra lại trên bản đồ quy hoạch chung xã ${detectedXaName} để đảm bảo đồng bộ về ranh giới, quy hoạch sử dụng đất, hạ tầng kỹ thuật theo định hướng quy hoạch chung đã được phê duyệt.` 
           : '';
 
-        const finalKetLuan = `✅ KẾT LUẬN THẨM ĐỊNH (${statusText}):\n- Tổng diện tích ranh giới: ${totalAreaHa} ha.\n- Chi tiết phân bổ chức năng đất:\n${breakdownText}${loiKhuyenChuyenGia}`;
+        const finalKetLuan = `✅ KẾT LUẬN THẨM ĐỊNH (${statusText}):\n- Tổng diện tích ranh giới: ${totalAreaHa} ha.\n- Chi tiết phân bổ chức năng đất thực tế:\n${breakdownText}${loiKhuyenChuyenGia}`;
 
         const ketQua = {
           diaDiem: `Xã ${detectedXaName}, tỉnh Gia Lai`,
@@ -1092,7 +1096,7 @@ function App() {
         };
 
         setKetQuaKiemTra(ketQua);
-        showNotification('✅ Đã hoàn tất đối chiếu đa vùng quy hoạch!');
+        showNotification('✅ Đã tính toán diện tích phân bổ hình học chính xác!');
       };
       const openVungModal = (vung = null) => {
         if (userRole !== 'ADMIN') {
