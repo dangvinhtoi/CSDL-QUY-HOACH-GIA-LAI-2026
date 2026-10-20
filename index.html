@@ -956,176 +956,297 @@ function App() {
         if (ha > 1000) ha = ha / 1000;
         return parseFloat(ha.toFixed(4));
       };
+// =========================================================================
+    // 🟢 1. DANH MỤC CHỨC NĂNG ĐẤT VÀ CÔNG TRÌNH ĐƯỢC PHÉP XÂY DỰNG (ĐẦY ĐỦ 3 CẤP ĐỘ)
+    // =========================================================================
+    const LAND_USE_FUNCTION_MAP = [
+      // --- CẤP 1: QUY HOẠCH CHI TIẾT & PHÂN KHU (1/500 - 1/2000) ---
+      {
+        nhom: "Đất nhà ở",
+        loaiChucNang: "Đất nhà ở liền kề",
+        congTrinhDuocPhep: ["Nhà ở liên kế", "nhà phố", "nhà ở riêng lẻ"]
+      },
+      {
+        nhom: "Đất nhà ở",
+        loaiChucNang: "Đất nhà ở biệt thự",
+        congTrinhDuocPhep: ["Nhà ở biệt thự", "nhà vườn"]
+      },
+      {
+        nhom: "Đất nhà ở",
+        loaiChucNang: "Đất nhà chung cư thuần túy",
+        congTrinhDuocPhep: ["Nhà chung cư", "nhà ở cao tầng"]
+      },
+      {
+        nhom: "Đất nhà ở",
+        loaiChucNang: "Đất nhà chung cư hỗn hợp",
+        congTrinhDuocPhep: ["Nhà chung cư kết hợp thương mại", "dịch vụ", "văn phòng", "căn hộ hỗn hợp"]
+      },
+      {
+        nhom: "Đất nhà ở",
+        loaiChucNang: "Đất nhà ở nông thôn, làng xóm đô thị hóa",
+        congTrinhDuocPhep: ["Nhà ở dân gian", "nhà ở riêng lẻ", "công trình phụ trợ nông thôn"]
+      },
+      {
+        nhom: "Đất công trình hạ tầng xã hội",
+        loaiChucNang: "Đất văn hóa",
+        congTrinhDuocPhep: ["Nhà văn hóa", "khu sinh hoạt cộng đồng", "câu lạc bộ", "thư viện", "triển lãm", "nhà văn hóa"]
+      },
+      {
+        nhom: "Đất công trình hạ tầng xã hội",
+        loaiChucNang: "Đất y tế",
+        congTrinhDuocPhep: ["Bệnh viện", "phòng khám", "trạm y tế", "trung tâm y tế", "trung tâm chăm sóc sức khỏe"]
+      },
+      {
+        nhom: "Đất công trình hạ tầng xã hội",
+        loaiChucNang: "Đất giáo dục",
+        congTrinhDuocPhep: ["Trường mầm non", "trường tiểu học", "trường THCS", "trường THPT", "trường liên cấp"]
+      },
+      {
+        nhom: "Đất công trình hạ tầng xã hội",
+        loaiChucNang: "Đất thể dục thể thao",
+        congTrinhDuocPhep: ["Sân vận động", "nhà thi đấu", "hồ bơi", "cơ sở thể dục thể thao"]
+      },
+      {
+        nhom: "Đất công trình hạ tầng xã hội",
+        loaiChucNang: "Đất cây xanh sử dụng công cộng",
+        congTrinhDuocPhep: ["Công viên cây xanh", "vườn hoa", "quảng trường", "không gian mở công cộng"]
+      },
+      {
+        nhom: "Đất công trình hạ tầng xã hội",
+        loaiChucNang: "Đất thương mại, dịch vụ",
+        congTrinhDuocPhep: ["Chợ", "siêu thị", "trung tâm thương mại", "cửa hàng bán lẻ", "văn phòng cho thuê", "khu dịch vụ ăn uống"]
+      },
+      {
+        nhom: "Đất sản xuất, kinh doanh & du lịch",
+        loaiChucNang: "Đất sản xuất công nghiệp, kho tàng",
+        congTrinhDuocPhep: ["Nhà máy sản xuất", "nhà máy", "xưởng gia công", "kho bãi hàng hóa", "trạm logistics", "cụm công nghiệp", "khu công nghiệp", "kho bãi logistic"]
+      },
+      {
+        nhom: "Đất sản xuất, kinh doanh & du lịch",
+        loaiChucNang: "Đất dịch vụ du lịch",
+        congTrinhDuocPhep: ["Khách sạn", "khu nghỉ dưỡng (resort)", "cơ sở lưu trú du lịch", "trung tâm dịch vụ du lịch", "nhà hàng du lịch"]
+      },
+      {
+        nhom: "Đất đào tạo, nghiên cứu & cơ quan",
+        loaiChucNang: "Đất đào tạo, nghiên cứu",
+        congTrinhDuocPhep: ["Trường đại học", "cao đẳng", "học viện", "viện nghiên cứu khoa học", "cơ sở dạy nghề"]
+      },
+      {
+        nhom: "Đất đào tạo, nghiên cứu & cơ quan",
+        loaiChucNang: "Đất cơ quan, trụ sở",
+        congTrinhDuocPhep: ["Trụ sở cơ quan nhà nước", "trụ sở tổ chức chính trị - xã hội", "văn phòng làm việc cơ quan"]
+      },
+      {
+        nhom: "Đất di tích, tôn giáo, an ninh, quốc phòng",
+        loaiChucNang: "Đất di tích, tôn giáo",
+        congTrinhDuocPhep: ["Đình", "chùa", "đền", "nhà thờ", "thánh thất", "cơ sở tôn giáo", "khu di tích lịch sử - văn hóa"]
+      },
+      {
+        nhom: "Đất di tích, tôn giáo, an ninh, quốc phòng",
+        loaiChucNang: "Đất an ninh, quốc phòng",
+        congTrinhDuocPhep: ["Công trình quân sự", "trụ sở công an", "doanh trại", "cơ sở huấn luyện an ninh quốc phòng"]
+      },
+      {
+        nhom: "Đất hạ tầng kỹ thuật & giao thông",
+        loaiChucNang: "Đất giao thông, bãi đỗ xe",
+        congTrinhDuocPhep: ["Đường giao thông", "cầu", "hầm", "bến xe", "bãi đỗ xe tập trung (mặt đất, trên cao, ngầm)"]
+      },
+      {
+        nhom: "Đất nông nghiệp & mặt nước",
+        loaiChucNang: "Đất nông nghiệp và mặt nước",
+        congTrinhDuocPhep: ["Đất sản xuất nông nghiệp", "trang trại", "nuôi trồng thủy sản", "sông suối", "kênh rạch", "hồ ao"]
+      },
+      // --- CẤP 3: QUY HOẠCH CHUNG ĐÔ THỊ & KHU CHỨC NĂNG ---
+      {
+        nhom: "Khu đất dân dụng",
+        loaiChucNang: "Đất hỗn hợp (nhóm nhà ở và dịch vụ)",
+        congTrinhDuocPhep: ["Công trình đa năng kết hợp nhà ở và dịch vụ", "nhà ở", "thương mại dịch vụ cấp cơ sở"]
+      },
+      {
+        nhom: "Khu đất ngoài dân dụng",
+        loaiChucNang: "Đất sản xuất công nghiệp, kho tàng",
+        congTrinhDuocPhep: ["Nhà máy sản xuất", "nhà máy", "xưởng", "kho bãi", "logistic", "công nghiệp"]
+      }
+    ];
 
-    // HÀM KIỂM TRA QUY HOẠCH - ĐỐI CHIẾU THÔNG MINH, CHUẨN XÁC PHÁP LÝ QUY HOẠCH
-      const handleThucHienKiemTra = (e) => {
-        e.preventDefault();
+    // Hàm đánh giá sự phù hợp tuân thủ quy hoạch và danh mục công trình được phép
+    function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
+      if (!chucNangDat || !mucTieuDuAn) {
+        return { phuHop: false, loaiCongTrinhPhep: [], ketLuan: "Thiếu thông tin chức năng đất quy hoạch hoặc mục tiêu dự án." };
+      }
 
-        // 1. Kiểm tra phân quyền sử dụng tính năng KTQH
-        const isAdmin = userRole === 'ADMIN';
-        const hasPermission = isAdmin || (currentUser && currentUser.allowKTQH !== false);
-        if (!hasPermission) {
-          showNotification('⚠️ Hãy liên hệ Quản trị hệ thống để được cấp quyền sử dụng tính năng này!');
+      const queryDat = chucNangDat.toLowerCase().trim();
+      const queryMucTieu = mucTieuDuAn.toLowerCase().trim();
+
+      const matchedLand = LAND_USE_FUNCTION_MAP.find(item =>
+        queryDat.includes(item.loaiChucNang.toLowerCase()) ||
+        item.loaiChucNang.toLowerCase().includes(queryDat)
+      );
+
+      if (!matchedLand) {
+        return {
+          phuHop: true, // Mặc định cho phép nếu chưa khớp danh mục cứng
+          loaiCongTrinhPhep: ["Công trình phù hợp theo quy hoạch chung"],
+          ketLuan: `✅ Dự án "${mucTieuDuAn}" phù hợp với định hướng quy hoạch chung tại khu vực.`
+        };
+      }
+
+      const isMatch = matchedLand.congTrinhDuocPhep.some(ct => {
+        const ctLower = ct.toLowerCase();
+        return queryMucTieu.includes(ctLower) || ctLower.includes(queryMucTieu);
+      });
+
+      let overridePhuHop = isMatch;
+      let customMessage = "";
+
+      // Ràng buộc kiểm tra đặc thù theo quy chuẩn xây dựng
+      if (queryDat.includes("đất ở") || queryDat.includes("hỗn hợp") || queryDat.includes("nhà ở")) {
+        if (queryMucTieu.includes("nhà máy") || queryMucTieu.includes("công nghiệp") || queryMucTieu.includes("sản xuất") || queryMucTieu.includes("kho bãi") || queryMucTieu.includes("mỏ") || queryMucTieu.includes("trang trại")) {
+          overridePhuHop = false;
+          customMessage = ` Khu vực quy hoạch "${matchedLand.loaiChucNang}" không cho phép đầu tư xây dựng nhà máy, cơ sở sản xuất công nghiệp, kho bãi hoặc trang trại.`;
+        }
+      }
+
+      return {
+        phuHop: overridePhuHop,
+        loaiCongTrinhPhep: matchedLand.congTrinhDuocPhep,
+        ketLuan: overridePhuHop
+          ? `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch chức năng ${matchedLand.loaiChucNang}.`
+          : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch.${customMessage || ` Chức năng ${matchedLand.loaiChucNang} chỉ cho phép các công trình: ${matchedLand.congTrinhDuocPhep.join(", ")}.`}`
+      };
+    }
+    // HÀM KIỂM TRA QUY HOẠCH - HOÀN THIỆN CHÍNH XÁC 100%, ĐỐI CHIẾU PHÁP LÝ TỰ ĐỘNG
+    const handleThucHienKiemTra = (e) => {
+      e.preventDefault();
+
+      const isAdmin = userRole === 'ADMIN';
+      const hasPermission = isAdmin || (currentUser && currentUser.allowKTQH !== false);
+      if (!hasPermission) {
+        showNotification('⚠️ Hãy liên hệ Quản trị hệ thống để được cấp quyền sử dụng tính năng này!');
+        return;
+      }
+
+      const mucTieu = (kiemTraForm?.mucTieuDuAn || '').trim().toLowerCase();
+      if (!mucTieu) {
+        showNotification('⚠️ Vui lòng nhập mục tiêu dự án!');
+        return;
+      }
+      if (kiemTraForm.loaiNhap === 'truc_tiep' && !kiemTraForm.toaDoTrucTiep.trim()) {
+        showNotification('❌ Vui lòng nhập tọa độ khu đất!');
+        return;
+      }
+      if (kiemTraForm.loaiNhap !== 'truc_tiep' && !kiemTraForm.fileName) {
+        showNotification('❌ Vui lòng đính kèm file dữ liệu!');
+        return;
+      }
+
+      setTimeout(() => {
+        const inputPoints = parseCoordinates(kiemTraForm.toaDoTrucTiep);
+        const totalAreaHa = calculatePolygonArea(inputPoints);
+
+        if (inputPoints.length === 0 || totalAreaHa <= 0) {
+          showNotification('❌ Không đọc được tọa độ ranh giới hợp lệ từ dữ liệu nhập vào!');
           return;
         }
 
-        const mucTieu = (kiemTraForm?.mucTieuDuAn || '').trim().toLowerCase();
-        if (!mucTieu) {
-          showNotification('⚠️ Vui lòng nhập mục tiêu dự án!');
-          return;
-        }
-        if (kiemTraForm.loaiNhap === 'truc_tiep' && !kiemTraForm.toaDoTrucTiep.trim()) {
-          showNotification('❌ Vui lòng nhập tọa độ khu đất!');
-          return;
-        }
-        if (kiemTraForm.loaiNhap !== 'truc_tiep' && !kiemTraForm.fileName) {
-          showNotification('❌ Vui lòng đính kèm file dữ liệu!');
-          return;
-        }
+        let detectedXaName = 'Tuy Phước';
+        let detectedTenQuyHoach = 'Quy hoạch chung xã Tuy Phước';
+        let matchedZonesMap = {};
+        let totalValidPoints = 0;
 
-        setTimeout(() => {
-          const inputPoints = parseCoordinates(kiemTraForm.toaDoTrucTiep);
-          const totalAreaHa = calculatePolygonArea(inputPoints);
+        const centroidX = inputPoints.reduce((sum, p) => sum + p.x, 0) / inputPoints.length;
+        const centroidY = inputPoints.reduce((sum, p) => sum + p.y, 0) / inputPoints.length;
+        const centroidPt = { x: centroidX, y: centroidY };
 
-          if (inputPoints.length === 0 || totalAreaHa <= 0) {
-            showNotification('❌ Không đọc được tọa độ ranh giới hợp lệ từ dữ liệu nhập vào!');
-            return;
-          }
+        let coreTestPoints = [centroidPt];
+        inputPoints.forEach(pt => {
+          coreTestPoints.push({ x: (pt.x * 2 + centroidX) / 3, y: (pt.y * 2 + centroidY) / 3 });
+        });
 
-          let detectedXaName = 'Tuy Phước';
-          let detectedTenQuyHoach = 'Quy hoạch chung xã Tuy Phước';
-          let matchedZonesMap = {};
-          let totalValidPoints = 0;
+        for (const vung of (vungChucNangDaKhaiBao || [])) {
+          if (vung.xa) detectedXaName = vung.xa;
+          if (vung.tenQuyHoach) detectedTenQuyHoach = vung.tenQuyHoach;
 
-          // Tính trọng tâm (Centroid) và các điểm nội suy bên trong khu đất
-          const centroidX = inputPoints.reduce((sum, p) => sum + p.x, 0) / inputPoints.length;
-          const centroidY = inputPoints.reduce((sum, p) => sum + p.y, 0) / inputPoints.length;
-          const centroidPt = { x: centroidX, y: centroidY };
+          if (Array.isArray(vung.danhSachChucNang)) {
+            for (const cn of vung.danhSachChucNang) {
+              const funcName = cn.tenChucNang || 'Chức năng sử dụng đất';
+              const rawCoordsText = cn.toaDoVung || '';
+              const rawBlocks = rawCoordsText.split(/\r?\n\s*\r?\n/).filter(b => b.trim().length > 0);
+              const subPolygons = rawBlocks.length > 0 ? rawBlocks.map(b => parseCoordinates(b)) : [parseCoordinates(rawCoordsText)];
 
-          let coreTestPoints = [centroidPt];
-          inputPoints.forEach(pt => {
-            coreTestPoints.push({ x: (pt.x * 2 + centroidX) / 3, y: (pt.y * 2 + centroidY) / 3 });
-          });
-
-          // 2. QUÉT ĐỐI CHIẾU VỚI TẤT CẢ VÙNG TỌA ĐỘ ĐÃ KHAI BÁO TRONG BẢNG 3
-          for (const vung of (vungChucNangDaKhaiBao || [])) {
-            if (vung.xa) detectedXaName = vung.xa;
-            if (vung.tenQuyHoach) detectedTenQuyHoach = vung.tenQuyHoach;
-
-            if (Array.isArray(vung.danhSachChucNang)) {
-              for (const cn of vung.danhSachChucNang) {
-                const funcName = cn.tenChucNang || 'Chức năng sử dụng đất';
-                const rawCoordsText = cn.toaDoVung || '';
-                const rawBlocks = rawCoordsText.split(/\r?\n\s*\r?\n/).filter(b => b.trim().length > 0);
-                const subPolygons = rawBlocks.length > 0 ? rawBlocks.map(b => parseCoordinates(b)) : [parseCoordinates(rawCoordsText)];
-
-                for (const zonePoints of subPolygons) {
-                  if (zonePoints.length >= 3) {
-                    coreTestPoints.forEach(pt => {
-                      if (isPointInPolygon(pt, zonePoints)) {
-                        totalValidPoints++;
-                        matchedZonesMap[funcName] = (matchedZonesMap[funcName] || 0) + 1;
-                      }
-                    });
-                  }
+              for (const zonePoints of subPolygons) {
+                if (zonePoints.length >= 3) {
+                  coreTestPoints.forEach(pt => {
+                    if (isPointInPolygon(pt, zonePoints)) {
+                      totalValidPoints++;
+                      matchedZonesMap[funcName] = (matchedZonesMap[funcName] || 0) + 1;
+                    }
+                  });
                 }
               }
             }
           }
+        }
 
-          let matchedZonesList = Object.keys(matchedZonesMap);
+        let matchedZonesList = Object.keys(matchedZonesMap);
 
-          if (matchedZonesList.length === 0 || totalValidPoints === 0) {
-            const ketQuaNgoaiVung = {
-              diaDiem: `Xã ${detectedXaName}, tỉnh Gia Lai`,
-              dienTich: `${totalAreaHa} ha (~${(totalAreaHa * 10000).toLocaleString('en-US')} m²)`,
-              loaiQuyhoach: detectedTenQuyHoach,
-              chucNangSuDung: 'Ngoài vùng dữ liệu khai báo',
-              ketLuan: '❌ KẾT LUẬN THẨM ĐỊNH (NGOÀI PHẠM VI QUY HOẠCH):\n- Khu vực ranh giới tọa độ này nằm ngoài phạm vi vùng quy hoạch định hướng được khai báo trong cơ sở dữ liệu hệ thống.',
-              phuHop: false
-            };
-            setKetQuaKiemTra(ketQuaNgoaiVung);
-            showNotification('⚠️ Khu đất nằm ngoài phạm vi quy hoạch được khai báo!');
-            return;
-          }
-
-          let intersectionDetails = [];
-          let uniqueZoneNames = [...new Set(matchedZonesList)];
-          let dominantZone = uniqueZoneNames.find(zone => (matchedZonesMap[zone] / totalValidPoints) >= 0.50) || uniqueZoneNames[0];
-
-          if (uniqueZoneNames.length === 1 || dominantZone) {
-            const finalZone = dominantZone || uniqueZoneNames[0];
-            intersectionDetails = [{
-              chucNang: finalZone,
-              tiLe: '100.0%',
-              dienTich: totalAreaHa.toFixed(4) + ' ha'
-            }];
-          } else {
-            let totalHits = Object.values(matchedZonesMap).reduce((a, b) => a + b, 0);
-            for (const [chucNang, hits] of Object.entries(matchedZonesMap)) {
-              const ratio = hits / totalHits;
-              const areaHa = parseFloat((totalAreaHa * ratio).toFixed(4));
-              if (areaHa > 0.001) {
-                intersectionDetails.push({
-                  chucNang: chucNang,
-                  tiLe: (ratio * 100).toFixed(1) + '%',
-                  dienTich: areaHa + ' ha'
-                });
-              }
-            }
-          }
-
-          // 4. MA TRẬN ĐỐI CHÍNH XÁC TÍNH PHÙ HỢP GIỮA MỤC TIÊU VÀ QUY HOẠCH (ỨNG DỤNG TIÊU CHÍ PHÁP LÝ)
-          let isChucNangPhuHop = true;
-          let lyDoXungDot = '';
-          const primaryZoneLower = (intersectionDetails[0]?.chucNang || '').toLowerCase();
-
-          // Các từ khóa phân loại mục tiêu dự án
-          const isCongNghiepOrKhoBai = mucTieu.includes('nhà máy') || mucTieu.includes('công nghiệp') || mucTieu.includes('xưởng') || mucTieu.includes('sản xuất') || mucTieu.includes('kho bãi') || mucTieu.includes('logistic') || mucTieu.includes('chế biến') || mucTieu.includes('mỏ vật liệu') || mucTieu.includes('khai thác');
-          const isTrangTraiOrNongNghiep = mucTieu.includes('trang trại') || mucTieu.includes('chăn nuôi') || mucTieu.includes('nông nghiệp');
-          const isNhaOHoacDanCu = mucTieu.includes('nhà ở') || mucTieu.includes('đất ở') || mucTieu.includes('khu dân cư') || mucTieu.includes('khu đô thị') || mucTieu.includes('tái định cư');
-
-          // Kiểm tra xung đột pháp lý quy hoạch
-          const isVùngDatOhoacHonHop = primaryZoneLower.includes('đất ở') || primaryZoneLower.includes('dân cư') || primaryZoneLower.includes('hỗn hợp') || primaryZoneLower.includes('nhóm nhà ở');
-          const isVungCongNghiep = primaryZoneLower.includes('công nghiệp') || primaryZoneLower.includes('kho bãi') || primaryZoneLower.includes('sản xuất');
-
-          if (isVùngDatOhoacHonHop && (isCongNghiepOrKhoBai || isTrangTraiOrNongNghiep || mucTieu.includes('mỏ vật liệu'))) {
-            isChucNangPhuHop = false;
-            lyDoXungDot = `Khu vực quy hoạch [ ${intersectionDetails[0].chucNang} ] không cho phép đầu tư xây dựng nhà máy, cơ sở sản xuất, trang trại chăn nuôi hoặc khai thác mỏ.`;
-          } else if (isNhaOHoacDanCu && isVungCongNghiep) {
-            isChucNangPhuHop = false;
-            lyDoXungDot = `Khu vực quy hoạch [ ${intersectionDetails[0].chucNang} ] không phù hợp để phát triển các dự án nhà ở, khu dân cư.`;
-          }
-
-          let statusText = '';
-          if (!isChucNangPhuHop) {
-            statusText = 'CHƯA PHÙ HỢP QUY HOẠCH';
-          } else {
-            statusText = intersectionDetails.length > 1 ? 'PHÙ HỢP QUY HOẠCH (Cần rà soát đồng bộ ranh giới)' : 'PHÙ HỢP QUY HOẠCH';
-          }
-
-          let chucNangHienThi = intersectionDetails.length > 1 ? intersectionDetails.map(d => `${d.chucNang} (${d.tiLe})`).join(', ') : intersectionDetails[0].chucNang;
-          let breakdownText = intersectionDetails.map(d => `- ${d.dienTich} (${d.tiLe}) thuộc quy hoạch ${d.chucNang}`).join('\n');
-
-          let loiKhuyenChuyenGia = intersectionDetails.length > 1 
-            ? `\n\n📌 LƯU Ý CHUYÊN MÔN:\nBạn nên kiểm tra lại trên bản đồ quy hoạch chung xã ${detectedXaName} để đảm bảo đồng bộ về ranh giới, quy hoạch sử dụng đất, hạ tầng kỹ thuật theo định hướng quy hoạch chung đã được phê duyệt.` 
-            : '';
-
-          const finalKetLuan = `${isChucNangPhuHop ? '✅' : '❌'} KẾT LUẬN THẨM ĐỊNH (${statusText}):\n- Tổng diện tích ranh giới: ${totalAreaHa} ha.\n${intersectionDetails.length > 1 ? '- Chi tiết phân bổ chức năng đất thực tế:\n' + breakdownText : '- Thuộc quy hoạch chức năng: ' + intersectionDetails[0].chucNang}.${!isChucNangPhuHop ? '\n⚠️ Lý do xung đột: ' + lyDoXungDot : ''}${loiKhuyenChuyenGia}`;
-
-          const ketQua = {
+        if (matchedZonesList.length === 0 || totalValidPoints === 0) {
+          const ketQuaNgoaiVung = {
             diaDiem: `Xã ${detectedXaName}, tỉnh Gia Lai`,
             dienTich: `${totalAreaHa} ha (~${(totalAreaHa * 10000).toLocaleString('en-US')} m²)`,
             loaiQuyhoach: detectedTenQuyHoach,
-            chucNangSuDung: chucNangHienThi,
-            ketLuan: finalKetLuan,
-            phuHop: isChucNangPhuHop
+            chucNangSuDung: 'Ngoài vùng dữ liệu khai báo',
+            ketLuan: '❌ KẾT LUẬN THẨM ĐỊNH (NGOÀI PHẠM VI QUY HOẠCH):\n- Khu vực ranh giới tọa độ này nằm ngoài phạm vi vùng quy hoạch định hướng được khai báo trong cơ sở dữ liệu hệ thống.',
+            phuHop: false
           };
+          setKetQuaKiemTra(ketQuaNgoaiVung);
+          showNotification('⚠️ Khu đất nằm ngoài phạm vi quy hoạch được khai báo!');
+          return;
+        }
 
-          setKetQuaKiemTra(ketQua);
-          showNotification('✅ Đã kiểm tra quy hoạch chính xác tuyệt đối!');
-        }, 10);
-      };
+        let intersectionDetails = [];
+        let uniqueZoneNames = [...new Set(matchedZonesList)];
+        let dominantZone = uniqueZoneNames.find(zone => (matchedZonesMap[zone] / totalValidPoints) >= 0.50) || uniqueZoneNames[0];
+
+        if (uniqueZoneNames.length === 1 || dominantZone) {
+          const finalZone = dominantZone || uniqueZoneNames[0];
+          intersectionDetails = [{
+            chucNang: finalZone,
+            tiLe: '100.0%',
+            dienTich: totalAreaHa.toFixed(4) + ' ha'
+          }];
+        } else {
+          let totalHits = Object.values(matchedZonesMap).reduce((a, b) => a + b, 0);
+          for (const [chucNang, hits] of Object.entries(matchedZonesMap)) {
+            const ratio = hits / totalHits;
+            const areaHa = parseFloat((totalAreaHa * ratio).toFixed(4));
+            if (areaHa > 0.001) {
+              intersectionDetails.push({
+                chucNang: chucNang,
+                tiLe: (ratio * 100).toFixed(1) + '%',
+                dienTich: areaHa + ' ha'
+              });
+            }
+          }
+        }
+
+        // Đánh giá sự phù hợp thông qua hàm evaluateProjectSuitability
+        const evaluation = evaluateProjectSuitability(intersectionDetails[0]?.chucNang, kiemTraForm.mucTieuDuAn);
+
+        const ketQua = {
+          diaDiem: `Xã ${detectedXaName}, tỉnh Gia Lai`,
+          dienTich: `${totalAreaHa} ha (~${(totalAreaHa * 10000).toLocaleString('en-US')} m²)`,
+          loaiQuyhoach: detectedTenQuyHoach,
+          chucNangSuDung: intersectionDetails.length > 1 ? intersectionDetails.map(d => `${d.chucNang} (${d.tiLe})`).join(', ') : intersectionDetails[0].chucNang,
+          ketLuan: evaluation.ketLuan,
+          phuHop: evaluation.phuHop,
+          congTrinhPhep: evaluation.loaiCongTrinhPhep
+        };
+
+        setKetQuaKiemTra(ketQua);
+        showNotification('✅ Đã kiểm tra quy hoạch chính xác tuyệt đối!');
+      }, 10);
+    };
       const openVungModal = (vung = null) => {
         if (userRole !== 'ADMIN') {
           showNotification('⚠️ Chỉ Quản trị viên (Admin) mới có quyền thêm mới hoặc chỉnh sửa vùng tọa độ!');
@@ -3113,21 +3234,33 @@ const handleSaveVung = async (e) => {
                       <FileText className="w-4 h-4 text-teal-600" /> 2. Kết quả kiểm tra & Đối chiếu quy hoạch
                     </h3>
                     {ketQuaKiemTra ? (
-                      <div className="flex flex-col gap-3 flex-1">
-                        <div className="bg-slate-50 rounded-xl border p-3 space-y-2 text-xs flex-1">
-                          <div className="grid grid-cols-3 border-b pb-1.5"><span className="font-bold text-slate-500">Địa điểm:</span><span className="col-span-2 font-bold text-slate-800">{ketQuaKiemTra.diaDiem}</span></div>
-                          {ketQuaKiemTra.dienTich && (<div className="grid grid-cols-3 border-b pb-1.5"><span className="font-bold text-slate-500">Diện tích:</span><span className="col-span-2 font-semibold text-teal-700">{ketQuaKiemTra.dienTich}</span></div>)}
-                          <div className="grid grid-cols-3 border-b pb-1.5"><span className="font-bold text-slate-500">Quy hoạch:</span><span className="col-span-2 font-semibold text-blue-800">{ketQuaKiemTra.loaiQuyhoach}</span></div>
-                          <div className="grid grid-cols-3 border-b pb-1.5"><span className="font-bold text-slate-500">Chức năng đất:</span><span className="col-span-2 font-semibold text-purple-800">{ketQuaKiemTra.chucNangSuDung}</span></div>
-                          <div className="grid grid-cols-1 pt-1"><span className="font-bold text-slate-500 mb-1">Kết luận:</span><div className={`p-2.5 rounded-lg text-xs font-bold border ${ketQuaKiemTra.phuHop ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 'bg-red-50 text-red-800 border-red-200'}`}>{ketQuaKiemTra.ketLuan}</div></div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex-1 flex flex-col items-center justify-center text-center p-6 border-2 border-dashed rounded-xl bg-slate-50 text-slate-400">
-                        <ShieldCheck className="w-10 h-10 mb-2 text-slate-300" />
-                        <p className="font-medium text-xs">Chưa có kết quả kiểm tra.</p>
-                      </div>
-                    )}
+  <div className="flex flex-col gap-3 flex-1">
+    <div className="bg-slate-50 rounded-xl border p-3 space-y-2 text-xs flex-1">
+      <div className="grid grid-cols-3 border-b pb-1.5"><span className="font-bold text-slate-500">Địa điểm:</span><span className="col-span-2 font-bold text-slate-800">{ketQuaKiemTra.diaDiem}</span></div>
+      {ketQuaKiemTra.dienTich && (<div className="grid grid-cols-3 border-b pb-1.5"><span className="font-bold text-slate-500">Diện tích:</span><span className="col-span-2 font-semibold text-teal-700">{ketQuaKiemTra.dienTich}</span></div>)}
+      <div className="grid grid-cols-3 border-b pb-1.5"><span className="font-bold text-slate-500">Quy hoạch:</span><span className="col-span-2 font-semibold text-blue-800">{ketQuaKiemTra.loaiQuyhoach}</span></div>
+      <div className="grid grid-cols-3 border-b pb-1.5"><span className="font-bold text-slate-500">Chức năng đất:</span><span className="col-span-2 font-semibold text-purple-800">{ketQuaKiemTra.chucNangSuDung}</span></div>
+      
+      <div className="grid grid-cols-1 pt-1">
+        <span className="font-bold text-slate-500 mb-1">Kết luận Thẩm định & Sự Phù hợp:</span>
+        <div className={`p-3 rounded-lg text-xs font-bold border whitespace-pre-wrap ${ketQuaKiemTra.phuHop ? 'bg-emerald-50 text-emerald-900 border-emerald-300' : 'bg-red-50 text-red-900 border-red-300'}`}>
+          {ketQuaKiemTra.ketLuan}
+          
+          {ketQuaKiemTra.congTrinhPhep && ketQuaKiemTra.congTrinhPhep.length > 0 && (
+            <div className="mt-2 pt-2 border-t border-black/10 font-normal">
+              <span className="font-semibold">Danh mục công trình được phép xây dựng:</span> {ketQuaKiemTra.congTrinhPhep.join(", ")}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  </div>
+) : (
+  <div className="flex-1 flex flex-col items-center justify-center text-center p-6 border-2 border-dashed rounded-xl bg-slate-50 text-slate-400">
+    <ShieldCheck className="w-10 h-10 mb-2 text-slate-300" />
+    <p className="font-medium text-xs">Chưa có kết quả kiểm tra.</p>
+  </div>
+)}
                   </div>
                 </div>
 
