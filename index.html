@@ -1042,22 +1042,28 @@ function App() {
         const mucTieuLower = mucTieu.toLowerCase();
         const cnLower = (bestMatchChucNang || '').toLowerCase();
 
-        const isDuAnNhaO = mucTieuLower.includes('nhà ở') || mucTieuLower.includes('đất ở') || mucTieuLower.includes('khu dân cư');
+        const isDuAnNhaO = mucTieuLower.includes('nhà ở') || mucTieuLower.includes('đất ở') || mucTieuLower.includes('khu dân cư') || mucTieuLower.includes('khu đô thị') || mucTieuLower.includes('tái định cư');
         const isDuAnCongNghiepThongThuong = mucTieuLower.includes('nhà máy sản xuất') || mucTieuLower.includes('xưởng cơ khí') || mucTieuLower.includes('kho bãi logistic');
-        
-        // Các dự án được phép trên đất đồi núi / lâm nghiệp: Khai thác khoáng sản, mỏ vật liệu, nhà máy chế biến đá, chế biến lâm sản
         const isDuAnKhoangSanVatLieu = mucTieuLower.includes('khai thác') || mucTieuLower.includes('mỏ') || mucTieuLower.includes('chế biến đá') || mucTieuLower.includes('vật liệu xây dựng') || mucTieuLower.includes('khoáng sản');
 
         const isQuyHoachDatDoiNui = cnLower.includes('đồi núi') || cnLower.includes('lâm nghiệp') || cnLower.includes('trồng rừng');
+        const isQuyHoachDatO_HonHop = cnLower.includes('đất ở') || cnLower.includes('đất hỗn hợp') || cnLower.includes('nhóm nhà ở');
 
         if (!isHoanToanNgoaiVung) {
-          if (isQuyHoachDatDoiNui) {
-            if (isDuAnNhaO || isDuAnCongNghiepThongThuong) {
+          // Quy tắc 1: Khu đô thị, khu dân cư, tái định cư chỉ được ở đất ở hoặc đất hỗn hợp
+          if (isDuAnNhaO && (mucTieuLower.includes('khu dân cư') || mucTieuLower.includes('khu đô thị') || mucTieuLower.includes('tái định cư'))) {
+            if (!isQuyHoachDatO_HonHop) {
+              isChucNangPhuHop = false;
+              lyDoXungDot = 'Khu đô thị, khu dân cư, khu tái định cư chỉ được xây dựng trong khu vực quy hoạch đất ở hoặc đất hỗn hợp (nhóm nhà ở và dịch vụ), ngoài ra không được xây dựng trong vùng quy hoạch này.';
+            }
+          } 
+          // Quy tắc 2: Đất đồi núi, lâm nghiệp
+          else if (isQuyHoachDatDoiNui) {
+            if (isDuAnCongNghiepThongThuong || (isDuAnNhaO && !isQuyHoachDatO_HonHop)) {
               isChucNangPhuHop = false;
               lyDoXungDot = 'Quy hoạch đất đồi núi, lâm nghiệp không cho phép xây dựng nhà ở dân cư hoặc nhà máy công nghiệp thông thường.';
             } else if (isDuAnKhoangSanVatLieu) {
-              // Đất đồi núi / rừng ĐƯỢC PHÉP làm mỏ khai thác khoáng sản, vật liệu xây dựng, nhà máy chế biến đá
-              isChucNangPhuHop = true;
+              isChucNangPhuHop = true; // Được phép làm mỏ, chế biến đá
             }
           }
         } else {
