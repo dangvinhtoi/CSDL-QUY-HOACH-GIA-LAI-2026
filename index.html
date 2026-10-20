@@ -1058,11 +1058,20 @@ function App() {
         let lyDoXungDot = '';
 
         if (!isHoanToanNgoaiVung) {
-          // KỊCH BẢN 1: ĐẤT CÂY XANH
-          if (isDatCayXang) {
-            if (isCongNghiep || isNongNghiep || isThuongMaiDichVu || isNhaODoThi || isCayXang) {
+          // 1. ĐẤT QUỐC PHÒNG, AN NINH
+          if (isDatQuocPhongAnNinh) {
+            if (isDuAnQuocPhongAnNinh) {
+              isChucNangPhuHop = true;
+            } else {
               isChucNangPhuHop = false;
-              lyDoXungDot = 'Đất cây xanh không được phép xây dựng các công trình thương mại dịch vụ, nhà máy sản xuất công nghiệp, nông nghiệp hay khu dân cư (chỉ được xây công trình công cộng phục vụ sinh hoạt chung mật độ tối đa 5%).';
+              lyDoXungDot = 'Đất quốc phòng không được phép xây dựng các công trình dân dụng, khu dân cư, thương mại hay công nghiệp ngoài các công trình phục vụ ngành quốc phòng.';
+            }
+          }
+          // 2. ĐẤT CÂY XANH
+          else if (isDatCayXang) {
+            if (isThuongMaiDichVu || isCongNghiep || isNongNghiep || isNhaODoThi || isCayXang) {
+              isChucNangPhuHop = false;
+              lyDoXungDot = 'Đất cây xanh không được phép xây dựng công trình thương mại dịch vụ, nhà máy sản xuất công nghiệp, nông nghiệp hay khu dân cư.';
             } else if (isCongCongChung) {
               isChucNangPhuHop = true;
             } else {
@@ -1070,14 +1079,14 @@ function App() {
               lyDoXungDot = 'Vùng quy hoạch đất cây xanh chỉ cho phép xây dựng công trình công cộng phục vụ không gian sinh hoạt chung.';
             }
           }
-          // KỊCH BẢN 2: ĐẤT Ở & ĐẤT HỖN HỢP
+          // 3. ĐẤT Ở & ĐẤT HỖN HỢP
           else if (isDatO_HonHop) {
             if (isCongNghiep || isNongNghiep) {
               isChucNangPhuHop = false;
               lyDoXungDot = 'Nhà máy sản xuất, chế biến công nghiệp, dự án nông nghiệp không được xây dựng trong vùng quy hoạch đất ở, đất hỗn hợp.';
             } else if (isCayXang) {
               isChucNangPhuHop = false;
-              lyDoXungDot = 'Vùng quy hoạch đất ở hoặc đất hỗn hợp hạn chế tối đa và hầu như không cho phép xây dựng cửa hàng xăng dầu.';
+              lyDoXungDot = 'Vùng quy hoạch đất ở hoặc đất hỗn hợp hạn chế tối đa cửa hàng xăng dầu.';
             } else if (isNhaODoThi || isThuongMaiDichVu) {
               isChucNangPhuHop = true;
             } else {
@@ -1085,11 +1094,11 @@ function App() {
               lyDoXungDot = 'Vùng quy hoạch đất ở hoặc đất hỗn hợp chỉ cho phép xây dựng khu dân cư, đô thị, tái định cư hoặc thương mại dịch vụ.';
             }
           }
-          // KỊCH BẢN 3: ĐẤT ĐỒI NÚI / LÂM NGHIỆP
+          // 4. ĐẤT ĐỒI NÚI / LÂM NGHIỆP
           else if (isDatDoiNuiLamNghiep) {
             if (isNhaODoThi || isThuongMaiDichVu || isCongNghiep || isNongNghiep) {
               isChucNangPhuHop = false;
-              lyDoXungDot = 'Quy hoạch đất đồi núi, lâm nghiệp không cho phép xây dựng khu dân cư, đô thị hay nhà máy sản xuất thông thường (ngoại trừ các mỏ khai thác khoáng sản, vật liệu xây dựng).';
+              lyDoXungDot = 'Quy hoạch đất đồi núi, lâm nghiệp không cho phép xây dựng khu dân cư, đô thị hay nhà máy thông thường (ngoại trừ khai thác khoáng sản, vật liệu xây dựng).';
             } else if (isKhoangSanVatLieu) {
               isChucNangPhuHop = true;
             } else {
@@ -1097,20 +1106,20 @@ function App() {
               lyDoXungDot = 'Quy hoạch đất đồi núi, lâm nghiệp chỉ phù hợp cho hoạt động bảo vệ rừng hoặc khai thác khoáng sản, vật liệu xây dựng.';
             }
           }
-          // KỊCH BẢN 4: ĐẤT SẢN XUẤT CÔNG NGHIỆP, KHO TÀNG
+          // 5. ĐẤT SẢN XUẤT CÔNG NGHIỆP, KHO TÀNG
           else if (isDatCongNghiepKhoTang) {
             if (isNhaODoThi || isThuongMaiDichVu || isNongNghiep) {
               isChucNangPhuHop = false;
-              lyDoXungDot = 'Khu vực quy hoạch sản xuất công nghiệp, kho tàng không phù hợp để xây dựng khu dân cư, đô thị hay dự án nông nghiệp thuần túy.';
+              lyDoXungDot = 'Khu vực quy hoạch sản xuất công nghiệp, kho tàng không phù hợp để xây dựng khu dân cư, đô thị hay dự án nông nghiệp.';
             } else if (isCongNghiep || isKhoangSanVatLieu || isHaTangKyThuat) {
               isChucNangPhuHop = true;
             }
           }
-          // KỊCH BẢN 5: ĐẤT NÔNG NGHIỆP & MẶT NƯỚC
+          // 6. ĐẤT NÔNG NGHIỆP & MẶT NƯỚC
           else if (isDatNongNghiepThuySan) {
             if (isNhaODoThi || isThuongMaiDichVu || isCongNghiep) {
               isChucNangPhuHop = false;
-              lyDoXungDot = 'Vùng quy hoạch đất nông nghiệp, mặt nước không cho phép xây dựng khu đô thị, nhà máy công nghiệp hay thương mại dịch vụ quy mô lớn.';
+              lyDoXungDot = 'Vùng quy hoạch đất nông nghiệp, mặt nước không cho phép xây dựng khu đô thị, nhà máy công nghiệp hay thương mại dịch vụ.';
             } else if (isNongNghiep) {
               isChucNangPhuHop = true;
             } else {
@@ -1119,7 +1128,6 @@ function App() {
             }
           }
           else {
-            // Mặc định đối chiếu chung
             isChucNangPhuHop = true;
           }
         } else {
