@@ -957,7 +957,7 @@ function App() {
         return parseFloat(ha.toFixed(4));
       };
 
-    // HÀM KIỂM TRA QUY HOẠCH - XÁC ĐỊNH CHÍNH XÁC 1 VÙNG HOẶC ĐA VÙNG KHÔNG BỊ NHẦM LẪN
+    // HÀM KIỂM TRA QUY HOẠCH - ĐỐI CHIẾU THÔNG MINH, CHUẨN XÁC PHÁP LÝ QUY HOẠCH
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
 
@@ -997,12 +997,11 @@ function App() {
           let matchedZonesMap = {};
           let totalValidPoints = 0;
 
-          // Tính toán trọng tâm (Centroid) của khu đất kiểm tra làm điểm mốc trung tâm chính xác nhất
+          // Tính trọng tâm (Centroid) và các điểm nội suy bên trong khu đất
           const centroidX = inputPoints.reduce((sum, p) => sum + p.x, 0) / inputPoints.length;
           const centroidY = inputPoints.reduce((sum, p) => sum + p.y, 0) / inputPoints.length;
           const centroidPt = { x: centroidX, y: centroidY };
 
-          // Xây dựng tập hợp điểm kiểm tra tập trung sâu bên trong khu đất (trọng tâm và các điểm lân cận trọng tâm)
           let coreTestPoints = [centroidPt];
           inputPoints.forEach(pt => {
             coreTestPoints.push({ x: (pt.x * 2 + centroidX) / 3, y: (pt.y * 2 + centroidY) / 3 });
@@ -1051,10 +1050,6 @@ function App() {
           }
 
           let intersectionDetails = [];
-
-          // 3. XỬ LÝ QUY TẮC NGHIỆP VỤ:
-          // - Nếu trọng tâm nằm trong 1 vùng hoặc một vùng chiếm áp đảo (>= 50% điểm mẫu): Lấy ngay 100% chức năng đó, không phân bổ.
-          // - Chỉ khi thực sự giao cắt từ 2 vùng có chức năng khác nhau rõ rệt mới phân bổ diện tích.
           let uniqueZoneNames = [...new Set(matchedZonesList)];
           let dominantZone = uniqueZoneNames.find(zone => (matchedZonesMap[zone] / totalValidPoints) >= 0.50) || uniqueZoneNames[0];
 
@@ -1080,20 +1075,26 @@ function App() {
             }
           }
 
-          // 4. ĐỐI CHÍNH XÁC TÍNH PHÙ HỢP GIỮA MỤC TIÊU DỰ ÁN VÀ QUY HOẠCH
+          // 4. MA TRẬN ĐỐI CHÍNH XÁC TÍNH PHÙ HỢP GIỮA MỤC TIÊU VÀ QUY HOẠCH (ỨNG DỤNG TIÊU CHÍ PHÁP LÝ)
           let isChucNangPhuHop = true;
           let lyDoXungDot = '';
           const primaryZoneLower = (intersectionDetails[0]?.chucNang || '').toLowerCase();
 
-          const isCongNghiepGoal = mucTieu.includes('nhà máy') || mucTieu.includes('công nghiệp') || mucTieu.includes('xưởng') || mucTieu.includes('sản xuất') || mucTieu.includes('kho bãi') || mucTieu.includes('logistic');
-          const isNhaOGoal = mucTieu.includes('nhà ở') || mucTieu.includes('đất ở') || mucTieu.includes('khu dân cư') || mucTieu.includes('khu đô thị') || mucTieu.includes('tái định cư');
+          // Các từ khóa phân loại mục tiêu dự án
+          const isCongNghiepOrKhoBai = mucTieu.includes('nhà máy') || mucTieu.includes('công nghiệp') || mucTieu.includes('xưởng') || mucTieu.includes('sản xuất') || mucTieu.includes('kho bãi') || mucTieu.includes('logistic') || mucTieu.includes('chế biến') || mucTieu.includes('mỏ vật liệu') || mucTieu.includes('khai thác');
+          const isTrangTraiOrNongNghiep = mucTieu.includes('trang trại') || mucTieu.includes('chăn nuôi') || mucTieu.includes('nông nghiệp');
+          const isNhaOHoacDanCu = mucTieu.includes('nhà ở') || mucTieu.includes('đất ở') || mucTieu.includes('khu dân cư') || mucTieu.includes('khu đô thị') || mucTieu.includes('tái định cư');
 
-          if (isCongNghiepGoal && (primaryZoneLower.includes('đất ở') || primaryZoneLower.includes('dân cư') || primaryZoneLower.includes('giáo dục') || primaryZoneLower.includes('cây xanh') || primaryZoneLower.includes('công cộng'))) {
+          // Kiểm tra xung đột pháp lý quy hoạch
+          const isVùngDatOhoacHonHop = primaryZoneLower.includes('đất ở') || primaryZoneLower.includes('dân cư') || primaryZoneLower.includes('hỗn hợp') || primaryZoneLower.includes('nhóm nhà ở');
+          const isVungCongNghiep = primaryZoneLower.includes('công nghiệp') || primaryZoneLower.includes('kho bãi') || primaryZoneLower.includes('sản xuất');
+
+          if (isVùngDatOhoacHonHop && (isCongNghiepOrKhoBai || isTrangTraiOrNongNghiep || mucTieu.includes('mỏ vật liệu'))) {
             isChucNangPhuHop = false;
-            lyDoXungDot = `Khu vực quy hoạch ${intersectionDetails[0].chucNang} không cho phép đầu tư xây dựng nhà máy, cơ sở sản xuất công nghiệp.`;
-          } else if (isNhaOGoal && !(primaryZoneLower.includes('đất ở') || primaryZoneLower.includes('dân cư') || primaryZoneLower.includes('khu đô thị'))) {
+            lyDoXungDot = `Khu vực quy hoạch [ ${intersectionDetails[0].chucNang} ] không cho phép đầu tư xây dựng nhà máy, cơ sở sản xuất, trang trại chăn nuôi hoặc khai thác mỏ.`;
+          } else if (isNhaOHoacDanCu && isVungCongNghiep) {
             isChucNangPhuHop = false;
-            lyDoXungDot = `Khu vực quy hoạch ${intersectionDetails[0].chucNang} không phù hợp để phát triển các dự án nhà ở, khu dân cư.`;
+            lyDoXungDot = `Khu vực quy hoạch [ ${intersectionDetails[0].chucNang} ] không phù hợp để phát triển các dự án nhà ở, khu dân cư.`;
           }
 
           let statusText = '';
