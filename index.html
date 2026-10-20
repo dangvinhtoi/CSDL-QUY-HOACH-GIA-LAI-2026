@@ -989,7 +989,7 @@ function App() {
       {
         nhom: "Đất công trình hạ tầng xã hội",
         loaiChucNang: "Đất văn hóa",
-        congTrinhDuocPhep: ["Nhà văn hóa", "khu sinh hoạt cộng đồng", "câu lạc bộ", "thư viện", "triển lãm", "nhà văn hóa"]
+        congTrinhDuocPhep: ["Nhà văn hóa", "khu sinh hoạt cộng đồng", "câu lạc bộ", "thư viện", "triển lãm"]
       },
       {
         nhom: "Đất công trình hạ tầng xã hội",
@@ -1019,7 +1019,7 @@ function App() {
       {
         nhom: "Đất sản xuất, kinh doanh & du lịch",
         loaiChucNang: "Đất sản xuất công nghiệp, kho tàng",
-        congTrinhDuocPhep: ["Nhà máy sản xuất", "nhà máy", "xưởng gia công", "kho bãi hàng hóa", "trạm logistics", "cụm công nghiệp", "khu công nghiệp", "kho bãi logistic"]
+        congTrinhDuocPhep: ["Nhà máy sản xuất", "nhà máy", "xưởng gia công", "kho bãi hàng hóa", "trạm logistics", "cụm công nghiệp", "khu công nghiệp", "kho bãi logistic", "nhà máy sản xuất"]
       },
       {
         nhom: "Đất sản xuất, kinh doanh & du lịch",
@@ -1043,76 +1043,74 @@ function App() {
       },
       {
         nhom: "Đất di tích, tôn giáo, an ninh, quốc phòng",
-        loaiChucNang: "Đất an ninh, quốc phòng",
-        congTrinhDuocPhep: ["Công trình quân sự", "trụ sở công an", "doanh trại", "cơ sở huấn luyện an ninh quốc phòng"]
+        loaiChucNang: "Đất quốc phòng",
+        congTrinhDuocPhep: ["Công trình quân sự", "doanh trại quân đội", "cơ sở quốc phòng", "trang thiết bị quân sự"]
+      },
+      {
+        nhom: "Đất di tích, tôn giáo, an ninh, quốc phòng",
+        loaiChucNang: "Đất an ninh",
+        congTrinhDuocPhep: ["Trụ sở công an", "cơ sở giam giữ", "trại giam", "công trình an ninh"]
       },
       {
         nhom: "Đất hạ tầng kỹ thuật & giao thông",
         loaiChucNang: "Đất giao thông, bãi đỗ xe",
-        congTrinhDuocPhep: ["Đường giao thông", "cầu", "hầm", "bến xe", "bãi đỗ xe tập trung (mặt đất, trên cao, ngầm)"]
+        congTrinhDuocPhep: ["Đường giao thông", "cầu", "hầm", "bến xe", "bãi đỗ xe tập trung (mặt đất, trên cao, ngầm)", "bãi đậu xe", "bãi đỗ xe"]
       },
       {
         nhom: "Đất nông nghiệp & mặt nước",
         loaiChucNang: "Đất nông nghiệp và mặt nước",
-        congTrinhDuocPhep: ["Đất sản xuất nông nghiệp", "trang trại", "nuôi trồng thủy sản", "sông suối", "kênh rạch", "hồ ao"]
+        congTrinhDuocPhep: ["Đất sản xuất nông nghiệp", "trang trại", "trang trại chăn nuôi", "nuôi trồng thủy sản", "sông suối", "kênh rạch", "hồ ao"]
       },
-      // --- CẤP 3: QUY HOẠCH CHUNG ĐÔ THỊ & KHU CHỨC NĂNG ---
+      // --- CẤP 2 & CẤP 3: KHU VỰC NÔNG THÔN VÀ QUY HOẠCH CHUNG ---
       {
         nhom: "Khu đất dân dụng",
         loaiChucNang: "Đất hỗn hợp (nhóm nhà ở và dịch vụ)",
         congTrinhDuocPhep: ["Công trình đa năng kết hợp nhà ở và dịch vụ", "nhà ở", "thương mại dịch vụ cấp cơ sở"]
-      },
-      {
-        nhom: "Khu đất ngoài dân dụng",
-        loaiChucNang: "Đất sản xuất công nghiệp, kho tàng",
-        congTrinhDuocPhep: ["Nhà máy sản xuất", "nhà máy", "xưởng", "kho bãi", "logistic", "công nghiệp"]
       }
     ];
 
-    // Hàm đánh giá sự phù hợp tuân thủ quy hoạch và danh mục công trình được phép
+    // =========================================================================
+    // 🟢 2. HÀM ĐÁNH GIÁ SỰ PHÙ HỢP CỦA DỰ ÁN (EVALUATE PROJECT SUITABILITY)
+    // =========================================================================
     function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
       if (!chucNangDat || !mucTieuDuAn) {
-        return { phuHop: false, loaiCongTrinhPhep: [], ketLuan: "Thiếu thông tin chức năng đất quy hoạch hoặc mục tiêu dự án." };
+        return { 
+          phuHop: false, 
+          loaiCongTrinhPhep: [], 
+          ketLuan: "Thiếu thông tin chức năng đất quy hoạch hoặc mục tiêu dự án." 
+        };
       }
 
       const queryDat = chucNangDat.toLowerCase().trim();
       const queryMucTieu = mucTieuDuAn.toLowerCase().trim();
 
+      // Tìm chức năng đất tương ứng trong cơ sở dữ liệu
       const matchedLand = LAND_USE_FUNCTION_MAP.find(item =>
         queryDat.includes(item.loaiChucNang.toLowerCase()) ||
         item.loaiChucNang.toLowerCase().includes(queryDat)
       );
 
+      // Nếu không tìm thấy trong danh mục định nghĩa cứng -> Mặc định là KHÔNG PHÙ HỢP (hoặc yêu cầu rà soát thủ công) thay vì tự động cho phép
       if (!matchedLand) {
         return {
-          phuHop: true, // Mặc định cho phép nếu chưa khớp danh mục cứng
-          loaiCongTrinhPhep: ["Công trình phù hợp theo quy hoạch chung"],
-          ketLuan: `✅ Dự án "${mucTieuDuAn}" phù hợp với định hướng quy hoạch chung tại khu vực.`
+          phuHop: false,
+          loaiCongTrinhPhep: [],
+          ketLuan: `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP. Chức năng đất "${chucNangDat}" chưa được cấu hình danh mục công trình cho phép xây dựng.`
         };
       }
 
+      // Kiểm tra mục tiêu dự án có thuộc danh mục công trình được phép xây dựng không
       const isMatch = matchedLand.congTrinhDuocPhep.some(ct => {
         const ctLower = ct.toLowerCase();
         return queryMucTieu.includes(ctLower) || ctLower.includes(queryMucTieu);
       });
 
-      let overridePhuHop = isMatch;
-      let customMessage = "";
-
-      // Ràng buộc kiểm tra đặc thù theo quy chuẩn xây dựng
-      if (queryDat.includes("đất ở") || queryDat.includes("hỗn hợp") || queryDat.includes("nhà ở")) {
-        if (queryMucTieu.includes("nhà máy") || queryMucTieu.includes("công nghiệp") || queryMucTieu.includes("sản xuất") || queryMucTieu.includes("kho bãi") || queryMucTieu.includes("mỏ") || queryMucTieu.includes("trang trại")) {
-          overridePhuHop = false;
-          customMessage = ` Khu vực quy hoạch "${matchedLand.loaiChucNang}" không cho phép đầu tư xây dựng nhà máy, cơ sở sản xuất công nghiệp, kho bãi hoặc trang trại.`;
-        }
-      }
-
       return {
-        phuHop: overridePhuHop,
+        phuHop: isMatch,
         loaiCongTrinhPhep: matchedLand.congTrinhDuocPhep,
-        ketLuan: overridePhuHop
+        ketLuan: isMatch
           ? `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch chức năng ${matchedLand.loaiChucNang}.`
-          : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch.${customMessage || ` Chức năng ${matchedLand.loaiChucNang} chỉ cho phép các công trình: ${matchedLand.congTrinhDuocPhep.join(", ")}.`}`
+          : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch. Chức năng ${matchedLand.loaiChucNang} chỉ cho phép các công trình: ${matchedLand.congTrinhDuocPhep.join(", ")}.`
       };
     }
     // HÀM KIỂM TRA QUY HOẠCH - HOÀN THIỆN CHÍNH XÁC 100%, ĐỐI CHIẾU PHÁP LÝ TỰ ĐỘNG
