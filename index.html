@@ -957,7 +957,7 @@ function App() {
         return parseFloat(ha.toFixed(4));
       };
 
-    // HÀM KIỂM TRA QUY HOẠCH THÔNG MINH - CHUẨN XÁC 100%
+    // HÀM KIỂM TRA QUY HOẠCH THÔNG MINH - CHUẨN XÁC THEO QUY ĐỊNH KHOÁNG SẢN & XÂY DỰNG
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
         const mucTieu = (kiemTraForm?.mucTieuDuAn || '').trim().toLowerCase();
@@ -1040,7 +1040,7 @@ function App() {
         const isCayXang = mucTieu.includes('xăng dầu') || mucTieu.includes('cửa hàng xăng');
         const isCongNghiep = mucTieu.includes('nhà máy') || mucTieu.includes('công nghiệp') || mucTieu.includes('xưởng') || mucTieu.includes('sản xuất') || mucTieu.includes('chế biến') || mucTieu.includes('kho bãi') || mucTieu.includes('logistic') || mucTieu.includes('tiểu thủ công nghiệp') || mucTieu.includes('cụm công nghiệp') || mucTieu.includes('khu chế xuất');
         const isNongNghiep = mucTieu.includes('nông nghiệp') || mucTieu.includes('trồng trọt') || mucTieu.includes('chăn nuôi') || mucTieu.includes('trang trại') || mucTieu.includes('vườn ươm') || mucTieu.includes('lâm nghiệp') || mucTieu.includes('thủy sản') || mucTieu.includes('nuôi trồng') || mucTieu.includes('lúa') || mucTieu.includes('muối');
-        const isKhoangSanVatLieu = mucTieu.includes('khai thác') || mucTieu.includes('mỏ') || mucTieu.includes('chế biến đá') || mucTieu.includes('vật liệu xây dựng') || mucTieu.includes('khoáng sản') || mucTieu.includes('đồ gốm');
+        const isKhoangSanVatLieu = mucTieu.includes('khai thác') || mucTieu.includes('mỏ') || mucTieu.includes('chế biến đá') || mucTieu.includes('vật liệu xây dựng') || mucTieu.includes('khoáng sản') || mucTieu.includes('đồ gốm') || mucTieu.includes('khai thác đất') || mucTieu.includes('khai thác đá');
         const isHaTangsXH = mucTieu.includes('văn hóa') || mucTieu.includes('sinh hoạt cộng đồng') || mucTieu.includes('thư viện') || mucTieu.includes('triển lãm') || mucTieu.includes('bệnh viện') || mucTieu.includes('phòng khám') || mucTieu.includes('trạm y tế') || mucTieu.includes('trường') || mucTieu.includes('giáo dục') || mucTieu.includes('thể dục thể thao') || mucTieu.includes('sân tập') || mucTieu.includes('bể bơi') || mucTieu.includes('công viên') || mucTieu.includes('công cộng');
         const isHanhChinhCoQuan = mucTieu.includes('cơ quan') || mucTieu.includes('trụ sở') || mucTieu.includes('hành chính') || mucTieu.includes('ubnd') || mucTieu.includes('tổ chức chính trị');
         const isTonGiaoDiTich = mucTieu.includes('chùa') || mucTieu.includes('nhà thờ') || mucTieu.includes('đền') || mucTieu.includes('miếu') || mucTieu.includes('thánh thất') || mucTieu.includes('di tích') || mucTieu.includes('tôn giáo') || mucTieu.includes('tín ngưỡng');
@@ -1070,8 +1070,17 @@ function App() {
         let lyDoXungDot = '';
 
         if (!isHoanToanNgoaiVung) {
+          // --- KỊCH BẢN ĐẶC BIỆT: MỎ KHAI THÁC KHOÁNG SẢN, VẬT LIỆU XÂY DỰNG ---
+          if (isKhoangSanVatLieu) {
+            if (isDatKhoangSanVLXD || isDatDoiNuiLamNghiep) {
+              isChucNangPhuHop = true; // Chỉ được thực hiện trong vùng quy hoạch khai thác khoáng sản/VLXD hoặc đất đồi núi/lâm nghiệp thích hợp
+            } else {
+              isChucNangPhuHop = false;
+              lyDoXungDot = 'Mỏ khai thác đất, đá, khoáng sản chỉ được thực hiện trong vùng được quy hoạch định hướng khai thác khoáng sản vật liệu xây dựng hoặc đất đồi núi thích hợp, không được phép khai thác trong đất sản xuất công nghiệp, kho tàng hay các loại đất khác.';
+            }
+          }
           // --- KỊCH BẢN 1: ĐẤT Ở & ĐẤT HỖN HỢP ---
-          if (isDatO || isDatHonHop) {
+          else if (isDatO || isDatHonHop) {
             if (isCongNghiep || isNongNghiep || isQuocPhongAnNinh || isKhoangSanVatLieu) {
               isChucNangPhuHop = false;
               lyDoXungDot = 'Vùng quy hoạch đất ở hoặc đất hỗn hợp không được phép xây dựng nhà máy sản xuất, công nghiệp, dự án nông nghiệp, khai thác khoáng sản hay công trình quốc phòng.';
@@ -1118,14 +1127,14 @@ function App() {
           }
           // --- KỊCH BẢN 5: ĐẤT SẢN XUẤT CÔNG NGHIỆP, KHO TÀNG & KHOÁNG SẢN ---
           else if (isDatCongNghiep || isDatKhoangSanVLXD) {
-            if (isCongNghiep || isKhoangSanVatLieu || isGiaoThongHaTangKT) {
+            if (isCongNghiep || isGiaoThongHaTangKT) {
               isChucNangPhuHop = true;
-            } else if (isNhaODoThi || isThuongMaiDichVu || isQuocPhongAnNinh || isNongNghiep) {
+            } else if (isNhaODoThi || isThuongMaiDichVu || isQuocPhongAnNinh || isNongNghiep || isKhoangSanVatLieu) {
               isChucNangPhuHop = false;
-              lyDoXungDot = 'Khu vực quy hoạch sản xuất công nghiệp, kho tàng không phù hợp để xây dựng khu dân cư, đô thị, thương mại dịch vụ hay công trình quốc phòng.';
+              lyDoXungDot = 'Khu vực quy hoạch sản xuất công nghiệp, kho tàng chỉ phù hợp làm nhà xưởng sản xuất, kho bãi, không cho phép xây dựng khu dân cư, thương mại, công trình quốc phòng hay khai thác mỏ đất đá.';
             } else {
               isChucNangPhuHop = false;
-              lyDoXungDot = 'Khu vực này chỉ cho phép xây dựng nhà xưởng sản xuất, kho bãi và công trình phụ trợ sản xuất.';
+              lyDoXungDot = 'Khu vực này chỉ cho phép xây dựng nhà xưởng sản xuất và kho bãi.';
             }
           }
           // --- KỊCH BẢN 6: ĐẤT ĐÀO TẠO, NGHIÊN CỨU & CƠ QUAN TRỤ SỞ ---
@@ -1168,11 +1177,11 @@ function App() {
           }
           // --- KỊCH BẢN 9: ĐẤT ĐỒI NÚI, LÂM NGHIỆP ---
           else if (isDatDoiNuiLamNghiep) {
-            if (isKhoangSanVatLieu) {
-              isChucNangPhuHop = true;
+            if (isKhoangSanVatLieu || isNongNghiep) {
+              isChucNangPhuHop = true; // Được phép làm mỏ khoáng sản, VLXD hoặc trồng rừng
             } else if (isNhaODoThi || isThuongMaiDichVu || isCongNghiep || isQuocPhongAnNinh) {
               isChucNangPhuHop = false;
-              lyDoXungDot = 'Quy hoạch đất đồi núi, lâm nghiệp không cho phép xây dựng khu dân cư, đô thị, nhà máy thông thường hay công trình quốc phòng (ngoại trừ khai thác khoáng sản, vật liệu xây dựng).';
+              lyDoXungDot = 'Quy hoạch đất đồi núi, lâm nghiệp không cho phép xây dựng khu dân cư, đô thị, nhà máy thông thường hay công trình quốc phòng.';
             } else {
               isChucNangPhuHop = false;
               lyDoXungDot = 'Quy hoạch đất đồi núi, lâm nghiệp chỉ phù hợp cho hoạt động bảo vệ phát triển rừng hoặc khai thác khoáng sản, vật liệu xây dựng.';
@@ -1182,9 +1191,9 @@ function App() {
           else if (isDatNongNghiepThuySan) {
             if (isNongNghiep) {
               isChucNangPhuHop = true;
-            } else if (isNhaODoThi || isThuongMaiDichVu || isCongNghiep || isQuocPhongAnNinh) {
+            } else if (isNhaODoThi || isThuongMaiDichVu || isCongNghiep || isQuocPhongAnNinh || isKhoangSanVatLieu) {
               isChucNangPhuHop = false;
-              lyDoXungDot = 'Vùng quy hoạch đất nông nghiệp, thủy sản không cho phép xây dựng khu đô thị, nhà máy công nghiệp hay công trình quốc phòng.';
+              lyDoXungDot = 'Vùng quy hoạch đất nông nghiệp, thủy sản không cho phép xây dựng khu đô thị, nhà máy công nghiệp hay khai thác mỏ khoáng sản.';
             } else {
               isChucNangPhuHop = false;
               lyDoXungDot = 'Vùng quy hoạch đất nông nghiệp chỉ dành cho canh tác trồng trọt, chăn nuôi, lâm nghiệp hoặc nuôi trồng thủy sản.';
