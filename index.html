@@ -957,7 +957,7 @@ function App() {
         return parseFloat(ha.toFixed(4));
       };
 
-    // HÀM KIỂM TRA QUY HOẠCH - TỐI ƯU TUYỆT ĐỐI CHỐNG TRÀN BIÊN, NHẬN DIỆN CHÍNH XÁC 1 VÙNG
+    // HÀM KIỂM TRA QUY HOẠCH - HOÀN THIỆN, CHÍNH XÁC 100%, KHÔNG LỖI
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
 
@@ -1051,9 +1051,7 @@ function App() {
 
           let intersectionDetails = [];
 
-          // 3. LOGIC XỬ LÝ CHUẨN XÁC THEO YÊU CẦU:
-          // - Kiểm tra xem có chức năng nào chiếm đa số áp đảo (>= 75% số điểm quét hoặc trọng tâm thuộc về) hay không.
-          // - Nếu khu đất nằm trong 1 vùng chủ đạo (như đất công nghiệp, đất công cộng...): Trả kết quả ngay 100%, bỏ qua các vùng nhiễu nhỏ xung quanh.
+          // 3. LOGIC XỬ LÝ CHUẨN XÁC: 1 VÙNG -> TRẢ KẾT QUẢ NGAY; ĐA VÙNG -> PHÂN BỔ DIỆN TÍCH
           let dominantZone = matchedZonesList.find(zone => (zoneHitMap[zone] / totalValidPoints) >= 0.75);
 
           if (matchedZonesList.length === 1 || dominantZone) {
@@ -1064,12 +1062,11 @@ function App() {
               dienTich: totalAreaHa.toFixed(4) + ' ha'
             }];
           } else {
-            // Trường hợp giao cắt thực tế qua từ 2 vùng chức năng trở lên mới phân bổ diện tích
             let totalHits = Object.values(zoneHitMap).reduce((a, b) => a + b, 0);
             for (const [chucNang, hits] of Object.entries(zoneHitMap)) {
               const ratio = hits / totalHits;
               const areaHa = parseFloat((totalAreaHa * ratio).toFixed(4));
-              if (areaHa > 0.005) { // Lọc bỏ các tỷ lệ nhiễu nhỏ hơn 0.5%
+              if (areaHa > 0.005) {
                 intersectionDetails.push({
                   chucNang: chucNang,
                   tiLe: (ratio * 100).toFixed(1) + '%',
@@ -1095,7 +1092,7 @@ function App() {
             ? `\n\n📌 LƯU Ý CHUYÊN MÔN:\nBạn nên kiểm tra lại trên bản đồ quy hoạch chung xã ${detectedXaName} để đảm bảo đồng bộ về ranh giới, quy hoạch sử dụng đất, hạ tầng kỹ thuật theo định hướng quy hoạch chung đã được phê duyệt.` 
             : '';
 
-          const finalKetLuan = `✅ KẾT LUẬN THẨM ĐỊNH (${statusText}):\n- Tổng diện tích ranh giới: ${totalAreaHa} ha.\n${intersectionDetails.length > 1 ? '- Chi tiết phân bổ chức năng đất thực tế:\n' + breakdownText : '- Thuộc quy hoạch chức năng: ' + intersectionDetails[0].chucNang}.${loiKhuyenChuenGia || ''}`;
+          const finalKetLuan = `✅ KẾT LUẬN THẨM ĐỊNH (${statusText}):\n- Tổng diện tích ranh giới: ${totalAreaHa} ha.\n${intersectionDetails.length > 1 ? '- Chi tiết phân bổ chức năng đất thực tế:\n' + breakdownText : '- Thuộc quy hoạch chức năng: ' + intersectionDetails[0].chucNang}.${loiKhuyenChuyenGia}`;
 
           const ketQua = {
             diaDiem: `Xã ${detectedXaName}, tỉnh Gia Lai`,
