@@ -1042,26 +1042,45 @@ function App() {
         const mucTieuLower = mucTieu.toLowerCase();
         const cnLower = (bestMatchChucNang || '').toLowerCase();
 
-        const isDuAnNhaO = mucTieuLower.includes('nhà ở') || mucTieuLower.includes('đất ở') || mucTieuLower.includes('khu dân cư') || mucTieuLower.includes('khu đô thị') || mucTieuLower.includes('tái định cư');
-        const isDuAnCongNghiepThongThuong = mucTieuLower.includes('nhà máy sản xuất') || mucTieuLower.includes('xưởng cơ khí') || mucTieuLower.includes('kho bãi logistic');
+        const isDuAnNhaO_DoThi = mucTieuLower.includes('nhà ở') || mucTieuLower.includes('đất ở') || mucTieuLower.includes('khu dân cư') || mucTieuLower.includes('khu đô thị') || mucTieuLower.includes('tái định cư');
+        const isDuAnThuongMaiDichVu = mucTieuLower.includes('thương mại') || mucTieuLower.includes('dịch vụ') || mucTieuLower.includes('trung tâm thương mại');
+        const isDuAnCayXang = mucTieuLower.includes('xăng dầu') || mucTieuLower.includes('cửa hàng xăng');
+        const isDuAnCongNghiep = mucTieuLower.includes('nhà máy') || mucTieuLower.includes('công nghiệp') || mucTieuLower.includes('xưởng') || mucTieuLower.includes('sản xuất') || mucTieuLower.includes('chế biến') || mucTieuLower.includes('kho bãi') || mucTieuLower.includes('logistic');
+        const isDuAnNongNghiep = mucTieuLower.includes('nông nghiệp') || mucTieuLower.includes('trồng trọt') || mucTieuLower.includes('chăn nuôi') || mucTieuLower.includes('trang trại') || mucTieuLower.includes('vườn ươm');
         const isDuAnKhoangSanVatLieu = mucTieuLower.includes('khai thác') || mucTieuLower.includes('mỏ') || mucTieuLower.includes('chế biến đá') || mucTieuLower.includes('vật liệu xây dựng') || mucTieuLower.includes('khoáng sản');
 
         const isQuyHoachDatDoiNui = cnLower.includes('đồi núi') || cnLower.includes('lâm nghiệp') || cnLower.includes('trồng rừng');
         const isQuyHoachDatO_HonHop = cnLower.includes('đất ở') || cnLower.includes('đất hỗn hợp') || cnLower.includes('nhóm nhà ở');
 
         if (!isHoanToanNgoaiVung) {
-          // Quy tắc 1: Khu đô thị, khu dân cư, tái định cư chỉ được ở đất ở hoặc đất hỗn hợp
-          if (isDuAnNhaO && (mucTieuLower.includes('khu dân cư') || mucTieuLower.includes('khu đô thị') || mucTieuLower.includes('tái định cư'))) {
-            if (!isQuyHoachDatO_HonHop) {
+          // Quy tắc 1: Đất ở, đất hỗn hợp (nhóm nhà ở và dịch vụ)
+          if (isQuyHoachDatO_HonHop) {
+            if (isDuAnCongNghiep || isDuAnNongNghiep) {
               isChucNangPhuHop = false;
-              lyDoXungDot = 'Khu đô thị, khu dân cư, khu tái định cư chỉ được xây dựng trong khu vực quy hoạch đất ở hoặc đất hỗn hợp (nhóm nhà ở và dịch vụ), ngoài ra không được xây dựng trong vùng quy hoạch này.';
+              lyDoXungDot = 'Vùng quy hoạch đất ở hoặc đất hỗn hợp không được phép xây dựng nhà máy sản xuất, chế biến, công nghiệp, dự án nông nghiệp, trang trại hay vườn ươm.';
+            } else if (isDuAnCayXang) {
+              isChucNangPhuHop = false;
+              lyDoXungDot = 'Vùng quy hoạch đất ở hoặc đất hỗn hợp hạn chế tối đa việc xây dựng các cửa hàng xăng dầu.';
+            } else if (isDuAnNhaO_DoThi || isDuAnThuongMaiDichVu) {
+              isChucNangPhuHop = true;
+            } else {
+              // Các mục tiêu chung chung không thuộc nhóm ở/dịch vụ/đô thị
+              isChucNangPhuHop = false;
+              lyDoXungDot = 'Vùng quy hoạch đất ở hoặc đất hỗn hợp chỉ cho phép xây dựng khu dân cư, khu đô thị, tái định cư, thương mại dịch vụ.';
             }
           } 
-          // Quy tắc 2: Đất đồi núi, lâm nghiệp
-          else if (isQuyHoachDatDoiNui) {
-            if (isDuAnCongNghiepThongThuong || (isDuAnNhaO && !isQuyHoachDatO_HonHop)) {
+          // Quy tắc 2: Khu đô thị, khu dân cư, tái định cư bắt buộc phải nằm ở đất ở / đất hỗn hợp
+          else if (isDuAnNhaO_DoThi) {
+            if (!isQuyHoachDatO_HonHop) {
               isChucNangPhuHop = false;
-              lyDoXungDot = 'Quy hoạch đất đồi núi, lâm nghiệp không cho phép xây dựng nhà ở dân cư hoặc nhà máy công nghiệp thông thường.';
+              lyDoXungDot = 'Khu đô thị, khu dân cư, khu tái định cư chỉ được xây dựng trong khu vực quy hoạch đất ở hoặc đất hỗn hợp (nhóm nhà ở và dịch vụ).';
+            }
+          } 
+          // Quy tắc 3: Đất đồi núi, lâm nghiệp
+          else if (isQuyHoachDatDoiNui) {
+            if (isDuAnCongNghiep || isDuAnNongNghiep || isDuAnNhaO_DoThi) {
+              isChucNangPhuHop = false;
+              lyDoXungDot = 'Quy hoạch đất đồi núi, lâm nghiệp không cho phép xây dựng khu dân cư, đô thị, nhà máy công nghiệp hay dự án nông nghiệp thông thường.';
             } else if (isDuAnKhoangSanVatLieu) {
               isChucNangPhuHop = true; // Được phép làm mỏ, chế biến đá
             }
@@ -1069,7 +1088,6 @@ function App() {
         } else {
           isChucNangPhuHop = false;
         }
-
         let statusText = 'CHƯA PHÙ HỢP QUY HOẠCH';
         let isFinalPhuHop = false;
 
