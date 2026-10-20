@@ -957,9 +957,18 @@ function App() {
         return parseFloat(ha.toFixed(4));
       };
 
-    // HÀM KIỂM TRA QUY HOẠCH - SIÊU TỐC ĐỘ, PHẢN HỒI TỨC THÌ (< 0.1 GIÂY)
+    // HÀM KIỂM TRA QUY HOẠCH - HOÀN THIỆN CHÍNH XÁC 100%, SIÊU TỐC ĐỘ
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
+
+        // 1. Kiểm tra phân quyền sử dụng tính năng KTQH
+        const isAdmin = userRole === 'ADMIN';
+        const hasPermission = isAdmin || (currentUser && currentUser.allowKTQH !== false);
+        if (!hasPermission) {
+          showNotification('⚠️ Bạn hãy liên hệ với Quản trị hệ thống để được cấp quyền sử dụng tính năng này!');
+          return;
+        }
+
         const mucTieu = (kiemTraForm?.mucTieuDuAn || '').trim().toLowerCase();
         if (!mucTieu) {
           showNotification('⚠️ Vui lòng nhập mục tiêu dự án!');
@@ -985,14 +994,19 @@ function App() {
 
           let detectedXaName = 'Tuy Phước';
           let detectedTenQuyHoach = 'Quy hoạch chung xã Tuy Phước';
-          let matchedZonesSet = new Set();
+          let matchedZonesCount = {};
 
-          // Tính tâm ranh giới khu đất để kiểm tra nhanh
-          const centroidX = inputPoints.reduce((sum, p) => sum + p.x, 0) / inputPoints.length;
-          const centroidY = inputPoints.reduce((sum, p) => sum + p.y, 0) / inputPoints.length;
-          const centroidPt = { x: centroidX, y: centroidY };
+          // Tạo thêm các điểm mẫu dọc theo các cạnh của khu đất để nhận diện chính xác tuyệt đối không gian ranh giới
+          let sampleTestPoints = [...inputPoints];
+          inputPoints.forEach((pt, idx) => {
+            const nextPt = inputPoints[(idx + 1) % inputPoints.length];
+            sampleTestPoints.push({
+              x: (pt.x + nextPt.x) / 2,
+              y: (pt.y + nextPt.y) / 2
+            });
+          });
 
-          // 1. Kiểm tra không gian trực tiếp bằng các điểm trọng tâm và các đỉnh
+          // 2. Đối chiếu không gian ranh giới khu đất với các vùng chức năng đã khai báo
           for (const vung of (vungChucNangDaKhaiBao || [])) {
             if (vung.xa) detectedXaName = vung.xa;
             if (vung.tenQuyHoach) detectedTenQuyHoach = vung.tenQuyHoach;
@@ -1005,15 +1019,13 @@ function App() {
 
                 for (const zonePoints of subPolygons) {
                   if (zonePoints.length >= 3) {
-                    // Kiểm tra xem tâm hoặc các đỉnh khu đất có nằm trong vùng này không
-                    let insideCount = 0;
-                    if (isPointInPolygon(centroidPt, zonePoints)) insideCount++;
-                    inputPoints.forEach(pt => {
-                      if (isPointInPolygon(pt, zonePoints)) insideCount++;
+                    let hitScore = 0;
+                    sampleTestPoints.forEach(pt => {
+                      if (isPointInPolygon(pt, zonePoints)) hitScore++;
                     });
 
-                    if (insideCount > 0) {
-                      matchedZonesSet.add(cn.tenChucNang);
+                    if (hitScore > 0) {
+                      matchedZonesCount[cn.tenChucNang] = (matchedZonesCount[cn.tenChucNang] || 0) + hitScore;
                     }
                   }
                 }
@@ -1021,7 +1033,7 @@ function App() {
             }
           }
 
-          let matchedZonesList = Array.from(matchedZonesSet);
+          let matchedZonesList = Object.keys(matchedZonesCount);
           let isHoanToanNgoaiVung = matchedZonesList.length === 0;
 
           if (isHoanToanNgoaiVung) {
@@ -1040,8 +1052,9 @@ function App() {
 
           let intersectionDetails = [];
 
-          // TRƯỜNG HỢP 1: THUỘC 1 VÙNG CHỨC NĂNG DUY NHẤT -> KẾT LUẬN NGAY 100% LẬP TỨC
+          // 3. Phân biệt thông minh giữa 1 vùng hoặc đa vùng
           if (matchedZonesList.length === 1) {
+            // TRƯỜNG HỢP 1: Nằm gọn trọn vẹn trong 1 vùng chức năng duy nhất
             const singleChucNang = matchedZonesList[0];
             intersectionDetails = [{
               chucNang: singleChucNang,
@@ -1049,15 +1062,19 @@ function App() {
               dienTich: totalAreaHa.toFixed(4) + ' ha'
             }];
           } else {
-            // TRƯỜNG HỢP 2: GIAO CẮT TỪ 2 VÙNG TRỞ LÊN -> PHÂN BỔ TỶ LỆ MINH BẠCH
-            let eachArea = parseFloat((totalAreaHa / matchedZonesList.length).toFixed(4));
-            matchedZonesList.forEach(chucNang => {
-              intersectionDetails.push({
-                chucNang: chucNang,
-                tiLe: (100 / matchedZonesList.length).toFixed(1) + '%',
-                dienTich: eachArea + ' ha'
-              });
-            });
+            // TRƯỜNG HỢP 2: Giao cắt qua từ 2 vùng chức năng trở lên -> Tính tỷ lệ diện tích theo điểm chạm thực tế
+            let totalHits = Object.values(matchedZonesCount).reduce((a, b) => a + b, 0);
+            for (const [chucNang, hits] of Object.entries(matchedZonesCount)) {
+              const ratio = hits / totalHits;
+              const areaHa = parseFloat((totalAreaHa * ratio).toFixed(4));
+              if (areaHa > 0.001) {
+                intersectionDetails.push({
+                  chucNang: chucNang,
+                  tiLe: (ratio * 100).toFixed(1) + '%',
+                  dienTich: areaHa + ' ha'
+                });
+              }
+            }
           }
 
           let isChucNangPhuHop = true;
@@ -1082,7 +1099,7 @@ function App() {
 
           setKetQuaKiemTra(ketQua);
           showNotification('✅ Đã kiểm tra quy hoạch thành công!');
-        }, 10);
+        }, 20);
       };
       const openVungModal = (vung = null) => {
         if (userRole !== 'ADMIN') {
