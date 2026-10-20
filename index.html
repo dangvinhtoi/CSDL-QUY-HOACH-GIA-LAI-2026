@@ -960,6 +960,13 @@ function App() {
     // HÀM KIỂM TRA QUY HOẠCH ĐA VÙNG - SIÊU MƯỢT, KHÔNG TREO TRÌNH DUYỆT
       const handleThucHienKiemTra = (e) => {
         e.preventDefault();
+        // 🟢 CHÈN ĐOẠN KIỂM TRA QUYỀN VÀO ĐÂY:
+        const isAdmin = userRole === 'ADMIN';
+        const hasPermission = isAdmin || (currentUser && currentUser.allowKTQH !== false);
+        if (!hasPermission) {
+          showNotification('⚠️ Bạn hãy liên hệ với Quản trị hệ thống để được cấp quyền sử dụng tính năng này!');
+          return;
+        }
         const mucTieu = (kiemTraForm?.mucTieuDuAn || '').trim().toLowerCase();
         if (!mucTieu) {
           showNotification('⚠️ Vui lòng nhập mục tiêu dự án!');
@@ -1746,6 +1753,7 @@ const handleSaveVung = async (e) => {
           email: em,
           username: u,
           password: p,
+          allowKTQH: true, // 🟢 Bổ sung quyền KTQH mặc định là được phép
           status: 'PENDING',
           createdAt: new Date().toLocaleString('vi-VN')
         };
@@ -3728,9 +3736,23 @@ const handleSaveVung = async (e) => {
                             </div>
                           )}
                          {member.status === 'APPROVED' && (
-                            <div className="flex items-center gap-2 w-full md:w-auto justify-end">
-                              <button onClick={() => handleAdminChangeMemberPassword(member.id, member.fullName)} className="bg-amber-100 hover:bg-amber-500 hover:text-white text-amber-700 px-3 py-1.5 rounded text-sm font-bold flex items-center gap-1 shadow-sm transition-colors"><Key className="w-4 h-4"/> Đổi MK</button>
-                              <button onClick={() => handleRejectMember(member.id)} className="bg-slate-200 hover:bg-red-500 hover:text-white text-slate-600 px-3 py-1.5 rounded text-sm font-bold flex items-center gap-1 shadow-sm transition-colors"><Trash2 className="w-4 h-4"/> Xóa TK</button>
+                            <div className="flex items-center gap-2 w-full md:w-auto justify-end flex-wrap">
+                              {/* NÚT BẬT/TẮT PHÂN QUYỀN KIỂM TRA QUY HOẠCH */}
+                              <button 
+                                onClick={() => {
+                                  const nextMembers = (membersList || []).map(m => m.id === member.id ? { ...m, allowKTQH: m.allowKTQH === false ? true : false } : m);
+                                  setMembersList(nextMembers);
+                                  localStorage.setItem('gialai_members_list', JSON.stringify(nextMembers));
+                                  syncToCloud({ membersList: nextMembers });
+                                  showNotification('✅ Đã cập nhật quyền sử dụng tính năng KTQH thành công!');
+                                }}
+                                className={`px-3 py-1.5 rounded text-xs font-bold text-white shadow-sm transition-colors ${member.allowKTQH !== false ? 'bg-red-500 hover:bg-red-600' : 'bg-emerald-600 hover:bg-emerald-700'}`}
+                              >
+                                {member.allowKTQH !== false ? 'Không cho phép KTQH' : 'Cho phép sử dụng tính năng KTQH'}
+                              </button>
+
+                              <button onClick={() => handleAdminChangeMemberPassword(member.id, member.fullName)} className="bg-amber-100 hover:bg-amber-500 hover:text-white text-amber-700 px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 shadow-sm transition-colors"><Key className="w-3.5 h-3.5"/> Đổi MK</button>
+                              <button onClick={() => handleRejectMember(member.id)} className="bg-slate-200 hover:bg-red-500 hover:text-white text-slate-600 px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 shadow-sm transition-colors"><Trash2 className="w-3.5 h-3.5"/> Xóa TK</button>
                             </div>
                           )}
                         </div>
