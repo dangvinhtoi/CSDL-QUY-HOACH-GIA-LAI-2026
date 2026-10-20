@@ -1070,7 +1070,7 @@ function App() {
     ];
 
     // =========================================================================
-    // 🟢 2. HÀM ĐÁNH GIÁ SỰ PHÙ HỢP CỦA DỰ ÁN (EVALUATE PROJECT SUITABILITY)
+    // 🟢 HÀM ĐÁNH GIÁ SỰ PHÙ HỢP THÔNG MINH (NHẬN DIỆN NGỮ NGHĨA & NHÓM NGÀNH)
     // =========================================================================
     function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
       if (!chucNangDat || !mucTieuDuAn) {
@@ -1084,33 +1084,83 @@ function App() {
       const queryDat = chucNangDat.toLowerCase().trim();
       const queryMucTieu = mucTieuDuAn.toLowerCase().trim();
 
-      // Tìm chức năng đất tương ứng trong cơ sở dữ liệu
+      // 1. Tìm danh mục cơ bản tương ứng
       const matchedLand = LAND_USE_FUNCTION_MAP.find(item =>
         queryDat.includes(item.loaiChucNang.toLowerCase()) ||
         item.loaiChucNang.toLowerCase().includes(queryDat)
       );
 
-      // Nếu không tìm thấy trong danh mục định nghĩa cứng -> Mặc định là KHÔNG PHÙ HỢP (hoặc yêu cầu rà soát thủ công) thay vì tự động cho phép
-      if (!matchedLand) {
-        return {
-          phuHop: false,
-          loaiCongTrinhPhep: [],
-          ketLuan: `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP. Chức năng đất "${chucNangDat}" chưa được cấu hình danh mục công trình cho phép xây dựng.`
-        };
+      const congTrinhPhep = matchedLand ? matchedLand.congTrinhDuocPhep : ["Công trình phù hợp theo định hướng quy hoạch chung"];
+      const tenChucNangDat = matchedLand ? matchedLand.loaiChucNang : chucNangDat;
+
+      // 2. Nhận diện thông minh theo nhóm ngành / ngữ nghĩa (Semantic Matching)
+      let isPhuHop = false;
+      let lyDoKhongPhuHop = "";
+
+      // Nhóm 1: Đất quốc phòng / An ninh
+      const isDatQPAnNinh = queryDat.includes("quốc phòng") || queryDat.includes("an ninh");
+      const isMucTieuQPAnNinh = queryMucTieu.includes("quốc phòng") || queryMucTieu.includes("quân sự") || queryMucTieu.includes("an ninh") || queryMucTieu.includes("công an") || queryMucTieu.includes("doanh trại") || queryMucTieu.includes("trụ sở công an");
+
+      // Nhóm 2: Đất sản xuất công nghiệp, kho tàng
+      const isDatCongNghiep = queryDat.includes("công nghiệp") || queryDat.includes("kho bãi") || queryDat.includes("sản xuất");
+      const isMucTieuCongNghiep = queryMucTieu.includes("nhà máy") || queryMucTieu.includes("công nghiệp") || queryMucTieu.includes("xưởng") || queryMucTieu.includes("sản xuất") || queryMucTieu.includes("kho bãi") || queryMucTieu.includes("logistic") || queryMucTieu.includes("chế biến");
+
+      // Nhóm 3: Đất ở / Dân cư / Hỗn hợp
+      const isDatOhoacHonHop = queryDat.includes("đất ở") || queryDat.includes("dân cư") || queryDat.includes("hỗn hợp") || queryDat.includes("nhà ở");
+      const isMucTieuNhaO = queryMucTieu.includes("nhà ở") || queryMucTieu.includes("đất ở") || queryMucTieu.includes("khu dân cư") || queryMucTieu.includes("khu đô thị") || queryMucTieu.includes("tái định cư") || queryMucTieu.includes("nhà phố") || queryMucTieu.includes("chung cư");
+
+      // Nhóm 4: Đất giáo dục / Y tế / Văn hóa / Công cộng
+      const isDatHaTangXH = queryDat.includes("giáo dục") || queryDat.includes("y tế") || queryDat.includes("văn hóa") || queryDat.includes("công cộng");
+      const isMucTieuHaTangXH = queryMucTieu.includes("trường") || queryMucTieu.includes("học") || queryMucTieu.includes("bệnh viện") || queryMucTieu.includes("y tế") || queryMucTieu.includes("văn hóa") || queryMucTieu.includes("nhà văn hóa") || queryMucTieu.includes("công cộng");
+
+      // Nhóm 5: Đất giao thông / Bãi đỗ xe
+      const isDatGiaoThong = queryDat.includes("giao thông") || queryDat.includes("bãi đỗ xe");
+      const isMucTieuGiaoThong = queryMucTieu.includes("giao thông") || queryMucTieu.includes("bãi đỗ") || queryMucTieu.includes("bãi đậu") || queryMucTieu.includes("đường");
+
+      // --- ĐÁNH GIÁ THÔNG MINH ---
+      if (isDatQPAnNinh) {
+        if (isMucTieuQPAnNinh) {
+          isPhuHop = true;
+        } else {
+          isPhuHop = false;
+          lyDoKhongPhuHop = "Khu vực đất quốc phòng/an ninh chỉ được phép bố trí các công trình phục vụ nhiệm vụ quốc phòng, an ninh, quân sự.";
+        }
+      } else if (isDatCongNghiep) {
+        if (isMucTieuCongNghiep || isMucTieuGiaoThong) {
+          isPhuHop = true;
+        } else {
+          isPhuHop = false;
+          lyDoKhongPhuHop = `Khu vực quy hoạch "${tenChucNangDat}" ưu tiên phát triển sản xuất công nghiệp, kho bãi, logistics.`;
+        }
+      } else if (isDatOhoacHonHop) {
+        if (isMucTieuNhaO || isMucTieuHaTangXH || isMucTieuGiaoThong || queryMucTieu.includes("thương mại") || queryMucTieu.includes("dịch vụ")) {
+          isPhuHop = true;
+        } else {
+          isPhuHop = false;
+          lyDoKhongPhuHop = `Khu vực quy hoạch "${tenChucNangDat}" không phù hợp với các dự án sản xuất công nghiệp nặng, nhà máy hoặc trang trại lớn.`;
+        }
+      } else if (isDatHaTangXH) {
+        if (isMucTieuHaTangXH || isMucTieuGiaoThong) {
+          isPhuHop = true;
+        } else {
+          isPhuHop = false;
+          lyDoKhongPhuHop = `Khu vực quy hoạch "${tenChucNangDat}" dành riêng cho các công trình hạ tầng xã hội, dịch vụ công cộng.`;
+        }
+      } else {
+        // Kiểm tra khớp thông thường với danh mục
+        const isMatchKeyword = congTrinhPhep.some(ct => {
+          const ctLower = ct.toLowerCase();
+          return queryMucTieu.includes(ctLower) || ctLower.includes(queryMucTieu);
+        });
+        isPhuHop = isMatchKeyword || queryMucTieu.includes(tenChucNangDat.toLowerCase());
       }
 
-      // Kiểm tra mục tiêu dự án có thuộc danh mục công trình được phép xây dựng không
-      const isMatch = matchedLand.congTrinhDuocPhep.some(ct => {
-        const ctLower = ct.toLowerCase();
-        return queryMucTieu.includes(ctLower) || ctLower.includes(queryMucTieu);
-      });
-
       return {
-        phuHop: isMatch,
-        loaiCongTrinhPhep: matchedLand.congTrinhDuocPhep,
-        ketLuan: isMatch
-          ? `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch chức năng ${matchedLand.loaiChucNang}.`
-          : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch. Chức năng ${matchedLand.loaiChucNang} chỉ cho phép các công trình: ${matchedLand.congTrinhDuocPhep.join(", ")}.`
+        phuHop: isPhuHop,
+        loaiCongTrinhPhep: congTrinhPhep,
+        ketLuan: isPhuHop
+          ? `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch chức năng ${tenChucNangDat}.`
+          : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch.${lyDoKhongPhuHop ? " " + lyDoKhongPhuHop : ` Chức năng ${tenChucNangDat} chỉ cho phép các công trình: ${congTrinhPhep.join(", ")}.`}`
       };
     }
     // HÀM KIỂM TRA QUY HOẠCH - HOÀN THIỆN CHÍNH XÁC 100%, ĐỐI CHIẾU PHÁP LÝ TỰ ĐỘNG
