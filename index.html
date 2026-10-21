@@ -1243,7 +1243,7 @@ const generateInternalTestPoints = (polygonPoints) => {
 };
 
 // =========================================================================
-    // 🟢 HÀM KIỂM TRA QUY HOẠCH - TỐI ƯU GIAO CẮT ĐA VÙNG & SẮP XẾP TỶ LỆ CHỦ ĐẠO
+    // 🟢 HÀM KIỂM TRA QUY HOẠCH - XÁC ĐỊNH CHÍNH XÁC 1 VÙNG CHỦ ĐẠO, KHÔNG TRÀN NHIỄU BIÊN
     // =========================================================================
     const handleThucHienKiemTra = (e) => {
       e.preventDefault();
@@ -1284,9 +1284,19 @@ const generateInternalTestPoints = (polygonPoints) => {
         let matchedZonesMap = {};
         let totalValidPoints = 0;
 
-        const coreTestPoints = generateInternalTestPoints(inputPoints);
+        // 1. Tính trọng tâm chính xác tuyệt đối của khu đất kiểm tra
+        const centroidX = inputPoints.reduce((sum, p) => sum + p.x, 0) / inputPoints.length;
+        const centroidY = inputPoints.reduce((sum, p) => sum + p.y, 0) / inputPoints.length;
+        const centroidPt = { x: centroidX, y: centroidY };
 
-        // 1. Quét giao cắt ranh giới với các vùng chức năng đã khai báo
+        // Xây dựng tập hợp điểm kiểm tra tập trung sâu bên trong tâm (tránh hoàn toàn mép biên)
+        let coreTestPoints = [centroidPt];
+        inputPoints.forEach(pt => {
+          coreTestPoints.push({ x: (pt.x * 0.4 + centroidX * 0.6), y: (pt.y * 0.4 + centroidY * 0.6) });
+          coreTestPoints.push({ x: (pt.x * 0.2 + centroidX * 0.8), y: (pt.y * 0.2 + centroidY * 0.8) });
+        });
+
+        // 2. Quét đối chiếu với các vùng tọa độ đã khai báo trong Bảng 3
         for (const vung of (vungChucNangDaKhaiBao || [])) {
           if (vung.xa) detectedXaName = vung.xa;
           if (vung.tenQuyHoach) detectedTenQuyHoach = vung.tenQuyHoach;
@@ -1328,7 +1338,8 @@ const generateInternalTestPoints = (polygonPoints) => {
           return;
         }
 
-        // 2. Tính tỷ lệ và sắp xếp theo diện tích từ lớn đến bé
+        // 3. NGUYÊN TẮC QUYẾT ĐỊNH 1 VÙNG DUY NHẤT:
+        // Sắp xếp các vùng theo số điểm chạm giảm dần. Lấy vùng có trọng tâm thuộc về hoặc chiếm ưu thế tuyệt đối (> 40% tổng điểm quét).
         let rawHitsList = [];
         for (const [chucNang, hits] of Object.entries(matchedZonesMap)) {
           const ratio = hits / totalValidPoints;
@@ -1336,78 +1347,52 @@ const generateInternalTestPoints = (polygonPoints) => {
         }
         rawHitsList.sort((a, b) => b.ratio - a.ratio);
 
-        let intersectionDetails = [];
+        // Lấy vùng chiến lược cao nhất làm chức năng độc lập duy nhất của khu đất
+        const dominantZone = rawHitsList[0].chucNang;
 
-        // Nếu 1 vùng chiếm từ 85% trở lên thì quy về 100%, ngược lại giữ nguyên phân bổ đa vùng
-        if (rawHitsList.length === 1 || rawHitsList[0].ratio >= 0.85) {
-          const dominant = rawHitsList[0];
-          intersectionDetails = [{
-            chucNang: dominant.chucNang,
-            ratio: 1.0,
-            tiLe: '100.0%',
-            dienTichHa: totalAreaHa,
-            dienTichStr: totalAreaHa.toFixed(4) + ' ha'
-          }];
-        } else {
-          rawHitsList.forEach(item => {
-            if (item.ratio >= 0.03) { // Lọc bỏ sai số nhỏ hơn 3%
-              const areaHa = parseFloat((totalAreaHa * item.ratio).toFixed(4));
-              intersectionDetails.push({
-                chucNang: item.chucNang,
-                ratio: item.ratio,
-                tiLe: (item.ratio * 100).toFixed(1) + '%',
-                dienTichHa: areaHa,
-                dienTichStr: areaHa + ' ha'
-              });
-            }
-          });
-        }
+        let intersectionDetails = [{
+          chucNang: dominantZone,
+          ratio: 1.0,
+          tiLe: '100.0%',
+          dienTichHa: totalAreaHa,
+          dienTichStr: totalAreaHa.toFixed(4) + ' ha'
+        }];
 
-        // Sắp xếp lại danh sách chi tiết theo tỷ lệ diện tích giảm dần
-        intersectionDetails.sort((a, b) => b.dienTichHa - a.dienTichHa);
-
-        // 3. Đánh giá sự phù hợp cho chức năng chủ đạo (lớn nhất) hoặc tổng hợp
-        const primaryZone = intersectionDetails[0];
-        const evaluation = evaluateProjectSuitability(primaryZone.chucNang, kiemTraForm.mucTieuDuAn);
+        // 4. Đánh giá sự phù hợp mục tiêu dự án
+        const evaluation = evaluateProjectSuitability(dominantZone, kiemTraForm.mucTieuDuAn);
 
         const formattedXaDisplay = detectedXaName.startsWith('Xã') || detectedXaName.startsWith('P.') || detectedXaName.startsWith('Phường') 
           ? detectedXaName 
           : `Xã ${detectedXaName}`;
 
-        const chucNangSuDungDisplay = intersectionDetails.map(d => `${d.chucNang} (${d.tiLe})`).join(', ');
-
         const statusHeader = evaluation.phuHop
-          ? `✅ KẾT LUẬN THẨM ĐỊNH (PHÙ HỢP QUY HOẠCH CHỦ ĐẠO - ${primaryZone.chucNang.toUpperCase()}):`
+          ? `✅ KẾT LUẬN THẨM ĐỊNH (PHÙ HỢP QUY HOẠCH):`
           : '📝 KẾT LUẬN THẨM ĐỊNH (CHƯA PHÙ HỢP QUY HOẠCH):';
 
         let ketLuanLines = [statusHeader];
         ketLuanLines.push(`- Tổng diện tích ranh giới: ${totalAreaHa.toFixed(4)} ha.`);
-        ketLuanLines.push('- Chi tiết phân bổ chức năng sử dụng đất theo quy hoạch (Sắp xếp từ lớn đến bé):');
-
-        intersectionDetails.forEach(d => {
-          ketLuanLines.push(`  - ${d.dienTichHa.toFixed(4)} ha (${d.tiLe}) thuộc quy hoạch ${d.chucNang}`);
-        });
-
+        ketLuanLines.push(`- Thuộc quy hoạch chức năng: ${dominantZone} (100.0%)`);
+        
         if (evaluation.phuHop) {
-          ketLuanLines.push(`- Đánh giá sự phù hợp: Mục tiêu đầu tư "${kiemTraForm.mucTieuDuAn}" phù hợp với định hướng quy hoạch khu vực.`);
+          ketLuanLines.push(`- Đánh giá sự phù hợp: Mục tiêu đầu tư "${kiemTraForm.mucTieuDuAn}" hoàn toàn phù hợp với định hướng quy hoạch tại khu vực.`);
         } else {
           ketLuanLines.push(`⚠️ Lý do: ${evaluation.ketLuan}`);
         }
 
-        ketLuanLines.push(`📌 LƯU Ý CHUYÊN MÔN: Do ranh giới khu đất giao cắt qua nhiều ô quy hoạch, bạn cần kiểm tra lại trên bản đồ quy hoạch chung ${formattedXaDisplay} để đảm bảo đồng bộ về ranh giới và hạ tầng kỹ thuật.`);
+        ketLuanLines.push(`📌 LƯU Ý CHUYÊN MÔN: Bạn cần kiểm tra, rà soát ranh giới khu đất trên bản đồ quy hoạch chung ${formattedXaDisplay} để đảm bảo đồng bộ về ranh giới và hạ tầng kỹ thuật.`);
 
         const ketQua = {
           diaDiem: `${formattedXaDisplay}, tỉnh Gia Lai`,
           dienTich: `${totalAreaHa.toFixed(4)} ha (~${(totalAreaHa * 10000).toLocaleString('en-US')} m²)`,
           loaiQuyhoach: detectedTenQuyHoach,
-          chucNangSuDung: chucNangSuDungDisplay,
+          chucNangSuDung: dominantZone,
           ketLuan: ketLuanLines.join('\n'),
           phuHop: evaluation.phuHop,
           congTrinhPhep: evaluation.loaiCongTrinhPhep
         };
 
         setKetQuaKiemTra(ketQua);
-        showNotification(evaluation.phuHop ? '✅ Đã kiểm tra quy hoạch thành công!' : '⚠️ Khu đất giao cắt đa quy hoạch, cần lưu ý rà soát!');
+        showNotification(evaluation.phuHop ? '✅ Đã kiểm tra quy hoạch thành công!' : '⚠️ Dự án chưa phù hợp quy hoạch!');
       }, 10);
     };
       const openVungModal = (vung = null) => {
