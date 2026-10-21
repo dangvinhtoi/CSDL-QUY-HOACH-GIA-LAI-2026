@@ -1075,93 +1075,129 @@ function App() {
     ];
 
     // =========================================================================
-    // 🟢 HÀM ĐÁNH GIÁ SỰ PHÙ HỢP THÔNG MINH (HỖ TRỢ ĐỐI CHIẾU TỪ KHÓA & NGỮ NGHĨA)
-    // =========================================================================
-    function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
-      if (!chucNangDat || !mucTieuDuAn) {
-        return { 
-          phuHop: false, 
-          loaiCongTrinhPhep: [], 
-          ketLuan: "Thiếu thông tin chức năng đất quy hoạch hoặc mục tiêu dự án." 
-        };
+// 🟢 1. THUẬT TOÁN TẠO LƯỚI ĐIỂM KIỂM TRA MỊN (GRID SAMPLING) CHỐNG SÓT ĐẤT NHỎ
+// =========================================================================
+const generateGridTestPoints = (polygonPoints) => {
+  if (!polygonPoints || polygonPoints.length < 3) return [];
+
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  polygonPoints.forEach(pt => {
+    if (pt.x < minX) minX = pt.x;
+    if (pt.x > maxX) maxX = pt.x;
+    if (pt.y < minY) minY = pt.y;
+    if (pt.y > maxY) maxY = pt.y;
+  });
+
+  const testPoints = [];
+  const centroidX = polygonPoints.reduce((sum, p) => sum + p.x, 0) / polygonPoints.length;
+  const centroidY = polygonPoints.reduce((sum, p) => sum + p.y, 0) / polygonPoints.length;
+  
+  // Lấy các điểm trọng tâm, đỉnh và điểm trung vị
+  testPoints.push({ x: centroidX, y: centroidY });
+  polygonPoints.forEach(pt => {
+    testPoints.push(pt);
+    testPoints.push({ x: (pt.x * 2 + centroidX) / 3, y: (pt.y * 2 + centroidY) / 3 });
+    testPoints.push({ x: (pt.x + centroidX) / 2, y: (pt.y + centroidY) / 2 });
+  });
+
+  // Tạo lưới điểm 12 x 12 phủ đều toàn bộ ranh giới
+  const steps = 12;
+  const stepX = (maxX - minX) / steps;
+  const stepY = (maxY - minY) / steps;
+
+  for (let i = 1; i < steps; i++) {
+    for (let j = 1; j < steps; j++) {
+      const pt = { x: minX + i * stepX, y: minY + j * stepY };
+      if (isPointInPolygon(pt, polygonPoints)) {
+        testPoints.push(pt);
       }
-
-      const queryDat = chucNangDat.toLowerCase().trim();
-      const queryMucTieu = mucTieuDuAn.toLowerCase().trim();
-
-      // 1. Tìm danh mục cơ bản tương ứng trong LAND_USE_FUNCTION_MAP
-      const matchedLand = LAND_USE_FUNCTION_MAP.find(item =>
-        queryDat.includes(item.loaiChucNang.toLowerCase()) ||
-        item.loaiChucNang.toLowerCase().includes(queryDat)
-      );
-
-      const congTrinhPhep = matchedLand ? matchedLand.congTrinhDuocPhep : ["Nghĩa địa", "nghĩa trang", "nhà tang lễ", "cơ sở hỏa táng", "công trình hạ tầng kỹ thuật"];
-      const tenChucNangDat = matchedLand ? matchedLand.loaiChucNang : chucNangDat;
-
-      let isPhuHop = false;
-      let lyDoKhongPhuHop = "";
-
-      // 2. Kiểm tra sự tương đồng từ khóa cốt lõi giữa chức năng đất và mục tiêu dự án (Khớp ngữ nghĩa linh hoạt)
-      const hasSharedKeywords = queryDat.split(/[\s,()]+/).some(word => word.length > 2 && queryMucTieu.includes(word));
-
-      // Nhóm đặc thù: Nghĩa địa / Nghĩa trang / Mai táng / Cải táng
-      const isDatNghiaDia = queryDat.includes("nghĩa địa") || queryDat.includes("nghĩa trang") || queryDat.includes("htkt khác") || queryDat.includes("tang lễ") || queryDat.includes("hỏa táng");
-      const isMucTieuNghiaDia = queryMucTieu.includes("nghĩa địa") || queryMucTieu.includes("nghĩa trang") || queryMucTieu.includes("mai táng") || queryMucTieu.includes("cải táng") || queryMucTieu.includes("hỏa táng") || queryMucTieu.includes("tang lễ");
-
-      // 3. Phân loại nhóm chức năng quy hoạch thực tế
-      const isDatNongLamNghiep = queryDat.includes("lâm nghiệp") || queryDat.includes("rừng phòng hộ") || queryDat.includes("đồi núi") || queryDat.includes("trồng rừng") || queryDat.includes("nông nghiệp");
-      const isDatQPAnNinh = queryDat.includes("quốc phòng") || queryDat.includes("an ninh");
-      const isDatCongNghiep = queryDat.includes("công nghiệp") || queryDat.includes("kho bãi") || queryDat.includes("sản xuất");
-      const isDatOhoacHonHop = queryDat.includes("đất ở") || queryDat.includes("dân cư") || queryDat.includes("hỗn hợp") || queryDat.includes("nhà ở");
-
-      // --- 4. MA TRẬN ĐỐI CHIẾU PHÁP LÝ QUY HOẠCH ---
-      if ((isDatNghiaDia && isMucTieuNghiaDia) || hasSharedKeywords) {
-        isPhuHop = true;
-      } else if (isDatNongLamNghiep) {
-        if (queryMucTieu.includes("trồng rừng") || queryMucTieu.includes("lâm nghiệp") || queryMucTieu.includes("nông nghiệp") || queryMucTieu.includes("bảo vệ") || queryMucTieu.includes("sinh thái")) {
-          isPhuHop = true;
-        } else {
-          isPhuHop = false;
-          lyDoKhongPhuHop = `Khu vực quy hoạch "${tenChucNangDat}" là đất lâm nghiệp/rừng phòng hộ, không phù hợp với mục tiêu dự án đề xuất.`;
-        }
-      } else if (isDatQPAnNinh) {
-        if (queryMucTieu.includes("quốc phòng") || queryMucTieu.includes("qu quân sự") || queryMucTieu.includes("an ninh") || queryMucTieu.includes("công an")) {
-          isPhuHop = true;
-        } else {
-          isPhuHop = false;
-          lyDoKhongPhuHop = "Khu vực đất quốc phòng/an ninh chỉ phục vụ mục đích quân sự và an ninh quốc gia.";
-        }
-      } else if (isDatCongNghiep) {
-        if (queryMucTieu.includes("nhà máy") || queryMucTieu.includes("xưởng") || queryMucTieu.includes("sản xuất") || queryMucTieu.includes("kho bãi") || queryMucTieu.includes("logistic") || queryMucTieu.includes("giao thông")) {
-          isPhuHop = true;
-        } else {
-          isPhuHop = false;
-          lyDoKhongPhuHop = `Khu vực quy hoạch "${tenChucNangDat}" định hướng cho sản xuất công nghiệp và kho bãi.`;
-        }
-      } else if (isDatOhoacHonHop) {
-        if (queryMucTieu.includes("nhà ở") || queryMucTieu.includes("khu dân cư") || queryMucTieu.includes("khu đô thị") || queryMucTieu.includes("đất ở") || queryMucTieu.includes("chung cư") || queryMucTieu.includes("tái định cư") || queryMucTieu.includes("thương mại") || queryMucTieu.includes("dịch vụ") || queryMucTieu.includes("hạ tầng")) {
-          isPhuHop = true;
-        } else {
-          isPhuHop = false;
-          lyDoKhongPhuHop = `Khu vực quy hoạch "${tenChucNangDat}" không phù hợp với mục tiêu dự án đề xuất.`;
-        }
-      } else {
-        isPhuHop = congTrinhPhep.some(ct => {
-          const ctLower = ct.toLowerCase();
-          return queryMucTieu.includes(ctLower) || ctLower.includes(queryMucTieu);
-        }) || queryMucTieu.includes(tenChucNangDat.toLowerCase());
-      }
-
-      return {
-        phuHop: isPhuHop,
-        loaiCongTrinhPhep: congTrinhPhep,
-        ketLuan: isPhuHop
-          ? `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch chức năng ${tenChucNangDat}.`
-          : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch.${lyDoKhongPhuHop ? " " + lyDoKhongPhuHop : ` Chức năng ${tenChucNangDat} chỉ cho phép các công trình: ${congTrinhPhep.join(", ")}.`}`
-      };
     }
-    // =========================================================================
-// 🟢 HÀM XỬ LÝ KIỂM TRA QUY HOẠCH - HỖ TRỢ ĐA VÙNG TỌA ĐỘ, PHÂN BỔ DIỆN TÍCH & QUY TẮC 2/3
+  }
+
+  return testPoints;
+};
+
+// =========================================================================
+// 🟢 2. HÀM ĐÁNH GIÁ SỰ PHÙ HỢP QUY HOẠCH CHUYÊN NGÀNH (MÔ HÌNH ĐƠN VỊ Ở / KHU DÂN CƯ)
+// =========================================================================
+function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
+  if (!chucNangDat || !mucTieuDuAn) {
+    return {
+      phuHop: false,
+      loaiCongTrinhPhep: [],
+      ketLuan: "Thiếu thông tin chức năng đất quy hoạch hoặc mục tiêu dự án."
+    };
+  }
+
+  const queryDat = chucNangDat.toLowerCase().trim();
+  const queryMucTieu = mucTieuDuAn.toLowerCase().trim();
+
+  // Tìm danh mục tương ứng trong LAND_USE_FUNCTION_MAP
+  const matchedLand = LAND_USE_FUNCTION_MAP.find(item =>
+    queryDat.includes(item.loaiChucNang.toLowerCase()) ||
+    item.loaiChucNang.toLowerCase().includes(queryDat)
+  );
+
+  const congTrinhPhep = matchedLand ? matchedLand.congTrinhDuocPhep : ["Nhà ở riêng lẻ", "công trình hạ tầng kỹ thuật", "công viên cây xanh", "thương mại dịch vụ"];
+  const tenChucNangDat = matchedLand ? matchedLand.loaiChucNang : chucNangDat;
+
+  // Nhận diện mục tiêu tổng thể phát triển Đơn vị ở / Khu dân cư / Khu đô thị
+  const isResidentialProject = 
+    queryMucTieu.includes("dân cư") || 
+    queryMucTieu.includes("đô thị") || 
+    queryMucTieu.includes("nhà ở") || 
+    queryMucTieu.includes("nhóm ở") || 
+    queryMucTieu.includes("đơn vị ở") ||
+    queryMucTieu.includes("thương mại") || 
+    queryMucTieu.includes("hỗn hợp");
+
+  // Kiểm tra nhóm đất thành phần quy hoạch thuộc cơ cấu phát triển Đơn vị ở
+  const isResidentialComponentLand = 
+    queryDat.includes("đất ở") || 
+    queryDat.includes("nhà ở") || 
+    queryDat.includes("hỗn hợp") || 
+    queryDat.includes("dân cư") || 
+    queryDat.includes("cây xanh") || 
+    queryDat.includes("mặt nước") || 
+    queryDat.includes("trụ sở") || 
+    queryDat.includes("cơ quan") || 
+    queryDat.includes("tôn giáo") || 
+    queryDat.includes("du lịch") || 
+    queryDat.includes("thương mại") || 
+    queryDat.includes("dịch vụ") || 
+    queryDat.includes("giao thông") || 
+    queryDat.includes("hạ tầng");
+
+  let isPhuHop = false;
+  let lyDoKhongPhuHop = "";
+
+  if (isResidentialProject && isResidentialComponentLand) {
+    isPhuHop = true;
+  } else if (queryDat.includes("công nghiệp") || queryDat.includes("kho bãi")) {
+    if (queryMucTieu.includes("nhà máy") || queryMucTieu.includes("xưởng") || queryMucTieu.includes("sản xuất") || queryMucTieu.includes("kho bãi") || queryMucTieu.includes("logistic")) {
+      isPhuHop = true;
+    } else {
+      isPhuHop = false;
+      lyDoKhongPhuHop = `Khu vực quy hoạch "${tenChucNangDat}" là đất sản xuất công nghiệp, không phù hợp với mục tiêu khu dân cư.`;
+    }
+  } else if (queryDat.includes("lâm nghiệp") || queryDat.includes("rừng phòng hộ")) {
+    isPhuHop = false;
+    lyDoKhongPhuHop = `Khu vực quy hoạch "${tenChucNangDat}" là đất lâm nghiệp/rừng phòng hộ, không phù hợp với mục tiêu dự án.`;
+  } else {
+    isPhuHop = congTrinhPhep.some(ct => queryMucTieu.includes(ct.toLowerCase()) || ct.toLowerCase().includes(queryMucTieu)) || queryMucTieu.includes(tenChucNangDat.toLowerCase());
+  }
+
+  return {
+    phuHop: isPhuHop,
+    loaiCongTrinhPhep: congTrinhPhep,
+    ketLuan: isPhuHop
+      ? `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch chức năng ${tenChucNangDat}.`
+      : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch.${lyDoKhongPhuHop ? " " + lyDoKhongPhuHop : ` Chức năng \${tenChucNangDat} chỉ cho phép các công trình: \${congTrinhPhep.join(", ")}.`}`
+  };
+}
+
+// =========================================================================
+// 🟢 3. HÀM KIỂM TRA QUY HOẠCH HOÀN CHỈNH (HỖ TRỢ ĐA VÙNG & TÍNH TỶ LỆ CHUẨN XÁC)
 // =========================================================================
 const handleThucHienKiemTra = (e) => {
   e.preventDefault();
@@ -1201,16 +1237,10 @@ const handleThucHienKiemTra = (e) => {
     let matchedZonesMap = {};
     let totalValidPoints = 0;
 
-    const centroidX = inputPoints.reduce((sum, p) => sum + p.x, 0) / inputPoints.length;
-    const centroidY = inputPoints.reduce((sum, p) => sum + p.y, 0) / inputPoints.length;
-    const centroidPt = { x: centroidX, y: centroidY };
+    // Lấy lưới điểm kiểm tra mịn
+    const coreTestPoints = generateGridTestPoints(inputPoints);
 
-    let coreTestPoints = [centroidPt];
-    inputPoints.forEach(pt => {
-      coreTestPoints.push({ x: (pt.x * 2 + centroidX) / 3, y: (pt.y * 2 + centroidY) / 3 });
-    });
-
-    // 1. Quét giao cắt ranh giới với các vùng chức năng đã khai báo
+    // 1. Quét giao cắt ranh giới với tất cả vùng chức năng đã khai báo
     for (const vung of (vungChucNangDaKhaiBao || [])) {
       if (vung.xa) detectedXaName = vung.xa;
       if (vung.tenQuyHoach) detectedTenQuyHoach = vung.tenQuyHoach;
@@ -1238,10 +1268,11 @@ const handleThucHienKiemTra = (e) => {
 
     let matchedZonesList = Object.keys(matchedZonesMap);
 
-    // Trường hợp ranh giới ngoài phạm vi dữ liệu
+    // Trường hợp ranh giới nằm ngoài phạm vi dữ liệu
     if (matchedZonesList.length === 0 || totalValidPoints === 0) {
+      const formattedXaNgoai = detectedXaName.startsWith('Xã') || detectedXaName.startsWith('P.') || detectedXaName.startsWith('Phường') ? detectedXaName : `Xã ${detectedXaName}`;
       const ketQuaNgoaiVung = {
-        diaDiem: `Xã ${detectedXaName}, tỉnh Gia Lai`,
+        diaDiem: `${formattedXaNgoai}, tỉnh Gia Lai`,
         dienTich: `${totalAreaHa.toFixed(4)} ha (~${(totalAreaHa * 10000).toLocaleString('en-US')} m²)`,
         loaiQuyhoach: detectedTenQuyHoach,
         chucNangSuDung: 'Ngoài vùng dữ liệu khai báo',
@@ -1253,7 +1284,7 @@ const handleThucHienKiemTra = (e) => {
       return;
     }
 
-    // 2. Tính toán phân bổ chi tiết diện tích & tỷ lệ cho từng chức năng đất
+    // 2. Tính toán phân bổ chi tiết diện tích & tỷ lệ % cho TẤT CẢ các vùng chức năng
     let intersectionDetails = [];
     let totalHits = Object.values(matchedZonesMap).reduce((a, b) => a + b, 0);
 
@@ -1274,66 +1305,59 @@ const handleThucHienKiemTra = (e) => {
     // Sắp xếp loại đất có diện tích lớn nhất lên đầu
     intersectionDetails.sort((a, b) => b.dienTichHa - a.dienTichHa);
 
-    // 3. Đánh giá sự phù hợp mục tiêu dự án cho từng vùng & kiểm tra điều kiện > 2/3 diện tích
+    // 3. Đánh giá sự phù hợp tổng thể dự án theo nhóm quy hoạch Đơn vị ở / Khu dân cư
     let totalSuitableRatio = 0;
-    let unsuitableReasons = [];
     let allAllowedBuildingTypes = new Set();
 
     intersectionDetails.forEach(item => {
       const evalItem = evaluateProjectSuitability(item.chucNang, kiemTraForm.mucTieuDuAn);
       item.phuHop = evalItem.phuHop;
-      
+
       if (evalItem.loaiCongTrinhPhep && Array.isArray(evalItem.loaiCongTrinhPhep)) {
         evalItem.loaiCongTrinhPhep.forEach(ct => allAllowedBuildingTypes.add(ct));
       }
 
       if (item.phuHop) {
         totalSuitableRatio += item.ratio;
-      } else {
-        const reasonText = evalItem.ketLuan.includes('không phù hợp') || evalItem.ketLuan.includes('không cho phép')
-          ? evalItem.ketLuan.replace(/^❌\s*/, '')
-          : `Khu vực quy hoạch ${item.chucNang} không phù hợp với mục tiêu ${kiemTraForm.mucTieuDuAn}.`;
-        unsuitableReasons.push(reasonText);
       }
     });
 
-    // ĐIỀU KIỆN CỐT LÕI: Diện tích chức năng đất phù hợp phải chiếm > 2/3 tổng diện tích (66.67%)
+    // Điều kiện phù hợp: Tổng diện tích các chức năng thuộc cấu thành khu dân cư/đơn vị ở chiếm hơn 2/3 diện tích ( > 66.67% )
     const isOverallSuitable = totalSuitableRatio > (2 / 3);
 
-    // 4. Định dạng chuỗi hiển thị Chức năng đất
-    const chucNangSuDungDisplay = intersectionDetails.length > 1
-      ? intersectionDetails.map(d => `${d.chucNang} (${d.tiLe})`).join(', ')
-      : intersectionDetails[0].chucNang;
+    // 4. Chuẩn hóa tên địa điểm (tránh trùng chữ "Xã Xã")
+    const formattedXaDisplay = detectedXaName.startsWith('Xã') || detectedXaName.startsWith('P.') || detectedXaName.startsWith('Phường') 
+      ? detectedXaName 
+      : `Xã ${detectedXaName}`;
 
-    // 5. Xây dựng văn bản Kết luận Thẩm định chuẩn mẫu
+    // 5. Định dạng chuỗi hiển thị Chức năng đất (Đầy đủ tất cả các loại đất có mặt)
+    const chucNangSuDungDisplay = intersectionDetails.map(d => `${d.chucNang} (${d.tiLe})`).join(', ');
+
+    // 6. Xây dựng văn bản Báo cáo Thẩm định Thích ứng Quy hoạch
     const statusHeader = isOverallSuitable
-      ? '✅ KẾT LUẬN THẨM ĐỊNH (PHÙ HỢP QUY HOẠCH):'
+      ? '✅ KẾT LUẬN THẨM ĐỊNH (PHÙ HỢP QUY HOẠCH ĐƠN VỊ Ở):'
       : '📝 KẾT LUẬN THẨM ĐỊNH (CHƯA PHÙ HỢP QUY HOẠCH):';
 
     let ketLuanLines = [statusHeader];
     ketLuanLines.push(`- Tổng diện tích ranh giới: ${totalAreaHa.toFixed(4)} ha.`);
-    ketLuanLines.push('- Chi tiết phân bổ chức năng đất thực tế:');
-    
+    ketLuanLines.push('- Chi tiết phân bổ chức năng sử dụng đất theo quy hoạch:');
+
     intersectionDetails.forEach(d => {
       ketLuanLines.push(`  - ${d.dienTichHa} ha (${d.tiLe}) thuộc quy hoạch ${d.chucNang}`);
     });
 
-    if (!isOverallSuitable) {
-      if (unsuitableReasons.length > 0) {
-        // Trích dẫn lý do không phù hợp của vùng đất chính/chiếm đa số
-        const mainReason = unsuitableReasons[0];
-        ketLuanLines.push(`⚠️ Lý do: ${mainReason.includes('Khu vực quy hoạch') ? mainReason : 'Khu vực quy hoạch không phù hợp với mục tiêu dự án đề xuất.'}`);
-      } else {
-        ketLuanLines.push(`⚠️ Lý do: Tổng diện tích chức năng đất phù hợp chỉ chiếm ${(totalSuitableRatio * 100).toFixed(1)}% (không đạt điều kiện chiếm hơn 2/3 diện tích ranh giới khu đất).`);
-      }
+    if (isOverallSuitable) {
+      ketLuanLines.push(`- Đánh giá phù hợp chuyên ngành: Phạm vi khu đất thuộc vùng quy hoạch định hướng phát triển Đất nhóm ở (Đơn vị ở). Mục tiêu đầu tư "${kiemTraForm.mucTieuDuAn}" hoàn toàn phù hợp với định hướng quy hoạch chung. Việc ranh giới dự án bao gồm Đất ở, Đất hỗn hợp, Đất cây xanh sử dụng công cộng, Đất mặt nước, Đất trụ sở cơ quan, Đất tôn giáo, Đất dịch vụ du lịch là hoàn toàn phù hợp với cơ cấu tổ chức không gian hạ tầng kỹ thuật và hạ tầng xã hội đồng bộ của một Đơn vị ở/Khu dân cư.`);
+    } else {
+      ketLuanLines.push(`⚠️ Lý do: Tổng diện tích các chức năng đất phù hợp chỉ chiếm ${(totalSuitableRatio * 100).toFixed(1)}% (chưa đạt điều kiện chiếm trên 2/3 diện tích khu đất).`);
     }
 
-    // Bổ sung Lưu ý chuyên môn bắt buộc theo quy hoạch chung xã
-    ketLuanLines.push(`📌 LƯU Ý CHUYÊN MÔN: Bạn cần kiểm tra ranh giới khu đất trên quy hoạch chung xã ${detectedXaName} để đảm bảo đồng bộ về ranh giới, quy hoạch sử dụng đất, hạ tầng kỹ thuật theo định hướng quy hoạch chung đã được phê duyệt.`);
+    // Bổ sung Lưu ý chuyên môn bắt buộc
+    ketLuanLines.push(`📌 LƯU Ý CHUYÊN MÔN: Bạn cần kiểm tra, rà soát ranh giới khu đất trên bản đồ quy hoạch chung ${formattedXaDisplay} để đảm bảo đồng bộ về ranh giới, quy hoạch sử dụng đất và hạ tầng kỹ thuật theo định hướng quy hoạch chung đã được phê duyệt.`);
 
-    // 6. Cập nhật State kết quả hiển thị trên giao diện
+    // 7. Cập nhật State kết quả lên giao diện
     const ketQua = {
-      diaDiem: `Xã ${detectedXaName}, tỉnh Gia Lai`,
+      diaDiem: `${formattedXaDisplay}, tỉnh Gia Lai`,
       dienTich: `${totalAreaHa.toFixed(4)} ha (~${(totalAreaHa * 10000).toLocaleString('en-US')} m²)`,
       loaiQuyhoach: detectedTenQuyHoach,
       chucNangSuDung: chucNangSuDungDisplay,
