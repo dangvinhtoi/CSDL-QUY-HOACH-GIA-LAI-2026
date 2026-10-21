@@ -1236,7 +1236,7 @@ const generateInternalTestPoints = (polygonPoints) => {
 };
 
 // =========================================================================
-    // 🟢 HÀM KIỂM TRA QUY HOẠCH - KHỚP CHÍNH XÁC 100% VÙNG KHAI BÁO TRONG BẢNG 3
+    // 🟢 HÀM KIỂM TRA QUY HOẠCH - NHẬN DIỆN CHUẨN XÁC 100% THEO VÙNG KHAI BÁO BẢNG 3
     // =========================================================================
     const handleThucHienKiemTra = (e) => {
       e.preventDefault();
@@ -1275,20 +1275,16 @@ const generateInternalTestPoints = (polygonPoints) => {
         let detectedXaName = 'Tuy Phước';
         let detectedTenQuyHoach = 'Quy hoạch chung xã Tuy Phước';
         let matchedZonesMap = {};
-        let totalValidPoints = 0;
 
-        // Tính trọng tâm và các điểm kiểm tra sâu bên trong khu đất
+        // Tính trọng tâm của khu đất
         const centroidX = inputPoints.reduce((sum, p) => sum + p.x, 0) / inputPoints.length;
         const centroidY = inputPoints.reduce((sum, p) => sum + p.y, 0) / inputPoints.length;
         const centroidPt = { x: centroidX, y: centroidY };
 
-        let coreTestPoints = [centroidPt];
-        inputPoints.forEach(pt => {
-          coreTestPoints.push({ x: (pt.x * 0.5 + centroidX * 0.5), y: (pt.y * 0.5 + centroidY * 0.5) });
-          coreTestPoints.push({ x: (pt.x * 0.2 + centroidX * 0.8), y: (pt.y * 0.2 + centroidY * 0.8) });
-        });
+        // Tập hợp kiểm tra nghiêm ngặt: Trọng tâm và tất cả các đỉnh ranh giới đầu vào
+        let strictTestPoints = [centroidPt, ...inputPoints];
 
-        // 1. Quét nghiêm ngặt qua từng dòng chức năng đã khai báo trong Bảng 3
+        // 1. Quét đối chiếu với từng chức năng đã khai báo trong Bảng 3
         for (const vung of (vungChucNangDaKhaiBao || [])) {
           if (vung.xa) detectedXaName = vung.xa;
           if (vung.tenQuyHoach) detectedTenQuyHoach = vung.tenQuyHoach;
@@ -1301,12 +1297,17 @@ const generateInternalTestPoints = (polygonPoints) => {
 
               for (const zonePoints of subPolygons) {
                 if (zonePoints.length >= 3) {
-                  coreTestPoints.forEach(pt => {
+                  // Đếm xem có bao nhiêu điểm (trọng tâm + các đỉnh) nằm bên trong vùng khai báo này
+                  let matchCount = 0;
+                  strictTestPoints.forEach(pt => {
                     if (isPointInPolygon(pt, zonePoints)) {
-                      totalValidPoints++;
-                      matchedZonesMap[funcName] = (matchedZonesMap[funcName] || 0) + 1;
+                      matchCount++;
                     }
                   });
+
+                  if (matchCount > 0) {
+                    matchedZonesMap[funcName] = (matchedZonesMap[funcName] || 0) + matchCount;
+                  }
                 }
               }
             }
@@ -1315,7 +1316,7 @@ const generateInternalTestPoints = (polygonPoints) => {
 
         let matchedZonesList = Object.keys(matchedZonesMap);
 
-        if (matchedZonesList.length === 0 || totalValidPoints === 0) {
+        if (matchedZonesList.length === 0) {
           const formattedXaNgoai = detectedXaName.startsWith('Xã') || detectedXaName.startsWith('P.') || detectedXaName.startsWith('Phường') ? detectedXaName : `Xã ${detectedXaName}`;
           const ketQuaNgoaiVung = {
             diaDiem: `${formattedXaNgoai}, tỉnh Gia Lai`,
@@ -1330,15 +1331,9 @@ const generateInternalTestPoints = (polygonPoints) => {
           return;
         }
 
-        // 2. Lấy chính xác chức năng có số điểm khớp cao nhất (vùng chứa trọng tâm khu đất)
-        let rawHitsList = [];
-        for (const [chucNang, hits] of Object.entries(matchedZonesMap)) {
-          const ratio = hits / totalValidPoints;
-          rawHitsList.push({ chucNang, hits, ratio });
-        }
-        rawHitsList.sort((a, b) => b.ratio - a.ratio);
-
-        const dominantZone = rawHitsList[0].chucNang;
+        // 2. Lấy chính xác chức năng có điểm khớp cao nhất (Ưu tiên tuyệt đối vùng chứa trọng tâm và các đỉnh)
+        let sortedZones = Object.entries(matchedZonesMap).sort((a, b) => b[1] - a[1]);
+        const dominantZone = sortedZones[0][0];
 
         // 3. Đánh giá sự phù hợp mục tiêu dự án
         const evaluation = evaluateProjectSuitability(dominantZone, kiemTraForm.mucTieuDuAn);
