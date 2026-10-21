@@ -1118,7 +1118,7 @@ const generateGridTestPoints = (polygonPoints) => {
 };
 
 // =========================================================================
-// 🟢 2. HÀM ĐÁNH GIÁ SỰ PHÙ HỢP QUY HOẠCH CHUYÊN NGÀNH (MÔ HÌNH ĐƠN VỊ Ở / KHU DÂN CƯ)
+// 🟢 HÀM ĐÁNH GIÁ SỰ PHÙ HỢP QUY HOẠCH (ĐÃ BỔ SUNG KHU TÁI ĐỊNH CƯ & NHÀ Ở)
 // =========================================================================
 function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   if (!chucNangDat || !mucTieuDuAn) {
@@ -1138,20 +1138,28 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
     item.loaiChucNang.toLowerCase().includes(queryDat)
   );
 
-  const congTrinhPhep = matchedLand ? matchedLand.congTrinhDuocPhep : ["Nhà ở riêng lẻ", "công trình hạ tầng kỹ thuật", "công viên cây xanh", "thương mại dịch vụ"];
+  const congTrinhPhep = matchedLand ? matchedLand.congTrinhDuocPhep : ["Nhà ở riêng lẻ", "nhà ở tái định cư", "công trình hạ tầng kỹ thuật", "công viên cây xanh", "thương mại dịch vụ"];
   const tenChucNangDat = matchedLand ? matchedLand.loaiChucNang : chucNangDat;
 
-  // Nhận diện mục tiêu tổng thể phát triển Đơn vị ở / Khu dân cư / Khu đô thị
+  // 🟢 1. BỔ SUNG TỪ KHÓA: "tái định cư", "tđc", "chung cư", "phân lô", "kdc", "kđt"...
   const isResidentialProject = 
     queryMucTieu.includes("dân cư") || 
     queryMucTieu.includes("đô thị") || 
     queryMucTieu.includes("nhà ở") || 
+    queryMucTieu.includes("tái định cư") ||   // 👈 Khắc phục lỗi cho dự án Tái định cư
+    queryMucTieu.includes("tđc") || 
+    queryMucTieu.includes("kdc") || 
+    queryMucTieu.includes("kđt") || 
     queryMucTieu.includes("nhóm ở") || 
-    queryMucTieu.includes("đơn vị ở") ||
+    queryMucTieu.includes("đơn vị ở") || 
+    queryMucTieu.includes("chung cư") || 
+    queryMucTieu.includes("phân lô") || 
+    queryMucTieu.includes("liền kề") || 
+    queryMucTieu.includes("biệt thự") || 
     queryMucTieu.includes("thương mại") || 
     queryMucTieu.includes("hỗn hợp");
 
-  // Kiểm tra nhóm đất thành phần quy hoạch thuộc cơ cấu phát triển Đơn vị ở
+  // 🟢 2. Kiểm tra nhóm đất thành phần quy hoạch thuộc cơ cấu phát triển Đơn vị ở / Khu tái định cư
   const isResidentialComponentLand = 
     queryDat.includes("đất ở") || 
     queryDat.includes("nhà ở") || 
@@ -1178,7 +1186,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
       isPhuHop = true;
     } else {
       isPhuHop = false;
-      lyDoKhongPhuHop = `Khu vực quy hoạch "${tenChucNangDat}" là đất sản xuất công nghiệp, không phù hợp với mục tiêu khu dân cư.`;
+      lyDoKhongPhuHop = `Khu vực quy hoạch "${tenChucNangDat}" là đất sản xuất công nghiệp, không phù hợp với mục tiêu khu dân cư / tái định cư.`;
     }
   } else if (queryDat.includes("lâm nghiệp") || queryDat.includes("rừng phòng hộ")) {
     isPhuHop = false;
@@ -1195,7 +1203,6 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
       : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch.${lyDoKhongPhuHop ? " " + lyDoKhongPhuHop : ` Chức năng \${tenChucNangDat} chỉ cho phép các công trình: \${congTrinhPhep.join(", ")}.`}`
   };
 }
-
 // =========================================================================
 // 🟢 3. HÀM KIỂM TRA QUY HOẠCH HOÀN CHỈNH (HỖ TRỢ ĐA VÙNG & TÍNH TỶ LỆ CHUẨN XÁC)
 // =========================================================================
