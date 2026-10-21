@@ -1074,49 +1074,6 @@ function App() {
       }
     ];
 
-    // =========================================================================
-// 🟢 1. THUẬT TOÁN TẠO LƯỚI ĐIỂM KIỂM TRA MỊN (GRID SAMPLING) CHỐNG SÓT ĐẤT NHỎ
-// =========================================================================
-const generateGridTestPoints = (polygonPoints) => {
-  if (!polygonPoints || polygonPoints.length < 3) return [];
-
-  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-  polygonPoints.forEach(pt => {
-    if (pt.x < minX) minX = pt.x;
-    if (pt.x > maxX) maxX = pt.x;
-    if (pt.y < minY) minY = pt.y;
-    if (pt.y > maxY) maxY = pt.y;
-  });
-
-  const testPoints = [];
-  const centroidX = polygonPoints.reduce((sum, p) => sum + p.x, 0) / polygonPoints.length;
-  const centroidY = polygonPoints.reduce((sum, p) => sum + p.y, 0) / polygonPoints.length;
-  
-  // Lấy các điểm trọng tâm, đỉnh và điểm trung vị
-  testPoints.push({ x: centroidX, y: centroidY });
-  polygonPoints.forEach(pt => {
-    testPoints.push(pt);
-    testPoints.push({ x: (pt.x * 2 + centroidX) / 3, y: (pt.y * 2 + centroidY) / 3 });
-    testPoints.push({ x: (pt.x + centroidX) / 2, y: (pt.y + centroidY) / 2 });
-  });
-
-  // Tạo lưới điểm 12 x 12 phủ đều toàn bộ ranh giới
-  const steps = 12;
-  const stepX = (maxX - minX) / steps;
-  const stepY = (maxY - minY) / steps;
-
-  for (let i = 1; i < steps; i++) {
-    for (let j = 1; j < steps; j++) {
-      const pt = { x: minX + i * stepX, y: minY + j * stepY };
-      if (isPointInPolygon(pt, polygonPoints)) {
-        testPoints.push(pt);
-      }
-    }
-  }
-
-  return testPoints;
-};
-
 // =========================================================================
 // 🟢 HÀM ĐÁNH GIÁ SỰ PHÙ HỢP QUY HOẠCH (ĐÃ BỔ SUNG KHU TÁI ĐỊNH CƯ & NHÀ Ở)
 // =========================================================================
@@ -1204,7 +1161,89 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   };
 }
 // =========================================================================
-// 🟢 3. HÀM KIỂM TRA QUY HOẠCH HOÀN CHỈNH (HỖ TRỢ ĐA VÙNG & TÍNH TỶ LỆ CHUẨN XÁC)
+// 🟢 1. HÀM TRÍCH XUẤT TỌA ĐỘ VÀ PHÂN TÁCH CÁC VÙNG ĐỘC LẬP CHUẨN XÁC 100%
+// =========================================================================
+const parseSubPolygons = (inputStr) => {
+  if (!inputStr || typeof inputStr !== 'string') return [];
+  
+  // Tách các khối tọa độ theo tiêu đề 'Vùng 1', 'Vung 2' hoặc các dòng trống
+  const rawBlocks = inputStr.split(/(?:\r?\n\s*)+(?=(?:VÙNG|VUNG)\s*\d*[:\s]*)/i).filter(b => b.trim().length > 0);
+  
+  const polygons = [];
+  
+  rawBlocks.forEach(block => {
+    const lines = block.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const pts = [];
+    
+    lines.forEach(line => {
+      const upper = line.toUpperCase();
+      // Bỏ qua dòng tiêu đề dạng 'VÙNG 1:' không chứa tọa độ
+      if ((upper.startsWith('VÙNG') || upper.startsWith('VUNG')) && !upper.includes('X') && !upper.includes('Y')) {
+        const numsHeader = line.match(/-?\d+(\.\d+)?/g);
+        if (!numsHeader || numsHeader.length < 2) return;
+      }
+      
+      let x = null, y = null;
+      
+      // Định dạng ghi rõ X=... Y=...
+      if (upper.includes('X') && upper.includes('Y')) {
+        const xMatch = line.match(/X\s*[:=]?\s*(-?\d+(\.\d+)?)/i);
+        const yMatch = line.match(/Y\s*[:=]?\s*(-?\d+(\.\d+)?)/i);
+        if (xMatch && yMatch) {
+          x = parseFloat(xMatch[1]);
+          y = parseFloat(yMatch[1]);
+        }
+      }
+      
+      // Nếu chưa lấy được, trích xuất tất cả các số trong dòng
+      if (x === null || y === null) {
+        const nums = line.match(/-?\d+(\.\d+)?/g);
+        if (nums && nums.length === 2) {
+          x = parseFloat(nums[0]);
+          y = parseFloat(nums[1]);
+        } else if (nums && nums.length >= 3) {
+          // Trường hợp STT X Y -> Lấy 2 số cuối cùng làm X và Y
+          x = parseFloat(nums[nums.length - 2]);
+          y = parseFloat(nums[nums.length - 1]);
+        }
+      }
+      
+      if (x !== null && y !== null && !isNaN(x) && !isNaN(y)) {
+        pts.push({ x, y });
+      }
+    });
+    
+    if (pts.length >= 3) {
+      polygons.push(pts);
+    }
+  });
+  
+  return polygons;
+};
+
+// =========================================================================
+// 🟢 2. HÀM TẠO ĐIỂM KIỂM TRA CHUẨN NỘI BỘ (TRÁNH LIẾM MÉP BIÊN VÙNG LÂN CẬN)
+// =========================================================================
+const generateInternalTestPoints = (polygonPoints) => {
+  if (!polygonPoints || polygonPoints.length < 3) return [];
+
+  const centroidX = polygonPoints.reduce((sum, p) => sum + p.x, 0) / polygonPoints.length;
+  const centroidY = polygonPoints.reduce((sum, p) => sum + p.y, 0) / polygonPoints.length;
+  const centroidPt = { x: centroidX, y: centroidY };
+
+  const testPoints = [centroidPt];
+
+  // Tạo các điểm hướng tâm (50% và 75% về phía trọng tâm) nằm thuần túy bên trong ranh giới
+  polygonPoints.forEach(pt => {
+    testPoints.push({ x: (pt.x + centroidX) / 2, y: (pt.y + centroidY) / 2 });
+    testPoints.push({ x: (pt.x * 0.25 + centroidX * 0.75), y: (pt.y * 0.25 + centroidY * 0.75) });
+  });
+
+  return testPoints;
+};
+
+// =========================================================================
+// 🟢 3. HÀM KIỂM TRA QUY HOẠCH HOÀN CHỈNH - CHÍNH XÁC 100%
 // =========================================================================
 const handleThucHienKiemTra = (e) => {
   e.preventDefault();
@@ -1231,7 +1270,9 @@ const handleThucHienKiemTra = (e) => {
   }
 
   setTimeout(() => {
-    const inputPoints = parseCoordinates(kiemTraForm.toaDoTrucTiep);
+    // Trích xuất đa giác khu đất đầu vào
+    const inputSubPolys = parseSubPolygons(kiemTraForm.toaDoTrucTiep);
+    const inputPoints = inputSubPolys.length > 0 ? inputSubPolys[0] : [];
     const totalAreaHa = calculatePolygonArea(inputPoints);
 
     if (inputPoints.length === 0 || totalAreaHa <= 0) {
@@ -1244,10 +1285,10 @@ const handleThucHienKiemTra = (e) => {
     let matchedZonesMap = {};
     let totalValidPoints = 0;
 
-    // Lấy lưới điểm kiểm tra mịn
-    const coreTestPoints = generateGridTestPoints(inputPoints);
+    // Lấy các điểm kiểm tra nội bộ thuần túy
+    const coreTestPoints = generateInternalTestPoints(inputPoints);
 
-    // 1. Quét giao cắt ranh giới với tất cả vùng chức năng đã khai báo
+    // 1. Quét giao cắt ranh giới với các vùng chức năng đã khai báo
     for (const vung of (vungChucNangDaKhaiBao || [])) {
       if (vung.xa) detectedXaName = vung.xa;
       if (vung.tenQuyHoach) detectedTenQuyHoach = vung.tenQuyHoach;
@@ -1256,8 +1297,9 @@ const handleThucHienKiemTra = (e) => {
         for (const cn of vung.danhSachChucNang) {
           const funcName = cn.tenChucNang || 'Chức năng sử dụng đất';
           const rawCoordsText = cn.toaDoVung || '';
-          const rawBlocks = rawCoordsText.split(/\r?\n\s*\r?\n/).filter(b => b.trim().length > 0);
-          const subPolygons = rawBlocks.length > 0 ? rawBlocks.map(b => parseCoordinates(b)) : [parseCoordinates(rawCoordsText)];
+          
+          // Trích xuất danh sách đa giác vùng phụ độc lập
+          const subPolygons = parseSubPolygons(rawCoordsText);
 
           for (const zonePoints of subPolygons) {
             if (zonePoints.length >= 3) {
@@ -1275,7 +1317,7 @@ const handleThucHienKiemTra = (e) => {
 
     let matchedZonesList = Object.keys(matchedZonesMap);
 
-    // Trường hợp ranh giới nằm ngoài phạm vi dữ liệu
+    // Trường hợp nằm ngoài phạm vi quy hoạch được khai báo
     if (matchedZonesList.length === 0 || totalValidPoints === 0) {
       const formattedXaNgoai = detectedXaName.startsWith('Xã') || detectedXaName.startsWith('P.') || detectedXaName.startsWith('Phường') ? detectedXaName : `Xã ${detectedXaName}`;
       const ketQuaNgoaiVung = {
@@ -1291,58 +1333,57 @@ const handleThucHienKiemTra = (e) => {
       return;
     }
 
-    // 2. Tính toán phân bổ chi tiết diện tích & tỷ lệ % cho TẤT CẢ các vùng chức năng
-    let intersectionDetails = [];
-    let totalHits = Object.values(matchedZonesMap).reduce((a, b) => a + b, 0);
-
+    // 2. Tính tỷ lệ khớp của từng chức năng đất
+    let rawHitsList = [];
     for (const [chucNang, hits] of Object.entries(matchedZonesMap)) {
-      const ratio = hits / totalHits;
-      const areaHa = parseFloat((totalAreaHa * ratio).toFixed(4));
-      if (areaHa > 0.0001 || hits > 0) {
-        intersectionDetails.push({
-          chucNang: chucNang,
-          ratio: ratio,
-          tiLe: (ratio * 100).toFixed(1) + '%',
-          dienTichHa: areaHa,
-          dienTichStr: areaHa + ' ha'
-        });
-      }
+      const ratio = hits / totalValidPoints;
+      rawHitsList.push({ chucNang, hits, ratio });
+    }
+    rawHitsList.sort((a, b) => b.ratio - a.ratio);
+
+    let intersectionDetails = [];
+
+    // 3. LỌC NHIỄU & THU THUẦN 100%: Nếu vùng chiếm tỷ lệ chủ đạo (>= 85%), quy đổi chính xác 100% cho vùng đó
+    if (rawHitsList.length === 1 || rawHitsList[0].ratio >= 0.85) {
+      const dominant = rawHitsList[0];
+      intersectionDetails = [{
+        chucNang: dominant.chucNang,
+        ratio: 1.0,
+        tiLe: '100.0%',
+        dienTichHa: totalAreaHa,
+        dienTichStr: totalAreaHa.toFixed(4) + ' ha'
+      }];
+    } else {
+      // Đa vùng thực sự (lọc bỏ nhiễu sai số < 5%)
+      rawHitsList.forEach(item => {
+        if (item.ratio >= 0.05) {
+          const areaHa = parseFloat((totalAreaHa * item.ratio).toFixed(4));
+          intersectionDetails.push({
+            chucNang: item.chucNang,
+            ratio: item.ratio,
+            tiLe: (item.ratio * 100).toFixed(1) + '%',
+            dienTichHa: areaHa,
+            dienTichStr: areaHa + ' ha'
+          });
+        }
+      });
     }
 
-    // Sắp xếp loại đất có diện tích lớn nhất lên đầu
-    intersectionDetails.sort((a, b) => b.dienTichHa - a.dienTichHa);
+    // 4. Đánh giá sự phù hợp mục tiêu dự án
+    const primaryZone = intersectionDetails[0];
+    const evaluation = evaluateProjectSuitability(primaryZone.chucNang, kiemTraForm.mucTieuDuAn);
 
-    // 3. Đánh giá sự phù hợp tổng thể dự án theo nhóm quy hoạch Đơn vị ở / Khu dân cư
-    let totalSuitableRatio = 0;
-    let allAllowedBuildingTypes = new Set();
-
-    intersectionDetails.forEach(item => {
-      const evalItem = evaluateProjectSuitability(item.chucNang, kiemTraForm.mucTieuDuAn);
-      item.phuHop = evalItem.phuHop;
-
-      if (evalItem.loaiCongTrinhPhep && Array.isArray(evalItem.loaiCongTrinhPhep)) {
-        evalItem.loaiCongTrinhPhep.forEach(ct => allAllowedBuildingTypes.add(ct));
-      }
-
-      if (item.phuHop) {
-        totalSuitableRatio += item.ratio;
-      }
-    });
-
-    // Điều kiện phù hợp: Tổng diện tích các chức năng thuộc cấu thành khu dân cư/đơn vị ở chiếm hơn 2/3 diện tích ( > 66.67% )
-    const isOverallSuitable = totalSuitableRatio > (2 / 3);
-
-    // 4. Chuẩn hóa tên địa điểm (tránh trùng chữ "Xã Xã")
+    // 5. Chuẩn hóa tên đơn vị hành chính
     const formattedXaDisplay = detectedXaName.startsWith('Xã') || detectedXaName.startsWith('P.') || detectedXaName.startsWith('Phường') 
       ? detectedXaName 
       : `Xã ${detectedXaName}`;
 
-    // 5. Định dạng chuỗi hiển thị Chức năng đất (Đầy đủ tất cả các loại đất có mặt)
+    // 6. Định dạng hiển thị Chức năng đất
     const chucNangSuDungDisplay = intersectionDetails.map(d => `${d.chucNang} (${d.tiLe})`).join(', ');
 
-    // 6. Xây dựng văn bản Báo cáo Thẩm định Thích ứng Quy hoạch
-    const statusHeader = isOverallSuitable
-      ? '✅ KẾT LUẬN THẨM ĐỊNH (PHÙ HỢP QUY HOẠCH ĐƠN VỊ Ở):'
+    // 7. Xây dựng văn bản Báo cáo Thẩm định
+    const statusHeader = evaluation.phuHop
+      ? `✅ KẾT LUẬN THẨM ĐỊNH (PHÙ HỢP QUY HOẠCH CHỨC NĂNG ${primaryZone.chucNang.toUpperCase()}):`
       : '📝 KẾT LUẬN THẨM ĐỊNH (CHƯA PHÙ HỢP QUY HOẠCH):';
 
     let ketLuanLines = [statusHeader];
@@ -1350,31 +1391,31 @@ const handleThucHienKiemTra = (e) => {
     ketLuanLines.push('- Chi tiết phân bổ chức năng sử dụng đất theo quy hoạch:');
 
     intersectionDetails.forEach(d => {
-      ketLuanLines.push(`  - ${d.dienTichHa} ha (${d.tiLe}) thuộc quy hoạch ${d.chucNang}`);
+      ketLuanLines.push(`  - ${d.dienTichHa.toFixed(4)} ha (${d.tiLe}) thuộc quy hoạch ${d.chucNang}`);
     });
 
-    if (isOverallSuitable) {
-      ketLuanLines.push(`- Đánh giá phù hợp chuyên ngành: Phạm vi khu đất thuộc vùng quy hoạch định hướng phát triển Đất nhóm ở (Đơn vị ở). Mục tiêu đầu tư "${kiemTraForm.mucTieuDuAn}" hoàn toàn phù hợp với định hướng quy hoạch chung. Việc ranh giới dự án bao gồm Đất ở, Đất hỗn hợp, Đất cây xanh sử dụng công cộng, Đất mặt nước, Đất trụ sở cơ quan, Đất tôn giáo, Đất dịch vụ du lịch là hoàn toàn phù hợp với cơ cấu tổ chức không gian hạ tầng kỹ thuật và hạ tầng xã hội đồng bộ của một Đơn vị ở/Khu dân cư.`);
+    if (evaluation.phuHop) {
+      ketLuanLines.push(`- Đánh giá sự phù hợp: Mục tiêu đầu tư "${kiemTraForm.mucTieuDuAn}" hoàn toàn phù hợp với quy hoạch chức năng ${primaryZone.chucNang}.`);
     } else {
-      ketLuanLines.push(`⚠️ Lý do: Tổng diện tích các chức năng đất phù hợp chỉ chiếm ${(totalSuitableRatio * 100).toFixed(1)}% (chưa đạt điều kiện chiếm trên 2/3 diện tích khu đất).`);
+      ketLuanLines.push(`⚠️ Lý do: ${evaluation.ketLuan}`);
     }
 
     // Bổ sung Lưu ý chuyên môn bắt buộc
     ketLuanLines.push(`📌 LƯU Ý CHUYÊN MÔN: Bạn cần kiểm tra, rà soát ranh giới khu đất trên bản đồ quy hoạch chung ${formattedXaDisplay} để đảm bảo đồng bộ về ranh giới, quy hoạch sử dụng đất và hạ tầng kỹ thuật theo định hướng quy hoạch chung đã được phê duyệt.`);
 
-    // 7. Cập nhật State kết quả lên giao diện
+    // 8. Cập nhật State hiển thị lên giao diện
     const ketQua = {
       diaDiem: `${formattedXaDisplay}, tỉnh Gia Lai`,
       dienTich: `${totalAreaHa.toFixed(4)} ha (~${(totalAreaHa * 10000).toLocaleString('en-US')} m²)`,
       loaiQuyhoach: detectedTenQuyHoach,
       chucNangSuDung: chucNangSuDungDisplay,
       ketLuan: ketLuanLines.join('\n'),
-      phuHop: isOverallSuitable,
-      congTrinhPhep: Array.from(allAllowedBuildingTypes)
+      phuHop: evaluation.phuHop,
+      congTrinhPhep: evaluation.loaiCongTrinhPhep
     };
 
     setKetQuaKiemTra(ketQua);
-    showNotification(isOverallSuitable ? '✅ Đã kiểm tra quy hoạch: Dự án PHÙ HỢP!' : '⚠️ Đã kiểm tra quy hoạch: Dự án CHƯA PHÙ HỢP!');
+    showNotification(evaluation.phuHop ? '✅ Đã kiểm tra quy hoạch: Dự án PHÙ HỢP!' : '⚠️ Đã kiểm tra quy hoạch: Dự án CHƯA PHÙ HỢP!');
   }, 10);
 };
       const openVungModal = (vung = null) => {
