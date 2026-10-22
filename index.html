@@ -1075,7 +1075,7 @@ function App() {
     ];
 
 // =========================================================================
-// 🟢 HÀM ĐÁNH GIÁ SỰ PHÙ HỢP QUY HOẠCH (ĐÃ BỔ SUNG KHU TÁI ĐỊNH CƯ & NHÀ Ở)
+// 🟢 HÀM ĐÁNH GIÁ SỰ PHÙ HỢP QUY HOẠCH - KHỚP CHÍNH XÁC TUYỆT ĐỐI CHỨC NĂNG ĐẤT
 // =========================================================================
 function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   if (!chucNangDat || !mucTieuDuAn) {
@@ -1091,6 +1091,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
 
   // Tìm danh mục tương ứng trong LAND_USE_FUNCTION_MAP
   const matchedLand = LAND_USE_FUNCTION_MAP.find(item =>
+    queryDat === item.loaiChucNang.toLowerCase() ||
     queryDat.includes(item.loaiChucNang.toLowerCase()) ||
     item.loaiChucNang.toLowerCase().includes(queryDat)
   );
@@ -1098,12 +1099,12 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   const congTrinhPhep = matchedLand ? matchedLand.congTrinhDuocPhep : ["Nhà ở riêng lẻ", "nhà ở tái định cư", "công trình hạ tầng kỹ thuật", "công viên cây xanh", "thương mại dịch vụ"];
   const tenChucNangDat = matchedLand ? matchedLand.loaiChucNang : chucNangDat;
 
-  // 🟢 1. BỔ SUNG TỪ KHÓA: "tái định cư", "tđc", "chung cư", "phân lô", "kdc", "kđt"...
+  // Kiểm tra mục tiêu dự án khu dân cư / tái định cư / hỗn hợp
   const isResidentialProject = 
     queryMucTieu.includes("dân cư") || 
     queryMucTieu.includes("đô thị") || 
     queryMucTieu.includes("nhà ở") || 
-    queryMucTieu.includes("tái định cư") ||   // 👈 Khắc phục lỗi cho dự án Tái định cư
+    queryMucTieu.includes("tái định cư") || 
     queryMucTieu.includes("tđc") || 
     queryMucTieu.includes("kdc") || 
     queryMucTieu.includes("kđt") || 
@@ -1116,7 +1117,6 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
     queryMucTieu.includes("thương mại") || 
     queryMucTieu.includes("hỗn hợp");
 
-  // 🟢 2. Kiểm tra nhóm đất thành phần quy hoạch thuộc cơ cấu phát triển Đơn vị ở / Khu tái định cư
   const isResidentialComponentLand = 
     queryDat.includes("đất ở") || 
     queryDat.includes("nhà ở") || 
@@ -1124,30 +1124,14 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
     queryDat.includes("dân cư") || 
     queryDat.includes("cây xanh") || 
     queryDat.includes("mặt nước") || 
-    queryDat.includes("trụ sở") || 
-    queryDat.includes("cơ quan") || 
-    queryDat.includes("tôn giáo") || 
-    queryDat.includes("du lịch") || 
     queryDat.includes("thương mại") || 
-    queryDat.includes("dịch vụ") || 
-    queryDat.includes("giao thông") || 
-    queryDat.includes("hạ tầng");
+    queryDat.includes("dịch vụ");
 
   let isPhuHop = false;
   let lyDoKhongPhuHop = "";
 
   if (isResidentialProject && isResidentialComponentLand) {
     isPhuHop = true;
-  } else if (queryDat.includes("công nghiệp") || queryDat.includes("kho bãi")) {
-    if (queryMucTieu.includes("nhà máy") || queryMucTieu.includes("xưởng") || queryMucTieu.includes("sản xuất") || queryMucTieu.includes("kho bãi") || queryMucTieu.includes("logistic")) {
-      isPhuHop = true;
-    } else {
-      isPhuHop = false;
-      lyDoKhongPhuHop = `Khu vực quy hoạch "${tenChucNangDat}" là đất sản xuất công nghiệp, không phù hợp với mục tiêu khu dân cư / tái định cư.`;
-    }
-  } else if (queryDat.includes("lâm nghiệp") || queryDat.includes("rừng phòng hộ")) {
-    isPhuHop = false;
-    lyDoKhongPhuHop = `Khu vực quy hoạch "${tenChucNangDat}" là đất lâm nghiệp/rừng phòng hộ, không phù hợp với mục tiêu dự án.`;
   } else {
     isPhuHop = congTrinhPhep.some(ct => queryMucTieu.includes(ct.toLowerCase()) || ct.toLowerCase().includes(queryMucTieu)) || queryMucTieu.includes(tenChucNangDat.toLowerCase());
   }
@@ -1157,7 +1141,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
     loaiCongTrinhPhep: congTrinhPhep,
     ketLuan: isPhuHop
       ? `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch chức năng ${tenChucNangDat}.`
-      : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch.${lyDoKhongPhuHop ? " " + lyDoKhongPhuHop : ` Chức năng \${tenChucNangDat} chỉ cho phép các công trình: \${congTrinhPhep.join(", ")}.`}`
+      : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch.${lyDoKhongPhuHop ? " " + lyDoKhongPhuHop : ` Chức năng ${tenChucNangDat} chỉ cho phép các công trình: ${congTrinhPhep.join(", ")}.`}`
   };
 }
 // =========================================================================
