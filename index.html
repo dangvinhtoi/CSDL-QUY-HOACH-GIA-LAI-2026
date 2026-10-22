@@ -1278,23 +1278,33 @@ const generateInternalTestPoints = (polygonPoints) => {
       );
     };
 // =========================================================================
-// 🟢 HÀM XỬ LÝ KIỂM TRA QUY HOẠCH TỰ ĐỘNG - CHUẨN XÁC VÀ CHẶN RESET TRANG
+// 🟢 HÀM XỬ LÝ KIỂM TRA QUY HOẠCH - AN TOÀN TUYỆT ĐỐI (CHỐNG LỖI UNDEFINED)
 // =========================================================================
 const handleThucHienKiemTra = (e) => {
-  // Chặn hành vi submit form làm refresh / làm mới lại trang web
   if (e && typeof e.preventDefault === 'function') {
     e.preventDefault();
   }
 
-  if (!kiemTraForm.mucTieuDuAn || !kiemTraForm.toaDoInput.trim()) {
+  // Kiểm tra an toàn đối tượng kiemTraForm tránh lỗi undefined
+  if (!window.kiemTraForm && typeof kiemTraForm === 'undefined') {
+    showNotification('⚠️ Lỗi hệ thống: Biểu mẫu kiểm tra chưa được khởi tạo!');
+    return;
+  }
+
+  const currentForm = typeof kiemTraForm !== 'undefined' ? kiemTraForm : {};
+  const mucTieu = currentForm.mucTieuDuAn || '';
+  const toaDoStr = currentForm.toaDoInput || '';
+
+  if (!mucTieu.trim() || !toaDoStr.trim()) {
     showNotification('⚠️ Vui lòng nhập đầy đủ Mục tiêu dự án và Tọa độ các đỉnh!');
     return;
   }
 
-  const rawLines = kiemTraForm.toaDoInput.split('\n');
+  const rawLines = toaDoStr.split('\n');
   let parsedPolygon = [];
 
   rawLines.forEach(line => {
+    if (!line) return;
     const parts = line.trim().split(/[\s,]+/);
     if (parts.length >= 2) {
       const x = parseFloat(parts[0]);
@@ -1438,7 +1448,7 @@ const handleThucHienKiemTra = (e) => {
       ketLuan: '❌ KẾT LUẬN THẨM ĐỊNH (NGOÀI PHẠM VI QUY HOẠCH):\n- Khu vực ranh giới tọa độ này nằm ngoài phạm vi vùng quy hoạch định hướng được khai báo trong cơ sở dữ liệu hệ thống.',
       phuHop: false
     };
-    setKetQuaKiemTra(ketQuaNgoaiVung);
+    if (typeof setKetQuaKiemTra === 'function') setKetQuaKiemTra(ketQuaNgoaiVung);
     showNotification('⚠️ Khu đất nằm ngoài phạm vi quy hoạch được khai báo!');
     return;
   }
@@ -1457,7 +1467,7 @@ const handleThucHienKiemTra = (e) => {
     }
   });
 
-  const evaluation = evaluateProjectSuitability(dominantZone, kiemTraForm.mucTieuDuAn);
+  const evaluation = evaluateProjectSuitability(dominantZone, mucTieu);
 
   const formattedXaDisplay = detectedXaName.startsWith('Xã') || detectedXaName.startsWith('P.') || detectedXaName.startsWith('Phường') 
     ? detectedXaName 
@@ -1473,7 +1483,7 @@ const handleThucHienKiemTra = (e) => {
   breakdownTextLines.forEach(line => ketLuanLines.push(`  ${line}`));
   
   if (evaluation.phuHop) {
-    ketLuanLines.push(`- Đánh giá sự phù hợp: Mục tiêu đầu tư "${kiemTraForm.mucTieuDuAn}" phù hợp với định hướng quy hoạch không gian tại khu vực.`);
+    ketLuanLines.push(`- Đánh giá sự phù hợp: Mục tiêu đầu tư "${mucTieu}" phù hợp với định hướng quy hoạch không gian tại khu vực.`);
   } else {
     ketLuanLines.push(`⚠️ Lý do: ${evaluation.ketLuan}`);
   }
@@ -1489,8 +1499,10 @@ const handleThucHienKiemTra = (e) => {
     phuHop: evaluation.phuHop,
     congTrinhPhep: evaluation.loaiCongTrinhPhep
   };
-  console.log("Đã tính xong kết quả:", ketQua);
-  setKetQuaKiemTra(ketQua);
+
+  if (typeof setKetQuaKiemTra === 'function') {
+    setKetQuaKiemTra(ketQua);
+  }
   showNotification(evaluation.phuHop ? '✅ Đã kiểm tra quy hoạch thành công!' : '⚠️ Dự án chưa phù hợp quy hoạch!');
 };
         
