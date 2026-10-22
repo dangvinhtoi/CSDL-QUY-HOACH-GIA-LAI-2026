@@ -1084,7 +1084,7 @@ function App() {
     ];
 
 // =========================================================================
-// 🟢 HÀM ĐÁNH GIÁ SỰ PHÙ HỢP QUY HOẠCH - NHẬN DIỆN THÔNG MINH TỪ KHÓA CHUNG
+// 🟢 HÀM ĐÁNH GIÁ SỰ PHÙ HỢP QUY HOẠCH - ĐẢM BẢO CHẶT CHẼ CHUYÊN MÔN NGÀNH
 // =========================================================================
 function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   if (!chucNangDat || !mucTieuDuAn) {
@@ -1104,13 +1104,15 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
     item.loaiChucNang.toLowerCase().includes(queryDat)
   );
 
-  const congTrinhPhep = matchedLand ? matchedLand.loaiCongTrinhPhep : ["Công trình quân sự", "doanh trại quân đội", "cơ sở quốc phòng"];
+  const congTrinhPhep = matchedLand ? matchedLand.congTrinhDuocPhep : ["Công trình quân sự", "doanh trại quân đội", "cơ sở quốc phòng"];
   const tenChucNangDat = matchedLand ? matchedLand.loaiChucNang : chucNangDat;
 
-  // 1. Kiểm tra xung đột đặc thù (Đất thương mại/du lịch không được làm khu dân cư, nhà ở...)
-  const isResidentialProject = queryMucTieu.includes("dân cư") || queryMucTieu.includes("đô thị") || queryMucTieu.includes("nhà ở") || queryMucTieu.includes("tái định cư") || queryMucTieu.includes("kdc");
+  // 1. Kiểm tra các trường hợp XUNG ĐỘT TUYỆT ĐỐI (Không phù hợp)
+  const isResidentialProject = queryMucTieu.includes("dân cư") || queryMucTieu.includes("đô thị") || queryMucTieu.includes("nhà ở") || queryMucTieu.includes("tái định cư") || queryMucTieu.includes("kdc") || queryMucTieu.includes("chung cư");
   const isCommercialOrTourismLand = queryDat.includes("thương mại") || queryDat.includes("dịch vụ") || queryDat.includes("du lịch");
+  const isDefenseOrSecurityLand = queryDat.includes("quốc phòng") || queryDat.includes("an ninh");
 
+  // Đất thương mại/du lịch không được làm khu dân cư/nhà ở
   if (isCommercialOrTourismLand && isResidentialProject) {
     return {
       phuHop: false,
@@ -1119,10 +1121,19 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
     };
   }
 
-  // 2. NHẬN DIỆN THÔNG MINH NHÓM CHUYÊN NGÀNH (Bao gồm từ khóa chung: "công trình quốc phòng", "quốc phòng", "an ninh"...)
+  // Đất quốc phòng/an ninh không được làm khu dân cư, thương mại, nhà ở dân dụng...
+  if (isDefenseOrSecurityLand && (isResidentialProject || queryMucTieu.includes("thương mại") || queryMucTieu.includes("dịch vụ") || queryMucTieu.includes("nhà máy"))) {
+    return {
+      phuHop: false,
+      loaiCongTrinhPhep: congTrinhPhep,
+      ketLuan: `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch. Đất "${tenChucNangDat}" chỉ được phép sử dụng cho mục đích quốc phòng, an ninh.`
+    };
+  }
+
+  // 2. NHẬN DIỆN THÔNG MINH NHÓM CHUYÊN NGÀNH (Phù hợp)
   let isSmartMatched = false;
 
-  // Nhóm Quốc phòng (Bắt cả từ khóa "công trình quốc phòng", "quốc phòng", "quân sự", "thao trường", "trường bắn", "chqs"...)
+  // Nhóm Quốc phòng
   if (queryDat.includes("quốc phòng") && (
       queryMucTieu.includes("quốc phòng") || 
       queryMucTieu.includes("quân sự") || 
@@ -1130,14 +1141,16 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
       queryMucTieu.includes("trường bắn") || 
       queryMucTieu.includes("huấn luyện") || 
       queryMucTieu.includes("chqs") ||
-      queryMucTieu.includes("ban chỉ huy")
+      queryMucTieu.includes("ban chỉ huy") ||
+      queryMucTieu.includes("công trình quốc phòng")
   )) {
     isSmartMatched = true;
   }
-  // Nhóm An ninh (Bắt cả "công trình an ninh", "an ninh", "công an"...)
+  // Nhóm An ninh
   else if (queryDat.includes("an ninh") && (
       queryMucTieu.includes("an ninh") || 
-      queryMucTieu.includes("công an")
+      queryMucTieu.includes("công an") ||
+      queryMucTieu.includes("công trình an ninh")
   )) {
     isSmartMatched = true;
   }
@@ -1150,24 +1163,28 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   )) {
     isSmartMatched = true;
   }
-  // Nhóm Y tế
-  else if (queryDat.includes("y tế") && (queryMucTieu.includes("y tế") || queryMucTieu.includes("bệnh viện"))) {
-    isSmartMatched = true;
-  }
-  // Nhóm Giáo dục
-  else if (queryDat.includes("giáo dục") && (queryMucTieu.includes("giáo dục") || queryMucTieu.includes("trường"))) {
+  // Nhóm Thương mại - Dịch vụ - Du lịch
+  else if (isCommercialOrTourismLand && (
+      queryMucTieu.includes("thương mại") || 
+      queryMucTieu.includes("dịch vụ") || 
+      queryMucTieu.includes("du lịch") || 
+      queryMucTieu.includes("khách sạn") || 
+      queryMucTieu.includes("nhà hàng") || 
+      queryMucTieu.includes("siêu thị") || 
+      queryMucTieu.includes("showroom") || 
+      queryMucTieu.includes("nghỉ dưỡng") ||
+      queryMucTieu.includes("giải trí")
+  )) {
     isSmartMatched = true;
   }
 
-  let isPhuHop = isSmartMatched || 
-    congTrinhPhep.some(ct => queryMucTieu.includes(ct.toLowerCase()) || ct.toLowerCase().includes(queryMucTieu)) || 
-    queryMucTieu.includes(tenChucNangDat.toLowerCase());
+  let isPhuHop = isSmartMatched;
 
   return {
     phuHop: isPhuHop,
     loaiCongTrinhPhep: congTrinhPhep,
     ketLuan: isPhuHop
-      ? `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch chức năng ${tenChucNangDat}.`
+      ? `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với định hướng quy hoạch không gian tại khu vực.`
       : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch. Chức năng ${tenChucNangDat} chỉ cho phép các công trình: ${congTrinhPhep.join(", ")}.`
   };
 }
