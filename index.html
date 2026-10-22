@@ -957,134 +957,33 @@ function App() {
         return parseFloat(ha.toFixed(4));
       };
 // =========================================================================
-    // 🟢 1. DANH MỤC CHỨC NĂNG ĐẤT VÀ CÔNG TRÌNH ĐƯỢC PHÉP XÂY DỰNG (ĐẦY ĐỦ 3 CẤP ĐỘ)
-    // =========================================================================
-    const LAND_USE_FUNCTION_MAP = [
-      // --- CẤP 1: QUY HOẠCH CHI TIẾT & PHÂN KHU (1/500 - 1/2000) ---
-      {
-        nhom: "Đất nhà ở",
-        loaiChucNang: "Đất nhà ở liền kề",
-        congTrinhDuocPhep: ["Nhà ở liên kế", "nhà phố", "nhà ở riêng lẻ"]
-      },
-      {
-        nhom: "Đất nhà ở",
-        loaiChucNang: "Đất nhà ở biệt thự",
-        congTrinhDuocPhep: ["Nhà ở biệt thự", "nhà vườn"]
-      },
-      {
-        nhom: "Đất nhà ở",
-        loaiChucNang: "Đất nhà chung cư thuần túy",
-        congTrinhDuocPhep: ["Nhà chung cư", "nhà ở cao tầng"]
-      },
-      {
-        nhom: "Đất nhà ở",
-        loaiChucNang: "Đất nhà chung cư hỗn hợp",
-        congTrinhDuocPhep: ["Nhà chung cư kết hợp thương mại", "dịch vụ", "văn phòng", "căn hộ hỗn hợp"]
-      },
-      {
-        nhom: "Đất nhà ở",
-        loaiChucNang: "Đất nhà ở nông thôn, làng xóm đô thị hóa",
-        congTrinhDuocPhep: ["Nhà ở dân gian", "nhà ở riêng lẻ", "công trình phụ trợ nông thôn"]
-      },
-      {
-        nhom: "Đất công trình hạ tầng xã hội",
-        loaiChucNang: "Đất văn hóa",
-        congTrinhDuocPhep: ["Nhà văn hóa", "khu sinh hoạt cộng đồng", "câu lạc bộ", "thư viện", "triển lãm"]
-      },
-      {
-        nhom: "Đất công trình hạ tầng xã hội",
-        loaiChucNang: "Đất y tế",
-        congTrinhDuocPhep: ["Bệnh viện", "phòng khám", "trạm y tế", "trung tâm y tế", "trung tâm chăm sóc sức khỏe"]
-      },
-      {
-        nhom: "Đất công trình hạ tầng xã hội",
-        loaiChucNang: "Đất giáo dục",
-        congTrinhDuocPhep: ["Trường mầm non", "trường tiểu học", "trường THCS", "trường THPT", "trường liên cấp"]
-      },
-      {
-        nhom: "Đất công trình hạ tầng xã hội",
-        loaiChucNang: "Đất thể dục thể thao",
-        congTrinhDuocPhep: ["Sân vận động", "nhà thi đấu", "hồ bơi", "cơ sở thể dục thể thao"]
-      },
-      {
-        nhom: "Đất công trình hạ tầng xã hội",
-        loaiChucNang: "Đất cây xanh sử dụng công cộng",
-        congTrinhDuocPhep: ["Công viên cây xanh", "vườn hoa", "quảng trường", "không gian mở công cộng"]
-      },
-      {
-        nhom: "Đất công trình hạ tầng xã hội",
-        loaiChucNang: "Đất thương mại, dịch vụ",
-        congTrinhDuocPhep: ["Chợ", "siêu thị", "trung tâm thương mại", "cửa hàng bán lẻ", "văn phòng cho thuê", "khu dịch vụ ăn uống"]
-      },
-      {
-        nhom: "Đất sản xuất, kinh doanh & du lịch",
-        loaiChucNang: "Đất sản xuất công nghiệp, kho tàng",
-        congTrinhDuocPhep: ["Nhà máy sản xuất", "nhà máy", "xưởng gia công", "kho bãi hàng hóa", "trạm logistics", "cụm công nghiệp", "khu công nghiệp", "kho bãi logistic", "nhà máy sản xuất"]
-      },
-      {
-        nhom: "Đất sản xuất, kinh doanh & du lịch",
-        loaiChucNang: "Đất dịch vụ du lịch",
-        congTrinhDuocPhep: ["Khách sạn", "khu nghỉ dưỡng (resort)", "cơ sở lưu trú du lịch", "trung tâm dịch vụ du lịch", "nhà hàng du lịch"]
-      },
-     {
+// 🟢 DANH MỤC CHỨC NĂNG ĐẤT VÀ CÔNG TRÌNH ĐƯỢC PHÉP CHUẨN XÁC
+// =========================================================================
+const LAND_USE_FUNCTION_MAP = [
+  {
+    nhom: "Đất nhà ở",
+    loaiChucNang: "Đất ở",
+    congTrinhDuocPhep: ["Nhà ở riêng lẻ", "nhà ở liền kề", "khu dân cư", "khu đô thị", "nhà ở tái định cư", "chung cư", "công trình hạ tầng kỹ thuật", "công viên cây xanh"]
+  },
+  {
+    nhom: "Đất nhà ở",
+    loaiChucNang: "Đất ở nông thôn",
+    congTrinhDuocPhep: ["Nhà ở riêng lẻ", "nhà ở nông thôn", "khu dân cư", "nhà ở tái định cư", "công trình hạ tầng kỹ thuật"]
+  },
+  {
     nhom: "Đất sản xuất, kinh doanh & du lịch",
     loaiChucNang: "Đất thương mại dịch vụ, dịch vụ du lịch",
-    congTrinhDuocPhep: [
-      "thương mại", "thương mại dịch vụ", "chợ", "trung tâm thương mại", "siêu thị", 
-      "trung tâm trưng bày sản phẩm", "showroom", "khách sạn", "nhà hàng", 
-      "khu vui chơi giải trí", "dịch vụ", "du lịch", "nghỉ dưỡng", "cơ sở lưu trú", 
-      "khu sinh thái", "công trình kinh doanh thương mại"]
-      },
-      {
-        nhom: "Đất đào tạo, nghiên cứu & cơ quan",
-        loaiChucNang: "Đất đào tạo, nghiên cứu",
-        congTrinhDuocPhep: ["Trường đại học", "cao đẳng", "học viện", "viện nghiên cứu khoa học", "cơ sở dạy nghề"]
-      },
-      {
-        nhom: "Đất đào tạo, nghiên cứu & cơ quan",
-        loaiChucNang: "Đất cơ quan, trụ sở",
-        congTrinhDuocPhep: ["Trụ sở cơ quan nhà nước", "trụ sở tổ chức chính trị - xã hội", "văn phòng làm việc cơ quan"]
-      },
-      {
-        nhom: "Đất di tích, tôn giáo, an ninh, quốc phòng",
-        loaiChucNang: "Đất di tích, tôn giáo",
-        congTrinhDuocPhep: ["Đình", "chùa", "đền", "nhà thờ", "thánh thất", "cơ sở tôn giáo", "khu di tích lịch sử - văn hóa"]
-      },
-      {
-        nhom: "Đất di tích, tôn giáo, an ninh, quốc phòng",
-        loaiChucNang: "Đất quốc phòng",
-        congTrinhDuocPhep: ["Công trình quân sự", "doanh trại quân đội", "cơ sở quốc phòng", "trang thiết bị quân sự"]
-      },
-      {
-        nhom: "Đất di tích, tôn giáo, an ninh, quốc phòng",
-        loaiChucNang: "Đất an ninh",
-        congTrinhDuocPhep: ["Trụ sở công an", "cơ sở giam giữ", "trại giam", "công trình an ninh"]
-      },
-      {
-        nhom: "Đất hạ tầng kỹ thuật & giao thông",
-        loaiChucNang: "Đất giao thông, bãi đỗ xe",
-        congTrinhDuocPhep: ["Đường giao thông", "cầu", "hầm", "bến xe", "bãi đỗ xe tập trung (mặt đất, trên cao, ngầm)", "bãi đậu xe", "bãi đỗ xe"]
-      },
-      {
-        nhom: "Đất nông nghiệp & mặt nước",
-        loaiChucNang: "Đất nông nghiệp và mặt nước",
-        congTrinhDuocPhep: ["Đất sản xuất nông nghiệp", "trang trại", "trang trại chăn nuôi", "nuôi trồng thủy sản", "sông suối", "kênh rạch", "hồ ao"]
-      },
-      {
-    nhom: "Đất hạ tầng kỹ thuật",
-    loaiChucNang: "Đất HTKT khác (nghĩa địa, nghĩa trang)",
-    congTrinhDuocPhep: ["Nghĩa địa", "nghĩa trang", "nhà tang lễ", "cơ sở hỏa táng", "khu mai táng", "cải táng"]
+    congTrinhDuocPhep: ["Thương mại", "dịch vụ", "chợ", "trung tâm thương mại", "siêu thị", "showroom", "khách sạn", "nhà hàng", "khu vui chơi giải trí", "nghỉ dưỡng"]
   },
-      // --- CẤP 2 & CẤP 3: KHU VỰC NÔNG THÔN VÀ QUY HOẠCH CHUNG ---
-      {
-        nhom: "Khu đất dân dụng",
-        loaiChucNang: "Đất hỗn hợp (nhóm nhà ở và dịch vụ)",
-        congTrinhDuocPhep: ["Công trình đa năng kết hợp nhà ở và dịch vụ", "nhà ở", "thương mại dịch vụ cấp cơ sở"]
-      }
-    ];
+  {
+    nhom: "Đất di tích, tôn giáo, an ninh, quốc phòng",
+    loaiChucNang: "Đất quốc phòng",
+    congTrinhDuocPhep: ["Công trình quân sự", "doanh trại quân đội", "cơ sở quốc phòng", "thao trường", "trường bắn"]
+  }
+];
 
 // =========================================================================
-// 🟢 HÀM ĐÁNH GIÁ SỰ PHÙ HỢP QUY HOẠCH - ĐẢM BẢO CHẶT CHẼ CHUYÊN MÔN NGÀNH
+// 🟢 HÀM ĐÁNH GIÁ SỰ PHÙ HỢP QUY HOẠCH - CHUẨN XÁC CHUYÊN MÔN
 // =========================================================================
 function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   if (!chucNangDat || !mucTieuDuAn) {
@@ -1104,15 +1003,14 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
     item.loaiChucNang.toLowerCase().includes(queryDat)
   );
 
-  const congTrinhPhep = matchedLand ? matchedLand.congTrinhDuocPhep : ["Công trình quân sự", "doanh trại quân đội", "cơ sở quốc phòng"];
+  const congTrinhPhep = matchedLand ? matchedLand.congTrinhDuocPhep : ["Nhà ở riêng lẻ", "công trình hạ tầng kỹ thuật", "công viên cây xanh", "thương mại dịch vụ"];
   const tenChucNangDat = matchedLand ? matchedLand.loaiChucNang : chucNangDat;
 
-  // 1. Kiểm tra các trường hợp XUNG ĐỘT TUYỆT ĐỐI (Không phù hợp)
+  // 1. Kiểm tra xung đột tuyệt đối (Đất thương mại/du lịch hoặc quốc phòng không được làm khu dân cư)
   const isResidentialProject = queryMucTieu.includes("dân cư") || queryMucTieu.includes("đô thị") || queryMucTieu.includes("nhà ở") || queryMucTieu.includes("tái định cư") || queryMucTieu.includes("kdc") || queryMucTieu.includes("chung cư");
   const isCommercialOrTourismLand = queryDat.includes("thương mại") || queryDat.includes("dịch vụ") || queryDat.includes("du lịch");
   const isDefenseOrSecurityLand = queryDat.includes("quốc phòng") || queryDat.includes("an ninh");
 
-  // Đất thương mại/du lịch không được làm khu dân cư/nhà ở
   if (isCommercialOrTourismLand && isResidentialProject) {
     return {
       phuHop: false,
@@ -1121,70 +1019,39 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
     };
   }
 
-  // Đất quốc phòng/an ninh không được làm khu dân cư, thương mại, nhà ở dân dụng...
-  if (isDefenseOrSecurityLand && (isResidentialProject || queryMucTieu.includes("thương mại") || queryMucTieu.includes("dịch vụ") || queryMucTieu.includes("nhà máy"))) {
+  if (isDefenseOrSecurityLand && isResidentialProject) {
     return {
       phuHop: false,
       loaiCongTrinhPhep: congTrinhPhep,
-      ketLuan: `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch. Đất "${tenChucNangDat}" chỉ được phép sử dụng cho mục đích quốc phòng, an ninh.`
+      ketLuan: `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch. Đất "${tenChucNangDat}" thuộc mục đích quốc phòng, không được phép xây dựng khu dân cư.`
     };
   }
 
-  // 2. NHẬN DIỆN THÔNG MINH NHÓM CHUYÊN NGÀNH (Phù hợp)
+  // 2. Kiểm tra nếu là Đất ở / Đất ở nông thôn đối chiếu với Khu dân cư / Nhà ở -> PHÙ HỢP tuyệt đối
+  const isResidentialLand = queryDat.includes("đất ở") || queryDat.includes("khu dân cư");
+  if (isResidentialLand && isResidentialProject) {
+    return {
+      phuHop: true,
+      loaiCongTrinhPhep: congTrinhPhep,
+      ketLuan: `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với định hướng quy hoạch đất ở tại khu vực.`
+    };
+  }
+
+  // 3. Nhận diện thông minh các nhóm chuyên ngành khác
   let isSmartMatched = false;
-
-  // Nhóm Quốc phòng
-  if (queryDat.includes("quốc phòng") && (
-      queryMucTieu.includes("quốc phòng") || 
-      queryMucTieu.includes("quân sự") || 
-      queryMucTieu.includes("thao trường") || 
-      queryMucTieu.includes("trường bắn") || 
-      queryMucTieu.includes("huấn luyện") || 
-      queryMucTieu.includes("chqs") ||
-      queryMucTieu.includes("ban chỉ huy") ||
-      queryMucTieu.includes("công trình quốc phòng")
-  )) {
+  if (isDefenseOrSecurityLand && (queryMucTieu.includes("quốc phòng") || queryMucTieu.includes("quân sự") || queryMucTieu.includes("thao trường") || queryMucTieu.includes("trường bắn"))) {
     isSmartMatched = true;
-  }
-  // Nhóm An ninh
-  else if (queryDat.includes("an ninh") && (
-      queryMucTieu.includes("an ninh") || 
-      queryMucTieu.includes("công an") ||
-      queryMucTieu.includes("công trình an ninh")
-  )) {
-    isSmartMatched = true;
-  }
-  // Nhóm Công nghiệp / Kho tàng
-  else if ((queryDat.includes("công nghiệp") || queryDat.includes("kho tàng")) && (
-      queryMucTieu.includes("công nghiệp") || 
-      queryMucTieu.includes("nhà máy") || 
-      queryMucTieu.includes("xưởng") || 
-      queryMucTieu.includes("kho bãi")
-  )) {
-    isSmartMatched = true;
-  }
-  // Nhóm Thương mại - Dịch vụ - Du lịch
-  else if (isCommercialOrTourismLand && (
-      queryMucTieu.includes("thương mại") || 
-      queryMucTieu.includes("dịch vụ") || 
-      queryMucTieu.includes("du lịch") || 
-      queryMucTieu.includes("khách sạn") || 
-      queryMucTieu.includes("nhà hàng") || 
-      queryMucTieu.includes("siêu thị") || 
-      queryMucTieu.includes("showroom") || 
-      queryMucTieu.includes("nghỉ dưỡng") ||
-      queryMucTieu.includes("giải trí")
-  )) {
+  } else if (isCommercialOrTourismLand && (queryMucTieu.includes("thương mại") || queryMucTieu.includes("dịch vụ") || queryMucTieu.includes("du lịch") || queryMucTieu.includes("khách sạn"))) {
     isSmartMatched = true;
   }
 
-  let isPhuHop = isSmartMatched;
+  let isPhuHop = isSmartMatched || congTrinhPhep.some(ct => queryMucTieu.includes(ct.toLowerCase()) || ct.toLowerCase().includes(queryMucTieu));
 
   return {
     phuHop: isPhuHop,
     loaiCongTrinhPhep: congTrinhPhep,
     ketLuan: isPhuHop
-      ? `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với định hướng quy hoạch không gian tại khu vực.`
+      ? `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch chức năng ${tenChucNangDat}.`
       : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch. Chức năng ${tenChucNangDat} chỉ cho phép các công trình: ${congTrinhPhep.join(", ")}.`
   };
 }
