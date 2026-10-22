@@ -988,14 +988,14 @@ const LAND_USE_FUNCTION_MAP = [
 ];
 
 // =========================================================================
-// 🟢 HÀM ĐÁNH GIÁ SỰ PHÙ HỢP QUY HOẠCH - CHUẨN XÁC CHUYÊN MÔN
+// 🟢 HÀM ĐÁNH GIÁ SỰ PHÙ HỢP QUY HOẠCH - XỬ LÝ CHUẨN XÁC ĐẤT CHƯA KHAI BÁO
 // =========================================================================
 function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
-  if (!chucNangDat || !mucTieuDuAn) {
+  if (!chucNangDat || !mucTieuDuAn || chucNangDat.includes('chưa khai báo')) {
     return {
       phuHop: false,
       loaiCongTrinhPhep: [],
-      ketLuan: "Thiếu thông tin chức năng đất quy hoạch hoặc mục tiêu dự án."
+      ketLuan: `❌ Khu vực này chưa được khai báo chức năng sử dụng đất chi tiết trong đồ án quy hoạch. Không đủ cơ sở dữ liệu không gian để đối chiếu sự phù hợp và danh mục công trình được phép xây dựng cho dự án "${mucTieuDuAn}".`
     };
   }
 
@@ -1008,10 +1008,10 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
     item.loaiChucNang.toLowerCase().includes(queryDat)
   );
 
-  const congTrinhPhep = matchedLand ? matchedLand.congTrinhDuocPhep : ["Nhà ở riêng lẻ", "công trình hạ tầng kỹ thuật", "công viên cây xanh", "thương mại dịch vụ"];
+  const congTrinhPhep = matchedLand ? matchedLand.congTrinhDuocPhep : [];
   const tenChucNangDat = matchedLand ? matchedLand.loaiChucNang : chucNangDat;
 
-  // 1. Kiểm tra xung đột tuyệt đối (Đất thương mại/du lịch hoặc quốc phòng không được làm khu dân cư)
+  // 1. Kiểm tra xung đột tuyệt đối
   const isResidentialProject = queryMucTieu.includes("dân cư") || queryMucTieu.includes("đô thị") || queryMucTieu.includes("nhà ở") || queryMucTieu.includes("tái định cư") || queryMucTieu.includes("kdc") || queryMucTieu.includes("chung cư");
   const isCommercialOrTourismLand = queryDat.includes("thương mại") || queryDat.includes("dịch vụ") || queryDat.includes("du lịch");
   const isDefenseOrSecurityLand = queryDat.includes("quốc phòng") || queryDat.includes("an ninh");
@@ -1032,7 +1032,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
     };
   }
 
-  // 2. Kiểm tra nếu là Đất ở / Đất ở nông thôn đối chiếu với Khu dân cư / Nhà ở -> PHÙ HỢP tuyệt đối
+  // 2. Kiểm tra nếu là Đất ở đối chiếu với Khu dân cư / Nhà ở -> PHÙ HỢP tuyệt đối
   const isResidentialLand = queryDat.includes("đất ở") || queryDat.includes("khu dân cư");
   if (isResidentialLand && isResidentialProject) {
     return {
@@ -1048,16 +1048,10 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
     isSmartMatched = true;
   } else if (isCommercialOrTourismLand && (queryMucTieu.includes("thương mại") || queryMucTieu.includes("dịch vụ") || queryMucTieu.includes("du lịch") || queryMucTieu.includes("khách sạn"))) {
     isSmartMatched = true;
-  }
-// 🟢 CHÈN ĐOẠN NHẬN DIỆN THỦY SẢN / MẶT NƯỚC VÀO ĐÂY:
-  else if ((queryDat.includes("thủy sản") || queryDat.includes("nuôi trồng") || queryDat.includes("mặt nước")) && (
-      queryMucTieu.includes("thủy sản") || 
-      queryMucTieu.includes("nuôi trồng") || 
-      queryMucTieu.includes("ao") || 
-      queryMucTieu.includes("hồ")
-  )) {
+  } else if ((queryDat.includes("thủy sản") || queryDat.includes("nuôi trồng") || queryDat.includes("mặt nước")) && (queryMucTieu.includes("thủy sản") || queryMucTieu.includes("nuôi trồng") || queryMucTieu.includes("ao") || queryMucTieu.includes("hồ"))) {
     isSmartMatched = true;
   }
+
   let isPhuHop = isSmartMatched || congTrinhPhep.some(ct => queryMucTieu.includes(ct.toLowerCase()) || ct.toLowerCase().includes(queryMucTieu));
 
   return {
