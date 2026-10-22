@@ -1406,8 +1406,6 @@ const generateInternalTestPoints = (polygonPoints) => {
         }
 
         // 4. TỔNG HỢP VÀ HIỂN THỊ KẾT QUẢ MINH BẠCH, RÕ RÀNG CHO NGƯỜI ĐỌC
-        let dominantZone = '';
-        let maxHits = 0;
         let totalHitsAll = 0;
         Object.keys(zoneOverlapScores).forEach(funcName => {
           totalHitsAll += zoneOverlapScores[funcName];
