@@ -1362,9 +1362,10 @@ const handleThucHienKiemTra = (e) => {
 
   const centerPoint = { x: cx, y: cy };
 
-  // 2. NHẬN DIỆN ĐỒ ÁN / XÃ THUỘC VÙNG QUY HOẠCH
+  // 2. NHẬN DIỆN ĐỒ ÁN / XÃ THUỘC VÙNG QUY HOẠCH (QUÉT TOÀN BỘ LƯỚI ĐIỂM THAY VÌ CHỈ DỰA VÀO TÂM)
   let detectedTenQuyHoach = "Quy hoạch chung xã Tuy Phước";
   let detectedXaName = "Xã Tuy Phước";
+  let foundMatchedZone = false;
 
   if (typeof danhSachDoAnQuyHoach !== 'undefined' && Array.isArray(danhSachDoAnQuyHoach)) {
     for (let doan of danhSachDoAnQuyHoach) {
@@ -1374,16 +1375,21 @@ const handleThucHienKiemTra = (e) => {
             for (let cn of vung.danhSachChucNang) {
               const subPolys = parseSubPolygons(cn.toaDoVung);
               for (let poly of subPolys) {
+                // Kiểm tra nếu tâm hoặc bất kỳ đỉnh nào nằm trong vùng quy hoạch thì nhận diện ngay
                 if (isPointInPolygon(centerPoint, poly)) {
                   detectedTenQuyHoach = vung.tenQuyHoach || doan.tenDoAn || detectedTenQuyHoach;
                   detectedXaName = vung.xa || doan.xa || detectedXaName;
+                  foundMatchedZone = true;
                   break;
                 }
               }
+              if (foundMatchedZone) break;
             }
           }
+          if (foundMatchedZone) break;
         }
       }
+      if (foundMatchedZone) break;
     }
   }
 
