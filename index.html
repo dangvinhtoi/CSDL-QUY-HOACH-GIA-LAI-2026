@@ -1232,7 +1232,7 @@ const generateInternalTestPoints = (polygonPoints) => {
 };
 
 // =========================================================================
-    // 🟢 HÀM KIỂM TRA QUY HOẠCH - QUÉT TOÀN DIỆN TẤT CẢ VÙNG KHAI BÁO (KHÔNG ƯU TIÊN)
+    // 🟢 HÀM KIỂM TRA QUY HOẠCH - SỬ DỤNG LƯỚI ĐIỂM MẪU (GRID SAMPLING) CHỐNG NHẦM LẪN
     // =========================================================================
     const handleThucHienKiemTra = (e) => {
       e.preventDefault();
@@ -1246,7 +1246,7 @@ const generateInternalTestPoints = (polygonPoints) => {
 
       const mucTieu = (kiemTraForm?.mucTieuDuAn || '').trim();
       if (!mucTieu) {
-        showNotification('⚠️ Vuint lòng nhập mục tiêu dự án!');
+        showNotification('⚠️ Vui lòng nhập mục tiêu dự án!');
         return;
       }
       if (kiemTraForm.loaiNhap === 'truc_tiep' && !kiemTraForm.toaDoTrucTiep.trim()) {
@@ -1271,14 +1271,36 @@ const generateInternalTestPoints = (polygonPoints) => {
         let detectedXaName = 'Tuy Phước';
         let detectedTenQuyHoach = 'Quy hoạch chung xã Tuy Phước';
 
-        const centroidX = inputPoints.reduce((sum, p) => sum + p.x, 0) / inputPoints.length;
-        const centroidY = inputPoints.reduce((sum, p) => sum + p.y, 0) / inputPoints.length;
+        // 1. TẠO LƯỚI ĐIỂM MẪU NỘI BỘ (GRID SAMPLING) BÊN TRONG KHU ĐẤT ĐỂ ĐO ĐẠC DIỆN TÍCH GIAO NHAU
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        inputPoints.forEach(p => {
+          if (p.x < minX) minX = p.x;
+          if (p.x > maxX) maxX = p.x;
+          if (p.y < minY) minY = p.y;
+          if (p.y > maxY) maxY = p.y;
+        });
+
+        const centroidX = (minX + maxX) / 2;
+        const centroidY = (minY + maxY) / 2;
         const centroidPt = { x: centroidX, y: centroidY };
 
-        // Tạo tập điểm kiểm tra toàn diện bao gồm trọng tâm và tất cả các đỉnh ranh giới
-        let testPoints = [centroidPt, ...inputPoints];
+        const gridSteps = 10; // Tạo lưới mẫu 10x10 = 100 điểm bên trong khu đất
+        const stepX = (maxX - minX) / gridSteps;
+        const stepY = (maxY - minY) / gridSteps;
+        
+        let internalGridPoints = [centroidPt];
+        for (let i = 0; i <= gridSteps; i++) {
+          for (let j = 0; j <= gridSteps; j++) {
+            const px = minX + i * stepX;
+            const py = minY + j * stepY;
+            const pt = { x: px, y: py };
+            if (isPointInPolygon(pt, inputPoints)) {
+              internalGridPoints.push(pt);
+            }
+          }
+        }
 
-        // Thu thập toàn bộ tất cả các vùng chức năng được khai báo trong CSDL (Bảng 3)
+        // 2. THU THẬP TẤT CẢ CÁC VÙNG CHỨC NĂNG ĐÃ KHAI BÁO TRONG CSDL (BẢNG 3)
         let allZonesList = [];
         (vungChucNangDaKhaiBao || []).forEach(vung => {
           if (vung.xa) detectedXaName = vung.xa;
@@ -1299,34 +1321,30 @@ const generateInternalTestPoints = (polygonPoints) => {
           }
         });
 
-        // QUÉT TOÀN DIỆN KHÔNG BỎ SÓT: Đếm số điểm kiểm tra rơi vào từng vùng chức năng
-        let matchedZoneCounts = {};
-        let totalMatches = 0;
-
+        // 3. ĐỐI CHIẾU DIỆN TÍCH GIAO NHAU THỰC TẾ QUA LƯỚI ĐIỂM MẪU
+        let zoneOverlapScores = {};
         allZonesList.forEach(zoneObj => {
-          let hits = 0;
-          testPoints.forEach(pt => {
+          let hitCount = 0;
+          internalGridPoints.forEach(pt => {
             if (isPointInPolygon(pt, zoneObj.zonePoints)) {
-              hits++;
+              hitCount++;
             }
           });
-          if (hits > 0) {
-            matchedZoneCounts[zoneObj.funcName] = (matchedZoneCounts[zoneObj.funcName] || 0) + hits;
-            totalMatches += hits;
+          if (hitCount > 0) {
+            zoneOverlapScores[zoneObj.funcName] = hitCount;
           }
         });
 
-        // Xác định chức năng chiếm tỷ lệ khớp cao nhất
         let dominantZone = '';
-        let maxHits = -1;
-        Object.keys(matchedZoneCounts).forEach(funcName => {
-          if (matchedZoneCounts[funcName] > maxHits) {
-            maxHits = matchedZoneCounts[funcName];
+        let maxHits = 0;
+        Object.keys(zoneOverlapScores).forEach(funcName => {
+          if (zoneOverlapScores[funcName] > maxHits) {
+            maxHits = zoneOverlapScores[funcName];
             dominantZone = funcName;
           }
         });
 
-        if (!dominantZone || totalMatches === 0) {
+        if (!dominantZone || maxHits === 0) {
           const formattedXaNgoai = detectedXaName.startsWith('Xã') || detectedXaName.startsWith('P.') || detectedXaName.startsWith('Phường') ? detectedXaName : `Xã ${detectedXaName}`;
           const ketQuaNgoaiVung = {
             diaDiem: `${formattedXaNgoai}, tỉnh Gia Lai`,
@@ -1341,7 +1359,7 @@ const generateInternalTestPoints = (polygonPoints) => {
           return;
         }
 
-        // Đánh giá sự phù hợp mục tiêu dự án
+        // 4. ĐÁNH GIÁ SỰ PHÙ HỢP MỤC TIÊU DỰ ÁN
         const evaluation = evaluateProjectSuitability(dominantZone, kiemTraForm.mucTieuDuAn);
 
         const formattedXaDisplay = detectedXaName.startsWith('Xã') || detectedXaName.startsWith('P.') || detectedXaName.startsWith('Phường') 
@@ -1354,7 +1372,7 @@ const generateInternalTestPoints = (polygonPoints) => {
 
         let ketLuanLines = [statusHeader];
         ketLuanLines.push(`- Tổng diện tích ranh giới: ${totalAreaHa.toFixed(4)} ha.`);
-        ketLuanLines.push(`- Thuộc quy hoạch chức năng: ${dominantZone} (100.0%)`);
+        ketLuanLines.push(`- Thuộc quy hoạch chức năng: ${dominantZone} (~${((maxHits / internalGridPoints.length) * 100).toFixed(1)}% diện tích giao nhau)`);
         
         if (evaluation.phuHop) {
           ketLuanLines.push(`- Đánh giá sự phù hợp: Mục tiêu đầu tư "${kiemTraForm.mucTieuDuAn}" hoàn toàn phù hợp với định hướng quy hoạch tại khu vực.`);
