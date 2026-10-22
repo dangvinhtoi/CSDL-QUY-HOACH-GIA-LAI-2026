@@ -961,6 +961,13 @@ function App() {
 // =========================================================================
 const LAND_USE_FUNCTION_MAP = [
   {
+    nhom: "Khu đất dân dụng",
+    loaiChucNang: "Đất hỗn hợp (nhóm nhà ở và dịch vụ)",
+    congTrinhDuocPhep: ["nhà ở", "khu dân cư", "khu đô thị", "chung cư", "nhà ở riêng lẻ", 
+      "thương mại", "dịch vụ", "trung tâm thương mại", "văn phòng", 
+      "công trình hỗn hợp", "công trình hạ tầng kỹ thuật", "công viên cây xanh"]
+  },
+  {
     nhom: "Đất nhà ở",
     loaiChucNang: "Đất ở",
     congTrinhDuocPhep: ["Nhà ở riêng lẻ", "nhà ở liền kề", "khu dân cư", "khu đô thị", "nhà ở tái định cư", "chung cư", "công trình hạ tầng kỹ thuật", "công viên cây xanh"]
@@ -988,14 +995,14 @@ const LAND_USE_FUNCTION_MAP = [
 ];
 
 // =========================================================================
-// 🟢 HÀM ĐÁNH GIÁ SỰ PHÙ HỢP QUY HOẠCH - XỬ LÝ CHUẨN XÁC ĐẤT CHƯA KHAI BÁO
+// 🟢 HÀM ĐÁNH GIÁ SỰ PHÙ HỢP QUY HOẠCH - CHUẨN XÁC CHO ĐẤT HỖN HỢP & CÁC LOẠI ĐẤT
 // =========================================================================
 function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   if (!chucNangDat || !mucTieuDuAn || chucNangDat.includes('chưa khai báo')) {
     return {
       phuHop: false,
       loaiCongTrinhPhep: [],
-      ketLuan: `❌ Khu vực này chưa được khai báo chức năng sử dụng đất chi tiết trong đồ án quy hoạch. Không đủ cơ sở dữ liệu không gian để đối chiếu sự phù hợp và danh mục công trình được phép xây dựng cho dự án "${mucTieuDuAn}".`
+      ketLuan: `❌ Khu vực này chưa được khai báo chức năng sử dụng đất chi tiết trong đồ án quy hoạch quy hoạch. Không đủ cơ sở dữ liệu không gian để đối chiếu cho dự án "${mucTieuDuAn}".`
     };
   }
 
@@ -1008,31 +1015,40 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
     item.loaiChucNang.toLowerCase().includes(queryDat)
   );
 
-  const congTrinhPhep = matchedLand ? matchedLand.congTrinhDuocPhep : [];
+  const congTrinhPhep = matchedLand ? matchedLand.congTrinhDuocPhep : ["Nhà ở", "Khu dân cư", "Thương mại dịch vụ", "Công trình hỗn hợp"];
   const tenChucNangDat = matchedLand ? matchedLand.loaiChucNang : chucNangDat;
 
-  // 1. Kiểm tra xung đột tuyệt đối
+  // 1. Kiểm tra xung đột tuyệt đối (Đất quốc phòng/an ninh tuyệt đối không cho làm nhà ở hay thương mại thông thường)
   const isResidentialProject = queryMucTieu.includes("dân cư") || queryMucTieu.includes("đô thị") || queryMucTieu.includes("nhà ở") || queryMucTieu.includes("tái định cư") || queryMucTieu.includes("kdc") || queryMucTieu.includes("chung cư");
-  const isCommercialOrTourismLand = queryDat.includes("thương mại") || queryDat.includes("dịch vụ") || queryDat.includes("du lịch");
   const isDefenseOrSecurityLand = queryDat.includes("quốc phòng") || queryDat.includes("an ninh");
-
-  if (isCommercialOrTourismLand && isResidentialProject) {
-    return {
-      phuHop: false,
-      loaiCongTrinhPhep: congTrinhPhep,
-      ketLuan: `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch. Đất "${tenChucNangDat}" không được phép bố trí dự án khu dân cư, đô thị hoặc nhà ở.`
-    };
-  }
 
   if (isDefenseOrSecurityLand && isResidentialProject) {
     return {
       phuHop: false,
       loaiCongTrinhPhep: congTrinhPhep,
-      ketLuan: `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch. Đất "${tenChucNangDat}" thuộc mục đích quốc phòng, không được phép xây dựng khu dân cư.`
+      ketLuan: `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch. Đất "${tenChucNangDat}" thuộc mục đích quốc phòng, an ninh, không được phép xây dựng khu dân cư.`
     };
   }
 
-  // 2. Kiểm tra nếu là Đất ở đối chiếu với Khu dân cư / Nhà ở -> PHÙ HỢP tuyệt đối
+  // 2. 🟢 XỬ LÝ ĐẶC THÙ CHO ĐẤT HỖN HỢP (Nhóm nhà ở và dịch vụ) -> Cho phép nhà ở, khu dân cư, đô thị, chung cư, thương mại, dịch vụ
+  const isMixedLand = queryDat.includes("đất hỗn hợp") || queryDat.includes("hỗn hợp");
+  if (isMixedLand) {
+    const isAllowedMixedProject = isResidentialProject || 
+                                  queryMucTieu.includes("thương mại") || 
+                                  queryMucTieu.includes("dịch vụ") || 
+                                  queryMucTieu.includes("văn phòng") || 
+                                  queryMucTieu.includes("hỗn hợp") ||
+                                  queryMucTieu.includes("siêu thị");
+    if (isAllowedMixedProject) {
+      return {
+        phuHop: true,
+        loaiCongTrinhPhep: congTrinhPhep,
+        ketLuan: `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với định hướng quy hoạch chức năng ${tenChucNangDat} (cho phép kết hợp ở, thương mại và dịch vụ tại khu vực).`
+      };
+    }
+  }
+
+  // 3. Kiểm tra các nhóm đất khác (Đất ở, Thương mại, Quốc phòng, Thủy sản...)
   const isResidentialLand = queryDat.includes("đất ở") || queryDat.includes("khu dân cư");
   if (isResidentialLand && isResidentialProject) {
     return {
@@ -1042,13 +1058,12 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
     };
   }
 
-  // 3. Nhận diện thông minh các nhóm chuyên ngành khác
   let isSmartMatched = false;
   if (isDefenseOrSecurityLand && (queryMucTieu.includes("quốc phòng") || queryMucTieu.includes("quân sự") || queryMucTieu.includes("thao trường") || queryMucTieu.includes("trường bắn"))) {
     isSmartMatched = true;
-  } else if (isCommercialOrTourismLand && (queryMucTieu.includes("thương mại") || queryMucTieu.includes("dịch vụ") || queryMucTieu.includes("du lịch") || queryMucTieu.includes("khách sạn"))) {
+  } else if (queryDat.includes("thương mại") && (queryMucTieu.includes("thương mại") || queryMucTieu.includes("dịch vụ") || queryMucTieu.includes("khách sạn"))) {
     isSmartMatched = true;
-  } else if ((queryDat.includes("thủy sản") || queryDat.includes("nuôi trồng") || queryDat.includes("mặt nước")) && (queryMucTieu.includes("thủy sản") || queryMucTieu.includes("nuôi trồng") || queryMucTieu.includes("ao") || queryMucTieu.includes("hồ"))) {
+  } else if ((queryDat.includes("thủy sản") || queryDat.includes("nuôi trồng")) && (queryMucTieu.includes("thủy sản") || queryMucTieu.includes("nuôi trồng"))) {
     isSmartMatched = true;
   }
 
