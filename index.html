@@ -1224,68 +1224,78 @@ const generateInternalTestPoints = (polygonPoints) => {
   return testPoints;
 };
 // =========================================================================
-    // 🟢 HÀM VẼ TRỰC QUAN ĐA GIÁC (CANVAS PREVIEW) ĐỂ KIỂM TRA ĐỘ CHÍNH XÁC TỌA ĐỘ
-    // =========================================================================
-    const PolygonPreviewCanvas = ({ polygonsList }) => {
-      const canvasRef = useRef(null);
+// 🟢 HÀM MÔ PHỎNG HÌNH HỌC KHÔNG GIAN - CHỈ VẼ VIÊN RANH GIỚI CHUẨN XÁC
+// =========================================================================
+const PolygonPreviewCanvas = ({ polygonsList }) => {
+  const canvasRef = useRef(null);
 
-      useEffect(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        if (!polygonsList || polygonsList.length === 0) {
-          ctx.fillStyle = '#94a3b8';
-          ctx.font = '12px Inter, sans-serif';
-          ctx.fillText('Chưa có dữ liệu tọa độ hợp lệ', 45, 75);
-          return;
-        }
+    if (!polygonsList || polygonsList.length === 0) {
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '12px Inter, sans-serif';
+      ctx.fillText('Chưa có dữ liệu tọa độ hợp lệ', 35, 75);
+      return;
+    }
 
-        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-        polygonsList.forEach(poly => {
-          poly.forEach(pt => {
-            if (pt.x < minX) minX = pt.x;
-            if (pt.x > maxX) maxX = pt.x;
-            if (pt.y < minY) minY = pt.y;
-            if (pt.y > maxY) maxY = pt.y;
-          });
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    polygonsList.forEach(poly => {
+      if (poly && poly.length >= 3) {
+        poly.forEach(pt => {
+          if (pt.x < minX) minX = pt.x;
+          if (pt.x > maxX) maxX = pt.x;
+          if (pt.y < minY) minY = pt.y;
+          if (pt.y > maxY) maxY = pt.y;
         });
+      }
+    });
 
-        const padding = 20;
-        const cWidth = canvas.width - padding * 2;
-        const cHeight = canvas.height - padding * 2;
-        const rangeX = maxX - minX || 1;
-        const rangeY = maxY - minY || 1;
-        const scale = Math.min(cWidth / rangeX, cHeight / rangeY);
+    if (minX === Infinity || maxX === -Infinity) {
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '12px Inter, sans-serif';
+      ctx.fillText('Đang cập nhật tọa độ...', 45, 75);
+      return;
+    }
 
-        const colors = ['#2563eb', '#16a34a', '#d97706', '#dc2626', '#7c3aed', '#0891b2'];
+    const padding = 15;
+    const cWidth = canvas.width - padding * 2;
+    const cHeight = canvas.height - padding * 2;
+    const rangeX = maxX - minX || 1;
+    const rangeY = maxY - minY || 1;
+    const scale = Math.min(cWidth / rangeX, cHeight / rangeY);
 
-        polygonsList.forEach((poly, pIdx) => {
-          if (poly.length < 3) return;
-          ctx.beginPath();
-          poly.forEach((pt, idx) => {
-            const cx = padding + (pt.x - minX) * scale + (cWidth - rangeX * scale) / 2;
-            const cy = canvas.height - (padding + (pt.y - minY) * scale + (cHeight - rangeY * scale) / 2);
-            if (idx === 0) ctx.moveTo(cx, cy);
-            else ctx.lineTo(cx, cy);
-          });
-          ctx.closePath();
-          ctx.fillStyle = colors[pIdx % colors.length] + '33';
-          ctx.fill();
-          ctx.strokeStyle = colors[pIdx % colors.length];
-          ctx.lineWidth = 2;
-          ctx.stroke();
-        });
-      }, [polygonsList]);
+    const colors = ['#2563eb', '#16a34a', '#d97706', '#dc2626', '#7c3aed', '#0891b2'];
 
-      return (
-        <div className="flex flex-col items-center bg-slate-100 p-2 rounded-lg border border-slate-300">
-          <canvas ref={canvasRef} width="220" height="150" className="bg-white rounded shadow-inner"></canvas>
-          <span className="text-[10px] text-slate-500 mt-1 font-semibold">Mô phỏng hình học không gian</span>
-        </div>
-      );
-    };
+    polygonsList.forEach((poly, pIdx) => {
+      if (!poly || poly.length < 3) return;
+      ctx.beginPath();
+      poly.forEach((pt, idx) => {
+        const cx = padding + (pt.x - minX) * scale + (cWidth - rangeX * scale) / 2;
+        const cy = canvas.height - (padding + (pt.y - minY) * scale + (cHeight - rangeY * scale) / 2);
+        if (idx === 0) ctx.moveTo(cx, cy);
+        else ctx.lineTo(cx, cy);
+      });
+      ctx.closePath();
+      // Chỉ tô màu nhẹ và viền rõ nét biên ranh giới
+      ctx.fillStyle = colors[pIdx % colors.length] + '22';
+      ctx.fill();
+      ctx.strokeStyle = colors[pIdx % colors.length];
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    });
+  }, [polygonsList]);
+
+  return (
+    <div className="flex flex-col items-center bg-slate-100 p-2 rounded-lg border border-slate-300 shadow-sm">
+      <canvas ref={canvasRef} width="200" height="140" className="bg-white rounded shadow-inner"></canvas>
+      <span className="text-[10px] text-slate-500 mt-1 font-semibold">Mô phỏng ranh giới khu đất</span>
+    </div>
+  );
+};
 // =========================================================================
 // 🟢 HÀM XỬ LÝ KIỂM TRA QUY HOẠCH - TỐI ƯU CHỐNG LỖI NGOÀI VÙNG (FALLBACK)
 // =========================================================================
