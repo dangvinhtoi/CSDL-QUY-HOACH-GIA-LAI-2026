@@ -1278,9 +1278,14 @@ const generateInternalTestPoints = (polygonPoints) => {
       );
     };
 // =========================================================================
-// 🟢 HÀM XỬ LÝ KIỂM TRA QUY HOẠCH TỰ ĐỘNG - CHUẨN XÁC VÀ MINH BẠCH
+// 🟢 HÀM XỬ LÝ KIỂM TRA QUY HOẠCH TỰ ĐỘNG - CHUẨN XÁC VÀ CHẶN RESET TRANG
 // =========================================================================
-const handleThucHienKiemTra = () => {
+const handleThucHienKiemTra = (e) => {
+  // Chặn hành vi submit form làm refresh / làm mới lại trang web
+  if (e && typeof e.preventDefault === 'function') {
+    e.preventDefault();
+  }
+
   if (!kiemTraForm.mucTieuDuAn || !kiemTraForm.toaDoInput.trim()) {
     showNotification('⚠️ Vui lòng nhập đầy đủ Mục tiêu dự án và Tọa độ các đỉnh!');
     return;
