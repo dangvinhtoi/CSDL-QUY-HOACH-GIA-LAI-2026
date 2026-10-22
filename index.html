@@ -1070,23 +1070,26 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
 }
  
 // =========================================================================
-// 🟢 HÀM PHÂN TÁCH VÙNG TỌA ĐỘ SIÊU LINH HOẠT - KHỚP CHÍNH XÁC 100%
+// 🟢 HÀM PHÂN TÁCH VÙNG TỌA ĐỘ HATCH THÔNG MINH (TỰ ĐỘNG TÁCH ĐỘC LẬP TỪNG VÙNG)
 // =========================================================================
 const parseSubPolygons = (inputStr) => {
   if (!inputStr || typeof inputStr !== 'string') return [];
   
-  // Hỗ trợ tách theo cả dòng mới, dấu chấm phẩy hoặc khối vùng
+  // Tách các khối dữ liệu dựa vào dòng trống hoặc từ khóa Vùng
   const rawBlocks = inputStr.split(/\r?\n\s*\r?\n/).filter(b => b.trim().length > 0);
   const polygons = [];
   
   const processBlock = (textBlock) => {
     const lines = textBlock.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-    const pts = [];
+    let currentPoly = [];
     
     lines.forEach(line => {
       const upper = line.toUpperCase();
-      // Bỏ qua dòng tiêu đề vùng nếu không chứa số tọa độ
-      if ((upper.startsWith('VÙNG') || upper.startsWith('VUNG')) && !upper.includes('X') && !upper.includes('Y') && !/\d/.test(line)) {
+      if ((upper.startsWith('VÙNG') || upper.startsWith('VUNG')) && !/\d/.test(line)) {
+        if (currentPoly.length >= 3) {
+          polygons.push(currentPoly);
+          currentPoly = [];
+        }
         return;
       }
       
@@ -1094,35 +1097,41 @@ const parseSubPolygons = (inputStr) => {
       const nums = line.match(/-?\d+(\.\d+)?/g);
       
       if (upper.includes('X') && upper.includes('Y') && nums && nums.length >= 2) {
-        // Trường hợp có chữ X=... Y=...
         const pX = line.split(/X[\s=:]+/i);
         if (pX.length > 1) x = parseFloat(pX[1].trim().split(/[\s,]+/)[0]);
         const pY = line.split(/Y[\s=:]+/i);
         if (pY.length > 1) y = parseFloat(pY[1].trim().split(/[\s,]+/)[0]);
-      }
-      
-      if ((x === null || isNaN(x) || y === null || isNaN(y)) && nums && nums.length >= 2) {
-        // Trường hợp thuần số (X Y cách nhau bằng khoảng trắng hoặc tab)
+      } else if (nums && nums.length >= 2) {
         x = parseFloat(nums[0]);
         y = parseFloat(nums[1]);
       }
       
       if (x !== null && y !== null && !isNaN(x) && !isNaN(y)) {
-        if (Math.abs(x - y) < 0.001) {
-          y = y + 1.0; // Chống lỗi trùng điểm hình học
+        if (Math.abs(x - y) < 0.001) y = y + 1.0;
+        
+        // Phát hiện bước nhảy tọa độ lớn để tự động tách vòng khép kín mới nếu dính liền
+        if (currentPoly.length > 0) {
+          const lastPt = currentPoly[currentPoly.length - 1];
+          const distSq = Math.pow(x - lastPt.x, 2) + Math.pow(y - lastPt.y, 2);
+          // Nếu khoảng cách giữa 2 điểm liên tiếp > 5000 mét (5km) thì đây là vùng Hatch rời nhau tiếp theo
+          if (distSq > 25000000 && currentPoly.length >= 3) {
+            polygons.push(currentPoly);
+            currentPoly = [];
+          }
         }
-        pts.push({ x, y });
+        currentPoly.push({ x, y });
       }
     });
     
-    if (pts.length >= 3) {
-      polygons.push(pts);
+    if (currentPoly.length >= 3) {
+      polygons.push(currentPoly);
     }
   };
 
   if (rawBlocks.length > 1) {
     rawBlocks.forEach(b => processBlock(b));
   } else {
+    // Nếu dán liền một khối dài, hàm thông minh sẽ tự phân tách qua bước nhảy điểm
     processBlock(inputStr);
   }
   
