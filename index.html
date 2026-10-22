@@ -1147,54 +1147,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
       : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch. Chức năng ${tenChucNangDat} chỉ cho phép các công trình: ${congTrinhPhep.join(", ")}.`
   };
 }
-  // 🟢 NHẬN DIỆN THÔNG MINH NHÓM CHUYÊN NGÀNH (BỔ SUNG ĐẦY ĐỦ TỪ KHÓA QUỐC PHÒNG)
-  let isSmartMatched = false;
-
-  // 1. Nhóm Quốc phòng (Bao gồm thao trường, trường bắn, huấn luyện, quân sự, Ban CHQS...)
-  if (queryDat.includes("quốc phòng") && (
-      queryMucTieu.includes("quốc phòng") || 
-      queryMucTieu.includes("quân sự") || 
-      queryMucTieu.includes("thao trường") || 
-      queryMucTieu.includes("trường bắn") || 
-      queryMucTieu.includes("huấn luyện") || 
-      queryMucTieu.includes("chqs") ||
-      queryMucTieu.includes("ban chỉ huy")
-  )) {
-    isSmartMatched = true;
-  }
-  // 2. Nhóm An ninh
-  else if (queryDat.includes("an ninh") && (queryMucTieu.includes("an ninh") || queryMucTieu.includes("công an"))) {
-    isSmartMatched = true;
-  }
-  // 3. Nhóm Công nghiệp / Kho tàng
-  else if ((queryDat.includes("công nghiệp") || queryDat.includes("kho tàng")) && (queryMucTieu.includes("công nghiệp") || queryMucTieu.includes("nhà máy") || queryMucTieu.includes("xưởng") || queryMucTieu.includes("kho bãi"))) {
-    isSmartMatched = true;
-  }
-  // 4. Nhóm Y tế
-  else if (queryDat.includes("y tế") && (queryMucTieu.includes("y tế") || queryMucTieu.includes("bệnh viện") || queryMucTieu.includes("phòng khám"))) {
-    isSmartMatched = true;
-  }
-  // 5. Nhóm Giáo dục
-  else if (queryDat.includes("giáo dục") && (queryMucTieu.includes("giáo dục") || queryMucTieu.includes("trường") || queryMucTieu.includes("học"))) {
-    isSmartMatched = true;
-  }
-  // 6. Nhóm Giao thông / Bãi đỗ xe
-  else if (queryDat.includes("giao thông") && (queryMucTieu.includes("giao thông") || queryMucTieu.includes("bãi đỗ") || queryMucTieu.includes("đường"))) {
-    isSmartMatched = true;
-  }
-
-  let isPhuHop = isSmartMatched || 
-    congTrinhPhep.some(ct => queryMucTieu.includes(ct.toLowerCase()) || ct.toLowerCase().includes(queryMucTieu)) || 
-    queryMucTieu.includes(tenChucNangDat.toLowerCase());
-
-  return {
-    phuHop: isPhuHop,
-    loaiCongTrinhPhep: congTrinhPhep,
-    ketLuan: isPhuHop
-      ? `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch chức năng ${tenChucNangDat}.`
-      : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch. Chức năng ${tenChucNangDat} chỉ cho phép các công trình: ${congTrinhPhep.join(", ")}.`
-  };
-}
+ 
 // =========================================================================
 // 🟢 HÀM PHÂN TÁCH VÙNG TỌA ĐỘ SIÊU LINH HOẠT - KHỚP CHÍNH XÁC 100%
 // =========================================================================
