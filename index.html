@@ -1278,182 +1278,216 @@ const generateInternalTestPoints = (polygonPoints) => {
       );
     };
 // =========================================================================
-    // 🟢 HÀM KIỂM TRA QUY HOẠCH - SỬ DỤNG LƯỚI ĐIỂM MẪU (GRID SAMPLING) CHỐNG NHẦM LẪN
-    // =========================================================================
-    const handleThucHienKiemTra = (e) => {
-      e.preventDefault();
+// 🟢 HÀM XỬ LÝ KIỂM TRA QUY HOẠCH TỰ ĐỘNG - CHUẨN XÁC VÀ MINH BẠCH
+// =========================================================================
+const handleThucHienKiemTra = () => {
+  if (!kiemTraForm.mucTieuDuAn || !kiemTraForm.toaDoInput.trim()) {
+    showNotification('⚠️ Vui lòng nhập đầy đủ Mục tiêu dự án và Tọa độ các đỉnh!');
+    return;
+  }
 
-      const isAdmin = userRole === 'ADMIN';
-      const hasPermission = isAdmin || (currentUser && currentUser.allowKTQH !== false);
-      if (!hasPermission) {
-        showNotification('⚠️ Hãy liên hệ Quản trị hệ thống để được cấp quyền sử dụng tính năng này!');
-        return;
+  const rawLines = kiemTraForm.toaDoInput.split('\n');
+  let parsedPolygon = [];
+
+  rawLines.forEach(line => {
+    const parts = line.trim().split(/[\s,]+/);
+    if (parts.length >= 2) {
+      const x = parseFloat(parts[0]);
+      const y = parseFloat(parts[1]);
+      if (!isNaN(x) && !isNaN(y)) {
+        parsedPolygon.push({ x, y });
       }
+    }
+  });
 
-      const mucTieu = (kiemTraForm?.mucTieuDuAn || '').trim();
-      if (!mucTieu) {
-        showNotification('⚠️ Vui lòng nhập mục tiêu dự án!');
-        return;
-      }
-      if (kiemTraForm.loaiNhap === 'truc_tiep' && !kiemTraForm.toaDoTrucTiep.trim()) {
-        showNotification('❌ Vui lòng nhập tọa độ khu đất!');
-        return;
-      }
-      if (kiemTraForm.loaiNhap !== 'truc_tiep' && !kiemTraForm.fileName) {
-        showNotification('❌ Vui lòng đính kèm file dữ liệu!');
-        return;
-      }
+  if (parsedPolygon.length < 3) {
+    showNotification('❌ Dữ liệu tọa độ không hợp lệ hoặc có ít hơn 3 đỉnh!');
+    return;
+  }
 
-      setTimeout(() => {
-        const inputSubPolys = parseSubPolygons(kiemTraForm.toaDoTrucTiep);
-        const inputPoints = inputSubPolys.length > 0 ? inputSubPolys[0] : [];
-        const totalAreaHa = calculatePolygonArea(inputPoints);
+  // 1. TÍNH TOÁN DIỆN TÍCH VÀ TRỌNG TÂM KHU ĐẤT
+  let doubleArea = 0;
+  let cx = 0;
+  let cy = 0;
+  const n = parsedPolygon.length;
 
-        if (inputPoints.length === 0 || totalAreaHa <= 0) {
-          showNotification('❌ Không đọc được tọa độ ranh giới hợp lệ từ dữ liệu nhập vào!');
-          return;
-        }
+  for (let i = 0; i < n; i++) {
+    const p1 = parsedPolygon[i];
+    const p2 = parsedPolygon[(i + 1) % n];
+    const cross = p1.x * p2.y - p2.x * p1.y;
+    doubleArea += cross;
+    cx += (p1.x + p2.x) * cross;
+    cy += (p1.y + p2.y) * cross;
+  }
 
-        let detectedXaName = 'Tuy Phước';
-        let detectedTenQuyHoach = 'Quy hoạch chung xã Tuy Phước';
+  const areaM2 = Math.abs(doubleArea) / 2.0;
+  const totalAreaHa = areaM2 / 10000;
 
-        // 1. TẠO LƯỚI ĐIỂM MẪU NỘI BỘ (GRID SAMPLING) BÊN TRONG KHU ĐẤT ĐỂ ĐO ĐẠC DIỆN TÍCH GIAO NHAU
-        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-        inputPoints.forEach(p => {
-          if (p.x < minX) minX = p.x;
-          if (p.x > maxX) maxX = p.x;
-          if (p.y < minY) minY = p.y;
-          if (p.y > maxY) maxY = p.y;
-        });
+  if (doubleArea !== 0) {
+    cx = cx / (3 * doubleArea);
+    cy = cy / (3 * doubleArea);
+  } else {
+    cx = parsedPolygon[0].x;
+    cy = parsedPolygon[0].y;
+  }
 
-        const centroidX = (minX + maxX) / 2;
-        const centroidY = (minY + maxY) / 2;
-        const centroidPt = { x: centroidX, y: centroidY };
+  const centerPoint = { x: cx, y: cy };
 
-        const gridSteps = 10; // Tạo lưới mẫu 10x10 = 100 điểm bên trong khu đất
-        const stepX = (maxX - minX) / gridSteps;
-        const stepY = (maxY - minY) / gridSteps;
-        
-        let internalGridPoints = [centroidPt];
-        for (let i = 0; i <= gridSteps; i++) {
-          for (let j = 0; j <= gridSteps; j++) {
-            const px = minX + i * stepX;
-            const py = minY + j * stepY;
-            const pt = { x: px, y: py };
-            if (isPointInPolygon(pt, inputPoints)) {
-              internalGridPoints.push(pt);
+  // 2. NHẬN DIỆN ĐỒ ÁN / XÃ THUỘC VÙNG QUY HOẠCH
+  let detectedTenQuyHoach = "Quy hoạch chung xã Tuy Phước";
+  let detectedXaName = "Xã Tuy Phước";
+
+  if (typeof danhSachDoAnQuyHoach !== 'undefined' && Array.isArray(danhSachDoAnQuyHoach)) {
+    for (let doan of danhSachDoAnQuyHoach) {
+      if (doan.danhSachVung && Array.isArray(doan.danhSachVung)) {
+        for (let vung of doan.danhSachVung) {
+          if (vung.danhSachChucNang && Array.isArray(vung.danhSachChucNang)) {
+            for (let cn of vung.danhSachChucNang) {
+              const subPolys = parseSubPolygons(cn.toaDoVung);
+              for (let poly of subPolys) {
+                if (isPointInPolygon(centerPoint, poly)) {
+                  detectedTenQuyHoach = vung.tenQuyHoach || doan.tenDoAn || detectedTenQuyHoach;
+                  detectedXaName = vung.xa || doan.xa || detectedXaName;
+                  break;
+                }
+              }
             }
           }
         }
+      }
+    }
+  }
 
-        // 2. THU THẬP TẤT CẢ CÁC VÙNG CHỨC NĂNG ĐÃ KHAI BÁO TRONG CSDL (BẢNG 3)
-        let allZonesList = [];
-        (vungChucNangDaKhaiBao || []).forEach(vung => {
-          if (vung.xa) detectedXaName = vung.xa;
-          if (vung.tenQuyHoach) detectedTenQuyHoach = vung.tenQuyHoach;
+  // 3. TẠO LƯỚI ĐIỂM QUÉT KIỂM TRA ĐỘ GIAO NHAU (GRID SAMPLING)
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  parsedPolygon.forEach(p => {
+    if (p.x < minX) minX = p.x;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.y > maxY) maxY = p.y;
+  });
 
-          if (Array.isArray(vung.danhSachChucNang)) {
+  const gridSteps = 15;
+  let internalGridPoints = [];
+  const stepX = (maxX - minX) / gridSteps;
+  const stepY = (maxY - minY) / gridSteps;
+
+  for (let i = 0; i <= gridSteps; i++) {
+    for (let j = 0; j <= gridSteps; j++) {
+      const testPt = {
+        x: minX + i * stepX,
+        y: minY + j * stepY
+      };
+      if (isPointInPolygon(testPt, parsedPolygon)) {
+        internalGridPoints.push(testPt);
+      }
+    }
+  }
+
+  let zoneOverlapScores = {};
+  let dominantZone = '';
+  let maxHits = 0;
+
+  if (typeof danhSachDoAnQuyHoach !== 'undefined' && Array.isArray(danhSachDoAnQuyHoach)) {
+    danhSachDoAnQuyHoach.forEach(doan => {
+      if (doan.danhSachVung && Array.isArray(doan.danhSachVung)) {
+        doan.danhSachVung.forEach(vung => {
+          if (vung.danhSachChucNang && Array.isArray(vung.danhSachChucNang)) {
             vung.danhSachChucNang.forEach(cn => {
-              const funcName = cn.tenChucNang || 'Chức năng sử dụng đất';
-              const rawCoordsText = cn.toaDoVung || '';
-              const subPolygons = parseSubPolygons(rawCoordsText);
-              
-              subPolygons.forEach(zonePoints => {
-                if (zonePoints.length >= 3) {
-                  allZonesList.push({ funcName, zonePoints });
+              const subPolys = parseSubPolygons(cn.toaDoVung);
+              const funcName = cn.tenChucNang || 'Chức năng khác';
+
+              internalGridPoints.forEach(pt => {
+                let insideAnySub = false;
+                for (let poly of subPolys) {
+                  if (isPointInPolygon(pt, poly)) {
+                    insideAnySub = true;
+                    break;
+                  }
+                }
+                if (insideAnySub) {
+                  zoneOverlapScores[funcName] = (zoneOverlapScores[funcName] || 0) + 1;
                 }
               });
             });
           }
         });
+      }
+    });
+  }
 
-        // 3. ĐỐI CHIẾU DIỆN TÍCH GIAO NHAU THỰC TẾ QUA LƯỚI ĐIỂM MẪU
-        let zoneOverlapScores = {};
-        allZonesList.forEach(zoneObj => {
-          let hitCount = 0;
-          internalGridPoints.forEach(pt => {
-            if (isPointInPolygon(pt, zoneObj.zonePoints)) {
-              hitCount++;
-            }
-          });
-          if (hitCount > 0) {
-            zoneOverlapScores[zoneObj.funcName] = hitCount;
-          }
-        });
+  Object.keys(zoneOverlapScores).forEach(funcName => {
+    if (zoneOverlapScores[funcName] > maxHits) {
+      maxHits = zoneOverlapScores[funcName];
+      dominantZone = funcName;
+    }
+  });
 
-        let dominantZone = '';
-        let maxHits = 0;
-        Object.keys(zoneOverlapScores).forEach(funcName => {
-          if (zoneOverlapScores[funcName] > maxHits) {
-            maxHits = zoneOverlapScores[funcName];
-            dominantZone = funcName;
-          }
-        });
+  if (!dominantZone || internalGridPoints.length === 0) {
+    const formattedXaNgoai = detectedXaName.startsWith('Xã') || detectedXaName.startsWith('P.') || detectedXaName.startsWith('Phường') ? detectedXaName : `Xã ${detectedXaName}`;
+    const ketQuaNgoaiVung = {
+      diaDiem: `${formattedXaNgoai}, tỉnh Gia Lai`,
+      dienTich: `${totalAreaHa.toFixed(4)} ha (~${(totalAreaHa * 10000).toLocaleString('en-US')} m²)`,
+      loaiQuyhoach: detectedTenQuyHoach,
+      chucNangSuDung: 'Ngoài vùng dữ liệu khai báo',
+      ketLuan: '❌ KẾT LUẬN THẨM ĐỊNH (NGOÀI PHẠM VI QUY HOẠCH):\n- Khu vực ranh giới tọa độ này nằm ngoài phạm vi vùng quy hoạch định hướng được khai báo trong cơ sở dữ liệu hệ thống.',
+      phuHop: false
+    };
+    setKetQuaKiemTra(ketQuaNgoaiVung);
+    showNotification('⚠️ Khu đất nằm ngoài phạm vi quy hoạch được khai báo!');
+    return;
+  }
 
-        if (!dominantZone || maxHits === 0) {
-          const formattedXaNgoai = detectedXaName.startsWith('Xã') || detectedXaName.startsWith('P.') || detectedXaName.startsWith('Phường') ? detectedXaName : `Xã ${detectedXaName}`;
-          const ketQuaNgoaiVung = {
-            diaDiem: `${formattedXaNgoai}, tỉnh Gia Lai`,
-            dienTich: `${totalAreaHa.toFixed(4)} ha (~${(totalAreaHa * 10000).toLocaleString('en-US')} m²)`,
-            loaiQuyhoach: detectedTenQuyHoach,
-            chucNangSuDung: 'Ngoài vùng dữ liệu khai báo',
-            ketLuan: '❌ KẾT LUẬN THẨM ĐỊNH (NGOÀI PHẠM VI QUY HOẠCH):\n- Khu vực ranh giới tọa độ này nằm ngoài phạm vi vùng quy hoạch định hướng được khai báo trong cơ sở dữ liệu hệ thống.',
-            phuHop: false
-          };
-          setKetQuaKiemTra(ketQuaNgoaiVung);
-          showNotification('⚠️ Khu đất nằm ngoài phạm vi quy hoạch được khai báo!');
-          return;
-        }
+  // 4. TỔNG HỢP VÀ HIỂN THỊ KẾT QUẢ MINH BẠCH, RÕ RÀNG CHO NGƯỜI ĐỌC
+  let totalHitsAll = 0;
+  Object.keys(zoneOverlapScores).forEach(funcName => {
+    totalHitsAll += zoneOverlapScores[funcName];
+  });
 
-        // 4. TỔNG HỢP VÀ HIỂN THỊ KẾT QUẢ MINH BẠCH, RÕ RÀNG CHO NGƯỜI ĐỌC
-        let totalHitsAll = 0;
-        Object.keys(zoneOverlapScores).forEach(funcName => {
-          totalHitsAll += zoneOverlapScores[funcName];
-        });
+  let breakdownTextLines = [];
+  Object.keys(zoneOverlapScores).forEach(funcName => {
+    const ratio = ((zoneOverlapScores[funcName] / totalHitsAll) * 100).toFixed(1);
+    if (parseFloat(ratio) > 0) {
+      breakdownTextLines.push(`• ${funcName}: chiếm khoảng ${ratio}% diện tích`);
+    }
+  });
 
-        let breakdownTextLines = [];
-        Object.keys(zoneOverlapScores).forEach(funcName => {
-          const ratio = ((zoneOverlapScores[funcName] / totalHitsAll) * 100).toFixed(1);
-          if (parseFloat(ratio) > 0) {
-            breakdownTextLines.push(`• ${funcName}: chiếm khoảng ${ratio}% diện tích`);
-          }
-        });
+  const evaluation = evaluateProjectSuitability(dominantZone, kiemTraForm.mucTieuDuAn);
 
-        const evaluation = evaluateProjectSuitability(dominantZone, kiemTraForm.mucTieuDuAn);
+  const formattedXaDisplay = detectedXaName.startsWith('Xã') || detectedXaName.startsWith('P.') || detectedXaName.startsWith('Phường') 
+    ? detectedXaName 
+    : `Xã ${detectedXaName}`;
 
-        const formattedXaDisplay = detectedXaName.startsWith('Xã') || detectedXaName.startsWith('P.') || detectedXaName.startsWith('Phường') 
-          ? detectedXaName 
-          : `Xã ${detectedXaName}`;
+  const statusHeader = evaluation.phuHop
+    ? `✅ KẾT LUẬN THẨM ĐỊNH (PHÙ HỢP QUY HOẠCH):`
+    : '📝 KẾT LUẬN THẨM ĐỊNH (CHƯA PHÙ HỢP QUY HOẠCH):';
 
-        const statusHeader = evaluation.phuHop
-          ? `✅ KẾT LUẬN THẨM ĐỊNH (PHÙ HỢP QUY HOẠCH):`
-          : '📝 KẾT LUẬN THẨM ĐỊNH (CHƯA PHÙ HỢP QUY HOẠCH):';
+  let ketLuanLines = [statusHeader];
+  ketLuanLines.push(`- Tổng diện tích ranh giới: ${totalAreaHa.toFixed(4)} ha.`);
+  ketLuanLines.push(`- Cơ cấu quy hoạch tại khu vực ranh giới:`);
+  breakdownTextLines.forEach(line => ketLuanLines.push(`  ${line}`));
+  
+  if (evaluation.phuHop) {
+    ketLuanLines.push(`- Đánh giá sự phù hợp: Mục tiêu đầu tư "${kiemTraForm.mucTieuDuAn}" phù hợp với định hướng quy hoạch không gian tại khu vực.`);
+  } else {
+    ketLuanLines.push(`⚠️ Lý do: ${evaluation.ketLuan}`);
+  }
 
-        let ketLuanLines = [statusHeader];
-        ketLuanLines.push(`- Tổng diện tích ranh giới: ${totalAreaHa.toFixed(4)} ha.`);
-        ketLuanLines.push(`- Cơ cấu quy hoạch tại khu vực ranh giới:`);
-        breakdownTextLines.forEach(line => ketLuanLines.push(`  ${line}`));
-        
-        if (evaluation.phuHop) {
-          ketLuanLines.push(`- Đánh giá sự phù hợp: Mục tiêu đầu tư "${kiemTraForm.mucTieuDuAn}" phù hợp với định hướng quy hoạch không gian tại khu vực.`);
-        } else {
-          ketLuanLines.push(`⚠️ Lý do: ${evaluation.ketLuan}`);
-        }
+  ketLuanLines.push(`📌 LƯU Ý CHUYÊN MÔN: Bạn cần kiểm tra, rà soát ranh giới khu đất trên bản đồ quy hoạch chung ${formattedXaDisplay} để đảm bảo đồng bộ về ranh giới và hạ tầng kỹ thuật.`);
 
-        ketLuanLines.push(`📌 LƯU Ý CHUYÊN MÔN: Bạn cần kiểm tra, rà soát ranh giới khu đất trên bản đồ quy hoạch chung ${formattedXaDisplay} để đảm bảo đồng bộ về ranh giới và hạ tầng kỹ thuật.`);
+  const ketQua = {
+    diaDiem: `${formattedXaDisplay}, tỉnh Gia Lai`,
+    dienTich: `${totalAreaHa.toFixed(4)} ha (~${(totalAreaHa * 10000).toLocaleString('en-US')} m²)`,
+    loaiQuyhoach: detectedTenQuyHoach,
+    chucNangSuDung: dominantZone,
+    ketLuan: ketLuanLines.join('\n'),
+    phuHop: evaluation.phuHop,
+    congTrinhPhep: evaluation.loaiCongTrinhPhep
+  };
 
-        const ketQua = {
-          diaDiem: `${formattedXaDisplay}, tỉnh Gia Lai`,
-          dienTich: `${totalAreaHa.toFixed(4)} ha (~${(totalAreaHa * 10000).toLocaleString('en-US')} m²)`,
-          loaiQuyhoach: detectedTenQuyHoach,
-          chucNangSuDung: dominantZone,
-          ketLuan: ketLuanLines.join('\n'),
-          phuHop: evaluation.phuHop,
-          congTrinhPhep: evaluation.loaiCongTrinhPhep
-        };
-
-        setKetQuaKiemTra(ketQua);
-        showNotification(evaluation.phuHop ? '✅ Đã kiểm tra quy hoạch thành công!' : '⚠️ Dự án chưa phù hợp quy hoạch!');
+  setKetQuaKiemTra(ketQua);
+  showNotification(evaluation.phuHop ? '✅ Đã kiểm tra quy hoạch thành công!' : '⚠️ Dự án chưa phù hợp quy hoạch!');
+};
         
       const openVungModal = (vung = null) => {
         if (userRole !== 'ADMIN') {
