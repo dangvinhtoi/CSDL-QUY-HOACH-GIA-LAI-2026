@@ -1489,7 +1489,7 @@ const handleThucHienKiemTra = (e) => {
     phuHop: evaluation.phuHop,
     congTrinhPhep: evaluation.loaiCongTrinhPhep
   };
-
+  console.log("Đã tính xong kết quả:", ketQua);
   setKetQuaKiemTra(ketQua);
   showNotification(evaluation.phuHop ? '✅ Đã kiểm tra quy hoạch thành công!' : '⚠️ Dự án chưa phù hợp quy hoạch!');
 };
