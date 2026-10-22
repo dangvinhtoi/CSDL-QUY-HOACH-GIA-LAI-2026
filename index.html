@@ -1290,10 +1290,11 @@ const handleThucHienKiemTra = (e) => {
 
   const centerPoint = { x: cx, y: cy };
 
-  // 2. NHẬN DIỆN ĐỒ ÁN / XÃ THUỘC VÙNG QUY HOẠCH
+ // 2. NHẬN DIỆN ĐỒ ÁN / XÃ THUỘC VÙNG QUY HOẠCH VÀ KIỂM TRA NẰM TRONG/NGOÀI
   let detectedTenQuyHoach = "Quy hoạch chung xã Tuy Phước";
   let detectedXaName = "Xã Tuy Phước";
   let matchedDoanVung = null;
+  let isInsideAnyMasterPolygon = false;
 
   if (typeof vungChucNangDaKhaiBao !== 'undefined' && Array.isArray(vungChucNangDaKhaiBao)) {
     for (let doan of vungChucNangDaKhaiBao) {
@@ -1301,18 +1302,38 @@ const handleThucHienKiemTra = (e) => {
         for (let cn of doan.danhSachChucNang) {
           const subPolys = parseSubPolygons(cn.toaDoVung);
           for (let poly of subPolys) {
-            if (isPointInPolygon(centerPoint, poly) || subPolys.some(p => isPointInPolygon(p[0], parsedPolygon))) {
+            // Kiểm tra nếu trọng tâm hoặc bất kỳ đỉnh nào nằm trong vùng khai báo
+            if (isPointInPolygon(centerPoint, poly) || parsedPolygon.some(p => isPointInPolygon(p, poly))) {
               detectedTenQuyHoach = doan.tenQuyHoach || detectedTenQuyHoach;
               detectedXaName = doan.xa || detectedXaName;
               matchedDoanVung = doan;
+              isInsideAnyMasterPolygon = true;
               break;
             }
           }
-          if (matchedDoanVung) break;
+          if (isInsideAnyMasterPolygon) break;
         }
       }
-      if (matchedDoanVung) break;
+      if (isInsideAnyMasterPolygon) break;
     }
+  }
+
+  // 🔴 NẾU KHU ĐẤT NẰM HOÀN TOÀN NGOÀI VÙNG KHAI BÁO QUY HOẠCH
+  if (!isInsideAnyMasterPolygon) {
+    const ketQuaNgoaiVung = {
+      diaDiem: `Khu vực ngoài ranh giới quy hoạch`,
+      dienTich: `${totalAreaHa.toFixed(4)} ha (~${(totalAreaHa * 10000).toLocaleString('en-US')} m²)`,
+      loaiQuyhoach: "Không thuộc phạm vi đồ án quy hoạch hiện hành",
+      chucNangSuDung: "Ngoài ranh giới quản lý quy hoạch",
+      ketLuan: `❌ KẾT LUẬN THẨM ĐỊNH (NGOÀI RANH GIỚI):\n- Tổng diện tích ranh giới: ${totalAreaHa.toFixed(4)} ha.\n- Cảnh báo: Vị trí tọa độ khu đất nằm HOÀN TOÀN NGOÀI phạm vi ranh giới quy hoạch đã khai báo trên hệ thống.\n- Đánh giá: Không đủ cơ sở dữ liệu không gian để đối chiếu quy hoạch cho dự án "${mucTieu}".\n📌 LƯU Ý CHUYÊN MÔN: Cần kiểm tra lại hệ tọa độ VN-2000 hoặc rà soát lại ranh giới lập quy hoạch của dự án.`,
+      phuHop: false,
+      congTrinhPhep: []
+    };
+    if (typeof setKetQuaKiemTra === 'function') {
+      setKetQuaKiemTra(ketQuaNgoaiVung);
+    }
+    showNotification('⚠️ Khu đất kiểm tra nằm ngoài vùng quy hoạch!');
+    return;
   }
 
   // 3. TẠO LƯỚI ĐIỂM QUÉT KIỂM TRA ĐỘ GIAO NHAU (GRID SAMPLING)
