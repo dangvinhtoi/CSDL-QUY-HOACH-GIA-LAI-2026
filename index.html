@@ -1278,24 +1278,38 @@ const generateInternalTestPoints = (polygonPoints) => {
       );
     };
 // =========================================================================
-// 🟢 HÀM XỬ LÝ KIỂM TRA QUY HOẠCH - AN TOÀN TUYỆT ĐỐI (CHỐNG LỖI UNDEFINED)
+// 🟢 HÀM XỬ LÝ KIỂM TRA QUY HOẠCH - LẤY TRỰC TIẾP TỪ GIAO DIỆN (CHỐNG LỆCH STATE)
 // =========================================================================
 const handleThucHienKiemTra = (e) => {
   if (e && typeof e.preventDefault === 'function') {
     e.preventDefault();
   }
 
-  // Kiểm tra an toàn đối tượng kiemTraForm tránh lỗi undefined
-  if (!window.kiemTraForm && typeof kiemTraForm === 'undefined') {
-    showNotification('⚠️ Lỗi hệ thống: Biểu mẫu kiểm tra chưa được khởi tạo!');
-    return;
+  // Lấy trực tiếp giá trị từ form hoặc state hiện tại của ứng dụng
+  let mucTieu = '';
+  let toaDoStr = '';
+
+  // Ưu tiên lấy qua đối tượng kiemTraForm nếu có, nếu không lấy trực tiếp từ phần tử DOM
+  if (typeof kiemTraForm !== 'undefined') {
+    mucTieu = kiemTraForm.mucTieuDuAn || kiemTraForm.mucTieu || '';
+    toaDoStr = kiemTraForm.toaDoInput || kiemTraForm.toaDo || '';
   }
 
-  const currentForm = typeof kiemTraForm !== 'undefined' ? kiemTraForm : {};
-  const mucTieu = currentForm.mucTieuDuAn || '';
-  const toaDoStr = currentForm.toaDoInput || '';
+  // Phòng hờ nếu state chưa cập nhật, quét trực tiếp từ giao diện DOM
+  if (!mucTieu && document.querySelector('textarea, input[placeholder*="mục tiêu"], input[placeholder*="Khu dân cư"]')) {
+    const elMucTieu = document.querySelector('textarea') || document.querySelector('input[type="text"]');
+    if (elMucTieu) mucTieu = elMucTieu.value;
+  }
+  if (!toaDoStr && document.querySelector('textarea[placeholder*="VN-2000"], textarea')) {
+    const textAreas = document.querySelectorAll('textarea');
+    if (textAreas.length > 1) {
+      toaDoStr = textAreas[1].value; // Textarea nhập tọa độ thường nằm ở dưới
+    } else if (textAreas.length === 1) {
+      toaDoStr = textAreas[0].value;
+    }
+  }
 
-  if (!mucTieu.trim() || !toaDoStr.trim()) {
+  if (!mucTieu || !mucTieu.trim() || !toaDoStr || !toaDoStr.trim()) {
     showNotification('⚠️ Vui lòng nhập đầy đủ Mục tiêu dự án và Tọa độ các đỉnh!');
     return;
   }
