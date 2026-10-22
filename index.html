@@ -995,14 +995,14 @@ const LAND_USE_FUNCTION_MAP = [
 ];
 
 // =========================================================================
-// 🟢 HÀM ĐÁNH GIÁ SỰ PHÙ HỢP QUY HOẠCH - CHUẨN XÁC CHO ĐẤT HỖN HỢP & CÁC LOẠI ĐẤT
+// 🟢 HÀM ĐÁNH GIÁ SỰ PHÙ HỢP QUY HOẠCH - TỐI ƯU TOÀN DIỆN CHO ĐẤT HỖN HỢP
 // =========================================================================
 function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   if (!chucNangDat || !mucTieuDuAn || chucNangDat.includes('chưa khai báo')) {
     return {
       phuHop: false,
       loaiCongTrinhPhep: [],
-      ketLuan: `❌ Khu vực này chưa được khai báo chức năng sử dụng đất chi tiết trong đồ án quy hoạch quy hoạch. Không đủ cơ sở dữ liệu không gian để đối chiếu cho dự án "${mucTieuDuAn}".`
+      ketLuan: `❌ Khu vực này chưa được khai báo chức năng sử dụng đất chi tiết trong đồ án quy hoạch. Không đủ cơ sở dữ liệu không gian để đối chiếu cho dự án "${mucTieuDuAn}".`
     };
   }
 
@@ -1018,7 +1018,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   const congTrinhPhep = matchedLand ? matchedLand.congTrinhDuocPhep : ["Nhà ở", "Khu dân cư", "Thương mại dịch vụ", "Công trình hỗn hợp"];
   const tenChucNangDat = matchedLand ? matchedLand.loaiChucNang : chucNangDat;
 
-  // 1. Kiểm tra xung đột tuyệt đối (Đất quốc phòng/an ninh tuyệt đối không cho làm nhà ở hay thương mại thông thường)
+  // 1. Kiểm tra xung đột tuyệt đối (Đất quốc phòng, an ninh không được làm nhà ở hay thương mại thông thường)
   const isResidentialProject = queryMucTieu.includes("dân cư") || queryMucTieu.includes("đô thị") || queryMucTieu.includes("nhà ở") || queryMucTieu.includes("tái định cư") || queryMucTieu.includes("kdc") || queryMucTieu.includes("chung cư");
   const isDefenseOrSecurityLand = queryDat.includes("quốc phòng") || queryDat.includes("an ninh");
 
@@ -1030,22 +1030,37 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
     };
   }
 
-  // 2. 🟢 XỬ LÝ ĐẶC THÙ CHO ĐẤT HỖN HỢP (Nhóm nhà ở và dịch vụ) -> Cho phép nhà ở, khu dân cư, đô thị, chung cư, thương mại, dịch vụ
+  // 2. 🟢 XỬ LÝ TOÀN DIỆN CHO ĐẤT HỖN HỢP (Nhóm nhà ở và dịch vụ)
+  // Theo quy chuẩn, đất hỗn hợp được phép xây dựng: nhà ở, khu dân cư, đô thị, chung cư, tái định cư,
+  // thương mại dịch vụ (siêu thị, trung tâm thương mại, nhà hàng, khách sạn, showroom), công viên, quảng trường, văn hóa, thể thao...
+  // Trừ các công trình: nhà máy sản xuất, trang trại, nghĩa trang, quốc phòng, an ninh...
   const isMixedLand = queryDat.includes("đất hỗn hợp") || queryDat.includes("hỗn hợp");
+  
   if (isMixedLand) {
-    const isAllowedMixedProject = isResidentialProject || 
-                                  queryMucTieu.includes("thương mại") || 
-                                  queryMucTieu.includes("dịch vụ") || 
-                                  queryMucTieu.includes("văn phòng") || 
-                                  queryMucTieu.includes("hỗn hợp") ||
-                                  queryMucTieu.includes("siêu thị");
-    if (isAllowedMixedProject) {
+    // Các nhóm dự án KHÔNG ĐƯỢC PHÉP trên đất hỗn hợp
+    const isForbiddenProject = queryMucTieu.includes("nhà máy") || 
+                               queryMucTieu.includes("xưởng") || 
+                               queryMucTieu.includes("trang trại") || 
+                               queryMucTieu.includes("chăn nuôi") || 
+                               queryMucTieu.includes("nghĩa trang") || 
+                               queryMucTieu.includes("nghĩa địa") || 
+                               queryMucTieu.includes("xử lý rác") ||
+                               queryMucTieu.includes("nước thải");
+
+    if (isForbiddenProject) {
       return {
-        phuHop: true,
+        phuHop: false,
         loaiCongTrinhPhep: congTrinhPhep,
-        ketLuan: `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với định hướng quy hoạch chức năng ${tenChucNangDat} (cho phép kết hợp ở, thương mại và dịch vụ tại khu vực).`
+        ketLuan: `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch. Đất "${tenChucNangDat}" không cho phép bố trí nhà máy, trang trại hoặc công trình xử lý hạ tầng độc hại.`
       };
     }
+
+    // Tất cả các mục tiêu còn lại (nhà ở, khu dân cư, đô thị, chung cư, siêu thị, trung tâm thương mại, công viên, quảng trường, văn hóa, thể thao, dịch vụ...) đều PHÙ HỢP
+    return {
+      phuHop: true,
+      loaiCongTrinhPhep: congTrinhPhep,
+      ketLuan: `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với định hướng quy hoạch chức năng ${tenChucNangDat} (cho phép phát triển không gian đa chức năng gồm nhà ở, thương mại dịch vụ, công viên và công trình công cộng tại khu vực).`
+    };
   }
 
   // 3. Kiểm tra các nhóm đất khác (Đất ở, Thương mại, Quốc phòng, Thủy sản...)
