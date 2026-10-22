@@ -1405,17 +1405,40 @@ const generateInternalTestPoints = (polygonPoints) => {
           return;
         }
 
-        // 4. ĐÁNH GIÁ SỰ PHÙ HỢP MỤC TIÊU DỰ ÁN & TỔNG HỢP CHI TIẾT
+        // 4. TỔNG HỢP VÀ HIỂN THỊ KẾT QUẢ MINH BẠCH, RÕ RÀNG CHO NGƯỜI ĐỌC
+        let dominantZone = '';
+        let maxHits = 0;
         let totalHitsAll = 0;
+        
         Object.keys(zoneOverlapScores).forEach(funcName => {
           totalHitsAll += zoneOverlapScores[funcName];
+          if (zoneOverlapScores[funcName] > maxHits) {
+            maxHits = zoneOverlapScores[funcName];
+            dominantZone = funcName;
+          }
         });
 
+        if (!dominantZone || totalHitsAll === 0) {
+          const formattedXaNgoai = detectedXaName.startsWith('Xã') || detectedXaName.startsWith('P.') || detectedXaName.startsWith('Phường') ? detectedXaName : `Xã ${detectedXaName}`;
+          const ketQuaNgoaiVung = {
+            diaDiem: `${formattedXaNgoai}, tỉnh Gia Lai`,
+            dienTich: `${totalAreaHa.toFixed(4)} ha (~${(totalAreaHa * 10000).toLocaleString('en-US')} m²)`,
+            loaiQuyhoach: detectedTenQuyHoach,
+            chucNangSuDung: 'Ngoài vùng dữ liệu khai báo',
+            ketLuan: '❌ KẾT LUẬN THẨM ĐỊNH (NGOÀI PHẠM VI QUY HOẠCH):\n- Khu vực ranh giới tọa độ này nằm ngoài phạm vi vùng quy hoạch định hướng được khai báo trong cơ sở dữ liệu hệ thống.',
+            phuHop: false
+          };
+          setKetQuaKiemTra(ketQuaNgoaiVung);
+          showNotification('⚠️ Khu đất nằm ngoài phạm vi quy hoạch được khai báo!');
+          return;
+        }
+
+        // Tính tỷ lệ % thực tế để hiển thị minh bạch các thành phần đất mà khu đất giao qua
         let breakdownTextLines = [];
         Object.keys(zoneOverlapScores).forEach(funcName => {
           const ratio = ((zoneOverlapScores[funcName] / totalHitsAll) * 100).toFixed(1);
           if (parseFloat(ratio) > 0) {
-            breakdownTextLines.push(`• ${funcName}: chiếm khoảng ${ratio}% diện tích`);
+            breakdownTextLines.push(`• ${funcName}: chiếm khoảng ${ratio}% diện tích khu đất`);
           }
         });
 
@@ -1440,7 +1463,21 @@ const generateInternalTestPoints = (polygonPoints) => {
           ketLuanLines.push(`⚠️ Lý do: ${evaluation.ketLuan}`);
         }
 
-        ketLuanLines.push(`📌 LƯU Ý CHUYÊN MÔN: Bạn cần kiểm tra, rà soát ranh giới khu đất trên bản đồ quy hoạch chung ${formattedXaDisplay} để đảm bảo đồng bộ về ranh giới và hạ tầng kỹ thuật.`);
+        ketLuanLines.push(`📌 LƯU Ý CHUYÊN MÔN: Cán bộ rà soát kỹ bản đồ quy hoạch chung ${formattedXaDisplay} tại vị trí ranh giới giáp ranh để đảm bảo chính xác.`);
+
+        const ketQua = {
+          diaDiem: `${formattedXaDisplay}, tỉnh Gia Lai`,
+          dienTich: `${totalAreaHa.toFixed(4)} ha (~${(totalAreaHa * 10000).toLocaleString('en-US')} m²)`,
+          loaiQuyhoach: detectedTenQuyHoach,
+          chucNangSuDung: dominantZone,
+          ketLuan: ketLuanLines.join('\n'),
+          phuHop: evaluation.phuHop,
+          congTrinhPhep: evaluation.loaiCongTrinhPhep
+        };
+
+        setKetQuaKiemTra(ketQua);
+        showNotification(evaluation.phuHop ? '✅ Đã kiểm tra quy hoạch thành công!' : '⚠️ Dự án chưa phù hợp quy hoạch!');
+        
       const openVungModal = (vung = null) => {
         if (userRole !== 'ADMIN') {
           showNotification('⚠️ Chỉ Quản trị viên (Admin) mới có quyền thêm mới hoặc chỉnh sửa vùng tọa độ!');
