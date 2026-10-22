@@ -1091,7 +1091,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
 }
  
 // =========================================================================
-// 🟢 HÀM PHÂN TÁCH VÙNG TỌA ĐỘ THÔNG MINH - TỰ ĐỘNG TÁCH ĐỘC LẬP TỪNG VÙNG QUA DÒNG TRỐNG
+// 🟢 HÀM PHÂN TÁCH VÙNG TỌA ĐỘ THÔNG MINH - TỰ ĐỘNG LỌC NHIỄU VÀ GÓI ĐA GIÁC
 // =========================================================================
 const parseSubPolygons = (inputStr) => {
   if (!inputStr || typeof inputStr !== 'string') return [];
@@ -1103,7 +1103,6 @@ const parseSubPolygons = (inputStr) => {
   lines.forEach(line => {
     const trimmed = line.trim();
     
-    // Nếu gặp dòng trống hoặc tiêu đề vùng, kết thúc polygon hiện tại và bắt đầu vùng mới
     if (trimmed === '' || ((trimmed.toUpperCase().startsWith('VÙNG') || trimmed.toUpperCase().startsWith('VUNG')) && !/\d/.test(trimmed))) {
       if (currentPoly.length >= 3) {
         polygons.push(currentPoly);
@@ -1135,7 +1134,21 @@ const parseSubPolygons = (inputStr) => {
     polygons.push(currentPoly);
   }
   
-  return polygons;
+  // 🟢 LỌC BỎ CÁC ĐA GIÁC QUÁ NHỎ (NHIỄU HÌNH HỌC TỪ CÁC HATCH LI TI TRONG CAD)
+  const validPolygons = polygons.filter(poly => {
+    let area = 0;
+    const n = poly.length;
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n;
+      area += poly[i].x * poly[j].y;
+      area -= poly[j].x * poly[i].y;
+    }
+    area = Math.abs(area) / 2.0;
+    // Chỉ giữ lại các vùng có diện tích thực tế > 1 mét vuông (bỏ qua các điểm rác li ti)
+    return area > 1.0;
+  });
+  
+  return validPolygons.length > 0 ? validPolygons : polygons;
 };
 // =========================================================================
 // 🟢 2. HÀM TẠO ĐIỂM KIỂM TRA CHUẨN NỘI BỘ (TRÁNH LIẾM MÉP BIÊN VÙNG LÂN CẬN)
