@@ -1400,17 +1400,8 @@ const handleThucHienKiemTra = (e) => {
 
   // 🟢 GIẢI PHÁP FALLBACK: Nếu không khớp điểm lưới nhưng nằm trong xã, tự động gán chức năng phù hợp với mục tiêu dự án
   if (!dominantZone) {
-    const mLower = mucTieu.toLowerCase();
-    if (mLower.includes('công nghiệp') || mLower.includes('sản xuất')) {
-      dominantZone = 'Đất sản xuất công nghiệp, kho tàng';
-    } else if (mLower.includes('thương mại') || mLower.includes('dịch vụ')) {
-      dominantZone = 'Đất thương mại, dịch vụ';
-    } else if (mLower.includes('tái định cư') || mLower.includes('dân cư') || mLower.includes('nhà ở')) {
-      dominantZone = 'Đất nhà ở liền kề';
-    } else {
-      dominantZone = 'Đất hỗn hợp (nhóm nhà ở và dịch vụ)';
-    }
-  }
+  dominantZone = 'Đất chưa khai báo chức năng chi tiết trong đồ án';
+}
 
   // 4. TỔNG HỢP VÀ HIỂN THỊ KẾT QUẢ MINH BẠCH, RÕ RÀNG CHO NGƯỜI ĐỌC
   let totalHitsAll = 0;
