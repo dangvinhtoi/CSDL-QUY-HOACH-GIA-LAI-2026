@@ -1026,6 +1026,15 @@ function App() {
         loaiChucNang: "Đất dịch vụ du lịch",
         congTrinhDuocPhep: ["Khách sạn", "khu nghỉ dưỡng (resort)", "cơ sở lưu trú du lịch", "trung tâm dịch vụ du lịch", "nhà hàng du lịch"]
       },
+     {
+    nhom: "Đất sản xuất, kinh doanh & du lịch",
+    loaiChucNang: "Đất thương mại dịch vụ, dịch vụ du lịch",
+    congTrinhDuocPhep: [
+      "thương mại", "thương mại dịch vụ", "chợ", "trung tâm thương mại", "siêu thị", 
+      "trung tâm trưng bày sản phẩm", "showroom", "khách sạn", "nhà hàng", 
+      "khu vui chơi giải trí", "dịch vụ", "du lịch", "nghỉ dưỡng", "cơ sở lưu trú", 
+      "khu sinh thái", "công trình kinh doanh thương mại"]
+      },
       {
         nhom: "Đất đào tạo, nghiên cứu & cơ quan",
         loaiChucNang: "Đất đào tạo, nghiên cứu",
@@ -1075,7 +1084,7 @@ function App() {
     ];
 
 // =========================================================================
-// 🟢 HÀM ĐÁNH GIÁ SỰ PHÙ HỢP QUY HOẠCH - TÍCH HỢP NHẬN DIỆN THÔNG MINH CHUYÊN NGÀNH
+// 🟢 HÀM ĐÁNH GIÁ SỰ PHÙ HỢP QUY HOẠCH - CHUẨN XÁC CHUYÊN MÔN NGÀNH
 // =========================================================================
 function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   if (!chucNangDat || !mucTieuDuAn) {
@@ -1095,20 +1104,49 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
     item.loaiChucNang.toLowerCase().includes(queryDat)
   );
 
-  const congTrinhPhep = matchedLand ? matchedLand.congTrinhDuocPhep : ["Nhà ở riêng lẻ", "công trình hạ tầng kỹ thuật", "công viên cây xanh"];
+  const congTrinhPhep = matchedLand ? matchedLand.congTrinhDuocPhep : ["Thương mại", "Dịch vụ", "Khách sạn", "Nhà hàng", "Khu du lịch, nghỉ dưỡng"];
   const tenChucNangDat = matchedLand ? matchedLand.loaiChucNang : chucNangDat;
 
-  const isResidentialProject = queryMucTieu.includes("dân cư") || queryMucTieu.includes("đô thị") || queryMucTieu.includes("nhà ở") || queryMucTieu.includes("tái định cư") || queryMucTieu.includes("kdc");
+  // Kiểm tra xung đột: Đất thương mại dịch vụ tuyệt đối không được làm khu dân cư, nhà ở, nhà máy, y tế, giáo dục...
+  const isResidentialProject = queryMucTieu.includes("dân cư") || queryMucTieu.includes("đô thị") || queryMucTieu.includes("nhà ở") || queryMucTieu.includes("tái định cư") || queryMucTieu.includes("chung cư") || queryMucTieu.includes("kdc");
   const isCommercialOrTourismLand = queryDat.includes("thương mại") || queryDat.includes("dịch vụ") || queryDat.includes("du lịch");
 
   if (isCommercialOrTourismLand && isResidentialProject) {
     return {
       phuHop: false,
       loaiCongTrinhPhep: congTrinhPhep,
-      ketLuan: `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch. Đất "${tenChucNangDat}" không được phép bố trí dự án khu dân cư, đô thị hoặc nhà ở.`
+      ketLuan: `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch. Đất "${tenChucNangDat}" không được phép bố trí dự án khu dân cư, đô thị, tái định cư hoặc nhà ở.`
     };
   }
 
+  // Nhận diện thông minh nhóm Thương mại - Dịch vụ - Du lịch
+  let isSmartMatched = false;
+  if (isCommercialOrTourismLand && (
+      queryMucTieu.includes("thương mại") || 
+      queryMucTieu.includes("dịch vụ") || 
+      queryMucTieu.includes("du lịch") || 
+      queryMucTieu.includes("khách sạn") || 
+      queryMucTieu.includes("nhà hàng") || 
+      queryMucTieu.includes("siêu thị") || 
+      queryMucTieu.includes("showroom") || 
+      queryMucTieu.includes("nghỉ dưỡng") ||
+      queryMucTieu.includes("giải trí")
+  )) {
+    isSmartMatched = true;
+  }
+
+  let isPhuHop = isSmartMatched || 
+    congTrinhPhep.some(ct => queryMucTieu.includes(ct.toLowerCase()) || ct.toLowerCase().includes(queryMucTieu)) || 
+    queryMucTieu.includes(tenChucNangDat.toLowerCase());
+
+  return {
+    phuHop: isPhuHop,
+    loaiCongTrinhPhep: congTrinhPhep,
+    ketLuan: isPhuHop
+      ? `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch chức năng ${tenChucNangDat}.`
+      : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch. Chức năng ${tenChucNangDat} chỉ cho phép các công trình: ${congTrinhPhep.join(", ")}.`
+  };
+}
   // 🟢 NHẬN DIỆN THÔNG MINH NHÓM CHUYÊN NGÀNH (BỔ SUNG ĐẦY ĐỦ TỪ KHÓA QUỐC PHÒNG)
   let isSmartMatched = false;
 
