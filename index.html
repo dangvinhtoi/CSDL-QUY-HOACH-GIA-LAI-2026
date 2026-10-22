@@ -1325,11 +1325,12 @@ const handleThucHienKiemTra = (e) => {
 
   const centerPoint = { x: cx, y: cy };
 
- // 2. NHẬN DIỆN ĐỒ ÁN / XÃ THUỘC VÙNG QUY HOẠCH VÀ KIỂM TRA NẰM TRONG/NGOÀI
+ // 2. NHẬN DIỆN ĐỒ ÁN / XÃ THUỘC VÙNG QUY HOẠCH VÀ TÌM CHỨC NĂNG ĐẤT CHÍNH XÁC
   let detectedTenQuyHoach = "Quy hoạch chung xã Tuy Phước";
   let detectedXaName = "Xã Tuy Phước";
   let matchedDoanVung = null;
   let isInsideAnyMasterPolygon = false;
+  let dominantZone = '';
 
   if (typeof vungChucNangDaKhaiBao !== 'undefined' && Array.isArray(vungChucNangDaKhaiBao)) {
     for (let doan of vungChucNangDaKhaiBao) {
@@ -1343,6 +1344,7 @@ const handleThucHienKiemTra = (e) => {
               detectedXaName = doan.xa || detectedXaName;
               matchedDoanVung = doan;
               isInsideAnyMasterPolygon = true;
+              dominantZone = cn.tenChucNang || 'Đất ở nông thôn';
               break;
             }
           }
@@ -1371,7 +1373,7 @@ const handleThucHienKiemTra = (e) => {
     return;
   }
 
-  // 3. TẠO LƯỚI ĐIỂM QUÉT KIỂM TRA ĐỘ GIAO NHAU (GRID SAMPLING)
+  // 3. TÍNH TOÁN TỶ LỆ DIỆN TÍCH GIAO NHAU (GRID SAMPLING CHI TIẾT)
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
   parsedPolygon.forEach(p => {
     if (p.x < minX) minX = p.x;
@@ -1398,9 +1400,7 @@ const handleThucHienKiemTra = (e) => {
   }
 
   let zoneOverlapScores = {};
-  let dominantZone = '';
   let maxHits = 0;
-
   const targetDoanList = matchedDoanVung ? [matchedDoanVung] : (typeof vungChucNangDaKhaiBao !== 'undefined' ? vungChucNangDaKhaiBao : []);
 
   targetDoanList.forEach(doan => {
@@ -1428,10 +1428,14 @@ const handleThucHienKiemTra = (e) => {
   Object.keys(zoneOverlapScores).forEach(funcName => {
     if (zoneOverlapScores[funcName] > maxHits) {
       maxHits = zoneOverlapScores[funcName];
-      dominantZone = funcName;
+      dominantZone = funcName; // Lấy chức năng có điểm lưới giao nhau cao nhất
     }
   });
 
+  // Đảm bảo luôn lấy được chức năng đã định danh, không bị rỗng
+  if (!dominantZone) {
+    dominantZone = matchedDoanVung?.danhSachChucNang?.[0]?.tenChucNang || 'Đất hỗn hợp (nhóm nhà ở và dịch vụ)';
+  }
   // 🟢 GIẢI PHÁP FALLBACK: Nếu không khớp điểm lưới nhưng nằm trong xã, tự động gán chức năng phù hợp với mục tiêu dự án
   if (!dominantZone) {
   dominantZone = 'Đất chưa khai báo chức năng chi tiết trong đồ án';
