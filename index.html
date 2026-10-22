@@ -1075,7 +1075,7 @@ function App() {
     ];
 
 // =========================================================================
-// 🟢 HÀM ĐÁNH GIÁ SỰ PHÙ HỢP QUY HOẠCH - TÍCH HỢP NHẬN DIỆN THÔNG MINH NHÓM CHUYÊN NGÀNH
+// 🟢 HÀM ĐÁNH GIÁ SỰ PHÙ HỢP QUY HOẠCH - TÍCH HỢP NHẬN DIỆN THÔNG MINH CHUYÊN NGÀNH
 // =========================================================================
 function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   if (!chucNangDat || !mucTieuDuAn) {
@@ -1089,7 +1089,6 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   const queryDat = chucNangDat.toLowerCase().trim();
   const queryMucTieu = mucTieuDuAn.toLowerCase().trim();
 
-  // Tìm danh mục tương ứng trong LAND_USE_FUNCTION_MAP
   const matchedLand = LAND_USE_FUNCTION_MAP.find(item =>
     queryDat === item.loaiChucNang.toLowerCase() ||
     queryDat.includes(item.loaiChucNang.toLowerCase()) ||
@@ -1099,7 +1098,6 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   const congTrinhPhep = matchedLand ? matchedLand.congTrinhDuocPhep : ["Nhà ở riêng lẻ", "công trình hạ tầng kỹ thuật", "công viên cây xanh"];
   const tenChucNangDat = matchedLand ? matchedLand.loaiChucNang : chucNangDat;
 
-  // Kiểm tra xung đột đặc thù (VD: Đất du lịch/thương mại không được làm khu dân cư)
   const isResidentialProject = queryMucTieu.includes("dân cư") || queryMucTieu.includes("đô thị") || queryMucTieu.includes("nhà ở") || queryMucTieu.includes("tái định cư") || queryMucTieu.includes("kdc");
   const isCommercialOrTourismLand = queryDat.includes("thương mại") || queryDat.includes("dịch vụ") || queryDat.includes("du lịch");
 
@@ -1111,11 +1109,19 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
     };
   }
 
-  // 🟢 NHẬN DIỆN THÔNG MINH NHÓM CHUYÊN NGÀNH (QUỐC PHÒNG, AN NINH, CÔNG NGHIỆP, Y TẾ, GIÁO DỤC,...)
+  // 🟢 NHẬN DIỆN THÔNG MINH NHÓM CHUYÊN NGÀNH (BỔ SUNG ĐẦY ĐỦ TỪ KHÓA QUỐC PHÒNG)
   let isSmartMatched = false;
 
-  // 1. Nhóm Quốc phòng
-  if (queryDat.includes("quốc phòng") && (queryMucTieu.includes("quốc phòng") || queryMucTieu.includes("quân sự"))) {
+  // 1. Nhóm Quốc phòng (Bao gồm thao trường, trường bắn, huấn luyện, quân sự, Ban CHQS...)
+  if (queryDat.includes("quốc phòng") && (
+      queryMucTieu.includes("quốc phòng") || 
+      queryMucTieu.includes("quân sự") || 
+      queryMucTieu.includes("thao trường") || 
+      queryMucTieu.includes("trường bắn") || 
+      queryMucTieu.includes("huấn luyện") || 
+      queryMucTieu.includes("chqs") ||
+      queryMucTieu.includes("ban chỉ huy")
+  )) {
     isSmartMatched = true;
   }
   // 2. Nhóm An ninh
