@@ -979,6 +979,11 @@ const LAND_USE_FUNCTION_MAP = [
     nhom: "Đất di tích, tôn giáo, an ninh, quốc phòng",
     loaiChucNang: "Đất quốc phòng",
     congTrinhDuocPhep: ["Công trình quân sự", "doanh trại quân đội", "cơ sở quốc phòng", "thao trường", "trường bắn"]
+  },
+  {
+    nhom: "Đất nông nghiệp & mặt nước",
+    loaiChucNang: "Đất nuôi trồng thủy sản",
+    congTrinhDuocPhep: ["Nuôi trồng thủy sản", "công trình phục vụ nuôi trồng thủy sản", "ao hồ", "công trình hạ tầng kỹ thuật"]
   }
 ];
 
@@ -1044,7 +1049,15 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   } else if (isCommercialOrTourismLand && (queryMucTieu.includes("thương mại") || queryMucTieu.includes("dịch vụ") || queryMucTieu.includes("du lịch") || queryMucTieu.includes("khách sạn"))) {
     isSmartMatched = true;
   }
-
+// 🟢 CHÈN ĐOẠN NHẬN DIỆN THỦY SẢN / MẶT NƯỚC VÀO ĐÂY:
+  else if ((queryDat.includes("thủy sản") || queryDat.includes("nuôi trồng") || queryDat.includes("mặt nước")) && (
+      queryMucTieu.includes("thủy sản") || 
+      queryMucTieu.includes("nuôi trồng") || 
+      queryMucTieu.includes("ao") || 
+      queryMucTieu.includes("hồ")
+  )) {
+    isSmartMatched = true;
+  }
   let isPhuHop = isSmartMatched || congTrinhPhep.some(ct => queryMucTieu.includes(ct.toLowerCase()) || ct.toLowerCase().includes(queryMucTieu));
 
   return {
