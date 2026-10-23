@@ -995,6 +995,16 @@ const LAND_USE_FUNCTION_MAP = [
     congTrinhDuocPhep: ["Nhà ở riêng lẻ", "nhà ở liền kề", "khu dân cư", "khu đô thị", "nhà ở tái định cư", "chung cư", "công trình hạ tầng kỹ thuật", "công viên cây xanh"]
   },
   {
+    nhom: "Đất di tích, tôn giáo, an ninh, quốc phòng",
+    loaiChucNang: "Đất tôn giáo",
+    congTrinhDuocPhep: [
+      "chùa", "niệm phật đường", "thiền viện", "nhà thờ", "nhà nguyện", 
+      "thánh đường", "thánh thất", "thánh tịnh", "đình", "đền", "miếu", "miếu thờ", 
+      "phủ", "am", "điện thờ", "nhà thờ họ", "từ đường", "công trình tôn giáo", 
+      "công trình tín ngưỡng", "nhà bảo tín", "tượng đài", "bia", "tháp", "công trình hạ tầng kỹ thuật"
+    ]
+  },
+  {
     nhom: "Đất công trình hạ tầng xã hội",
     loaiChucNang: "Đất giáo dục (trường học)",
     congTrinhDuocPhep: [
@@ -1128,6 +1138,34 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
         phuHop: true,
         loaiCongTrinhPhep: congTrinhPhep,
         ketLuan: `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch chức năng ${tenChucNangDat} (cho phép xây dựng các công trình giáo dục, trường học các cấp).`
+      };
+    }
+  }
+  // 🟢 Nhận diện thông minh chuyên ngành Tôn giáo & Tín ngưỡng
+  const isReligiousLand = queryDat.includes("tôn giáo") || queryDat.includes("tín ngưỡng");
+  if (isReligiousLand) {
+    const isReligiousProject = queryMucTieu.includes("chùa") || 
+                               queryMucTieu.includes("niệm phật") || 
+                               queryMucTieu.includes("thiền viện") || 
+                               queryMucTieu.includes("nhà thờ") || 
+                               queryMucTieu.includes("nhà nguyện") || 
+                               queryMucTieu.includes("thánh đường") || 
+                               queryMucTieu.includes("thánh thất") || 
+                               queryMucTieu.includes("thánh tịnh") || 
+                               queryMucTieu.includes("đình") || 
+                               queryMucTieu.includes("đền") || 
+                               queryMucTieu.includes("miếu") || 
+                               queryMucTieu.includes("phủ") || 
+                               queryMucTieu.includes("am") || 
+                               queryMucTieu.includes("điện thờ") || 
+                               queryMucTieu.includes("từ đường") || 
+                               queryMucTieu.includes("tôn giáo") || 
+                               queryMucTieu.includes("tín ngưỡng");
+    if (isReligiousProject) {
+      return {
+        phuHop: true,
+        loaiCongTrinhPhep: congTrinhPhep,
+        ketLuan: `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch chức năng ${tenChucNangDat} (cho phép xây dựng các công trình tôn giáo và tín ngưỡng theo quy định).`
       };
     }
   }
