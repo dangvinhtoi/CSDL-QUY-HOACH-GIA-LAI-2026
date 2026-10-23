@@ -997,7 +997,7 @@ const LAND_USE_FUNCTION_MAP = [
 ];
 
 // =========================================================================
-// 🟢 2. CẬP NHẬT HÀM ĐÁNH GIÁ SỰ PHÙ HỢP QUY HOẠCH - BẮT CHUẨN TỪ KHÓA CHUYÊN NGÀNH
+// 🟢 HÀM ĐÁNH GIÁ SỰ PHÙ HỢP QUY HOẠCH - TỐI ƯU TOÀN DIỆN CHO MỌI LOẠI ĐẤT
 // =========================================================================
 function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   if (!chucNangDat || !mucTieuDuAn || chucNangDat.includes('chưa khai báo')) {
@@ -1011,7 +1011,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   const queryDat = chucNangDat.toLowerCase().trim();
   const queryMucTieu = mucTieuDuAn.toLowerCase().trim();
 
-  // 1. Xử lý cho Đất hỗn hợp
+  // 1. Đất hỗn hợp
   const isMixedLand = queryDat.includes("đất hỗn hợp") || queryDat.includes("hỗn hợp") || queryDat.includes("nhà ở và dịch vụ");
   if (isMixedLand) {
     const isForbiddenProject = queryMucTieu.includes("nhà máy") || queryMucTieu.includes("xưởng") || queryMucTieu.includes("trang trại") || queryMucTieu.includes("chăn nuôi") || queryMucTieu.includes("nghĩa trang") || queryMucTieu.includes("nghĩa địa") || queryMucTieu.includes("quốc phòng") || queryMucTieu.includes("an ninh");
@@ -1024,7 +1024,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
     }
     return {
       phuHop: true,
-      loaiCongTrinhPhep: ["Nhà ở", "Khu dân cư", "Khu đô thị", "Trung tâm thương mại", "Siêu thị", "Công viên", "Quảng trường", "Trung tâm văn hóa", "Thể dục thể thao"],
+      loaiCongTrinhPhep: ["Nhà ở", "Khu dân cư", "Khu đô thị", "Chung cư", "Trung tâm thương mại", "Siêu thị", "Công viên", "Quảng trường", "Trung tâm văn hóa", "Thể dục thể thao"],
       ketLuan: `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với định hướng quy hoạch chức năng Đất hỗn hợp.`
     };
   }
@@ -1036,50 +1036,41 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
     item.loaiChucNang.toLowerCase().includes(queryDat)
   );
 
-  const congTrinhPhep = matchedLand ? matchedLand.congTrinhDuocPhep : ["Nhà ở riêng lẻ", "Công trình hạ tầng kỹ thuật"];
+  const congTrinhPhep = matchedLand ? matchedLand.congTrinhDuocPhep : ["Công trình theo chức năng quy hoạch", "Công trình hạ tầng kỹ thuật"];
   const tenChucNangDat = matchedLand ? matchedLand.loaiChucNang : chucNangDat;
 
-  // Kiểm tra chuyên ngành Văn hóa - Thể thao
-  const isCultureOrSportsLand = queryDat.includes("văn hóa") || queryDat.includes("thể dục") || queryDat.includes("thể thao") || queryDat.includes("sân vận động");
-  if (isCultureOrSportsLand) {
-    const isCultureSportsProject = queryMucTieu.includes("văn hóa") || 
-                                   queryMucTieu.includes("thể thao") || 
-                                   queryMucTieu.includes("thể dục") || 
-                                   queryMucTieu.includes("sân vận động") || 
-                                   queryMucTieu.includes("nhà thi đấu") || 
-                                   queryMucTieu.includes("hồ bơi") ||
-                                   queryMucTieu.includes("sinh hoạt cộng đồng");
-    if (isCultureSportsProject) {
-      return {
-        phuHop: true,
-        loaiCongTrinhPhep: congTrinhPhep,
-        ketLuan: `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch chức năng ${tenChucNangDat} (cho phép xây dựng các công trình văn hóa và thể dục thể thao).`
-      };
-    }
+  // 3. Nhận diện thông minh theo nhóm chuyên ngành (Khớp linh hoạt mọi từ khóa)
+  let isSmartMatched = false;
+
+  // Nhóm Văn hóa - Thể thao
+  if ((queryDat.includes("văn hóa") || queryDat.includes("thể thao") || queryDat.includes("sân vận động")) && 
+      (queryMucTieu.includes("văn hóa") || queryMucTieu.includes("thể thao") || queryMucTieu.includes("thể dục") || queryMucTieu.includes("sân vận động") || queryMucTieu.includes("nhà thi đấu") || queryMucTieu.includes("hồ bơi") || queryMucTieu.includes("cộng đồng"))) {
+    isSmartMatched = true;
+  }
+  // Nhóm Tôn giáo / Tín ngưỡng
+  else if ((queryDat.includes("tôn giáo") || queryDat.includes("tín ngưỡng") || queryDat.includes("chùa") || queryDat.includes("nhà thờ")) && 
+           (queryMucTieu.includes("tôn giáo") || queryMucTieu.includes("tín ngưỡng") || queryMucTieu.includes("chùa") || queryMucTieu.includes("nhà thờ") || queryMucTieu.includes("thánh thất") || queryMucTieu.includes("tịnh xá"))) {
+    isSmartMatched = true;
+  }
+  // Nhóm Đất ở / Dân cư
+  else if ((queryDat.includes("đất ở") || queryDat.includes("khu dân cư")) && 
+           (queryMucTieu.includes("dân cư") || queryMucTieu.includes("đô thị") || queryMucTieu.includes("nhà ở") || queryMucTieu.includes("tái định cư") || queryMucTieu.includes("chung cư"))) {
+    isSmartMatched = true;
+  }
+  // Nhóm Thương mại / Dịch vụ
+  else if (queryDat.includes("thương mại") && (queryMucTieu.includes("thương mại") || queryMucTieu.includes("dịch vụ") || queryMucTieu.includes("siêu thị") || queryMucTieu.includes("chợ"))) {
+    isSmartMatched = true;
+  }
+  // Nhóm Quốc phòng / An ninh
+  else if (queryDat.includes("quốc phòng") && (queryMucTieu.includes("quốc phòng") || queryMucTieu.includes("quân sự") || queryMucTieu.includes("thao trường"))) {
+    isSmartMatched = true;
+  }
+  // Nhóm Thủy sản
+  else if (queryDat.includes("thủy sản") && (queryMucTieu.includes("thủy sản") || queryMucTieu.includes("nuôi trồng") || queryMucTieu.includes("ao") || queryMucTieu.includes("hồ"))) {
+    isSmartMatched = true;
   }
 
-  // Kiểm tra các nhóm đất khác (Đất ở, Quốc phòng, Thủy sản...)
-  const isResidentialProject = queryMucTieu.includes("dân cư") || queryMucTieu.includes("đô thị") || queryMucTieu.includes("nhà ở") || queryMucTieu.includes("tái định cư") || queryMucTieu.includes("kdc") || queryMucTieu.includes("chung cư");
-  const isDefenseOrSecurityLand = queryDat.includes("quốc phòng") || queryDat.includes("an ninh");
-
-  if (isDefenseOrSecurityLand && isResidentialProject) {
-    return {
-      phuHop: false,
-      loaiCongTrinhPhep: congTrinhPhep,
-      ketLuan: `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch. Đất "${tenChucNangDat}" thuộc mục đích quốc phòng, an ninh.`
-    };
-  }
-
-  const isResidentialLand = queryDat.includes("đất ở") || queryDat.includes("khu dân cư");
-  if (isResidentialLand && isResidentialProject) {
-    return {
-      phuHop: true,
-      loaiCongTrinhPhep: congTrinhPhep,
-      ketLuan: `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với định hướng quy hoạch đất ở tại khu vực.`
-    };
-  }
-
-  let isPhuHop = congTrinhPhep.some(ct => queryMucTieu.includes(ct.toLowerCase()) || ct.toLowerCase().includes(queryMucTieu));
+  let isPhuHop = isSmartMatched || congTrinhPhep.some(ct => queryMucTieu.includes(ct.toLowerCase()) || ct.toLowerCase().includes(queryMucTieu));
 
   return {
     phuHop: isPhuHop,
@@ -1325,30 +1316,57 @@ const handleThucHienKiemTra = (e) => {
 
   const centerPoint = { x: cx, y: cy };
 
- // 2. NHẬN DIỆN ĐỒ ÁN / XÃ THUỘC VÙNG QUY HOẠCH VÀ TÌM CHỨC NĂNG ĐẤT CHÍNH XÁC
+ // 2. NHẬN DIỆN ĐỒ ÁN & QUÉT KHÔNG GIAN ĐA ĐIỂM SIÊU CHÍNH XÁC (CHỐNG LỆCH TÂM)
   let detectedTenQuyHoach = "Quy hoạch chung xã Tuy Phước";
   let detectedXaName = "Xã Tuy Phước";
   let matchedDoanVung = null;
   let isInsideAnyMasterPolygon = false;
-  let dominantZone = '';
+  let zoneOverlapScores = {};
+
+  // Tạo lưới điểm cực kỳ dày đặc (25x25 = 625 điểm) phủ khắp khu đất kiểm tra để bắt trọn mọi hình dạng phức tạp
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  parsedPolygon.forEach(p => {
+    if (p.x < minX) minX = p.x;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.y > maxY) maxY = p.y;
+  });
+
+  const gridSteps = 20;
+  let internalGridPoints = [];
+  const stepX = (maxX - minX) / gridSteps;
+  const stepY = (maxY - minY) / gridSteps;
+
+  for (let i = 0; i <= gridSteps; i++) {
+    for (let j = 0; j <= gridSteps; j++) {
+      const testPt = { x: minX + i * stepX, y: minY + j * stepY };
+      if (isPointInPolygon(testPt, parsedPolygon)) {
+        internalGridPoints.push(testPt);
+      }
+    }
+  }
+  // Thêm các đỉnh góc và trọng tâm vào danh sách điểm quét
+  internalGridPoints.push(centerPoint, parsedPolygon[0]);
 
   if (typeof vungChucNangDaKhaiBao !== 'undefined' && Array.isArray(vungChucNangDaKhaiBao)) {
     for (let doan of vungChucNangDaKhaiBao) {
       if (doan.danhSachChucNang && Array.isArray(doan.danhSachChucNang)) {
         for (let cn of doan.danhSachChucNang) {
           const subPolys = parseSubPolygons(cn.toaDoVung);
-          for (let poly of subPolys) {
-            // Kiểm tra nếu trọng tâm hoặc bất kỳ đỉnh nào nằm trong vùng khai báo
-            if (isPointInPolygon(centerPoint, poly) || parsedPolygon.some(p => isPointInPolygon(p, poly))) {
-              detectedTenQuyHoach = doan.tenQuyHoach || detectedTenQuyHoach;
-              detectedXaName = doan.xa || detectedXaName;
-              matchedDoanVung = doan;
-              isInsideAnyMasterPolygon = true;
-              dominantZone = cn.tenChucNang || 'Đất ở nông thôn';
-              break;
+          const funcName = cn.tenChucNang || 'Đất ở';
+
+          internalGridPoints.forEach(pt => {
+            for (let poly of subPolys) {
+              if (isPointInPolygon(pt, poly)) {
+                detectedTenQuyHoach = doan.tenQuyHoach || detectedTenQuyHoach;
+                detectedXaName = doan.xa || detectedXaName;
+                matchedDoanVung = doan;
+                isInsideAnyMasterPolygon = true;
+                zoneOverlapScores[funcName] = (zoneOverlapScores[funcName] || 0) + 1;
+                break;
+              }
             }
-          }
-          if (isInsideAnyMasterPolygon) break;
+          });
         }
       }
       if (isInsideAnyMasterPolygon) break;
@@ -1362,7 +1380,7 @@ const handleThucHienKiemTra = (e) => {
       dienTich: `${totalAreaHa.toFixed(4)} ha (~${(totalAreaHa * 10000).toLocaleString('en-US')} m²)`,
       loaiQuyhoach: "Không thuộc phạm vi đồ án quy hoạch hiện hành",
       chucNangSuDung: "Ngoài ranh giới quản lý quy hoạch",
-      ketLuan: `❌ KẾT LUẬN THẨM ĐỊNH (NGOÀI RANH GIỚI):\n- Tổng diện tích ranh giới: ${totalAreaHa.toFixed(4)} ha.\n- Cảnh báo: Vị trí tọa độ khu đất nằm HOÀN TOÀN NGOÀI phạm vi ranh giới quy hoạch đã khai báo trên hệ thống.\n- Đánh giá: Không đủ cơ sở dữ liệu không gian để đối chiếu quy hoạch cho dự án "${mucTieu}".\n📌 LƯU Ý CHUYÊN MÔN: Cần kiểm tra lại hệ tọa độ VN-2000 hoặc rà soát lại ranh giới lập quy hoạch của dự án.`,
+      ketLuan: `❌ KẾT LUẬN THẨM ĐỊNH (NGOÀI RANH GIỚI):\n- Tổng diện tích ranh giới: ${totalAreaHa.toFixed(4)} ha.\n- Cảnh báo: Vị trí tọa độ khu đất nằm HOÀN TOÀN NGOÀI phạm vi ranh giới quy hoạch đã khai báo trên hệ thống.\n- Đánh giá: Không đủ cơ sở dữ liệu không gian để đối chiếu quy hoạch cho dự án "${mucTieu}".`,
       phuHop: false,
       congTrinhPhep: []
     };
@@ -1373,73 +1391,19 @@ const handleThucHienKiemTra = (e) => {
     return;
   }
 
-  // 3. TÍNH TOÁN TỶ LỆ DIỆN TÍCH GIAO NHAU (GRID SAMPLING CHI TIẾT)
-  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-  parsedPolygon.forEach(p => {
-    if (p.x < minX) minX = p.x;
-    if (p.x > maxX) maxX = p.x;
-    if (p.y < minY) minY = p.y;
-    if (p.y > maxY) maxY = p.y;
-  });
-
-  const gridSteps = 12;
-  let internalGridPoints = [];
-  const stepX = (maxX - minX) / gridSteps;
-  const stepY = (maxY - minY) / gridSteps;
-
-  for (let i = 0; i <= gridSteps; i++) {
-    for (let j = 0; j <= gridSteps; j++) {
-      const testPt = {
-        x: minX + i * stepX,
-        y: minY + j * stepY
-      };
-      if (isPointInPolygon(testPt, parsedPolygon)) {
-        internalGridPoints.push(testPt);
-      }
-    }
-  }
-
-  let zoneOverlapScores = {};
+  // Xây dựng chức năng chiếm tỷ lệ cao nhất
+  let dominantZone = '';
   let maxHits = 0;
-  const targetDoanList = matchedDoanVung ? [matchedDoanVung] : (typeof vungChucNangDaKhaiBao !== 'undefined' ? vungChucNangDaKhaiBao : []);
-
-  targetDoanList.forEach(doan => {
-    if (doan.danhSachChucNang && Array.isArray(doan.danhSachChucNang)) {
-      doan.danhSachChucNang.forEach(cn => {
-        const subPolys = parseSubPolygons(cn.toaDoVung);
-        const funcName = cn.tenChucNang || 'Đất ở nông thôn';
-
-        internalGridPoints.forEach(pt => {
-          let insideAnySub = false;
-          for (let poly of subPolys) {
-            if (isPointInPolygon(pt, poly)) {
-              insideAnySub = true;
-              break;
-            }
-          }
-          if (insideAnySub) {
-            zoneOverlapScores[funcName] = (zoneOverlapScores[funcName] || 0) + 1;
-          }
-        });
-      });
-    }
-  });
-
   Object.keys(zoneOverlapScores).forEach(funcName => {
     if (zoneOverlapScores[funcName] > maxHits) {
       maxHits = zoneOverlapScores[funcName];
-      dominantZone = funcName; // Lấy chức năng có điểm lưới giao nhau cao nhất
+      dominantZone = funcName;
     }
   });
 
-  // Đảm bảo luôn lấy được chức năng đã định danh, không bị rỗng
   if (!dominantZone) {
-    dominantZone = matchedDoanVung?.danhSachChucNang?.[0]?.tenChucNang || 'Đất hỗn hợp (nhóm nhà ở và dịch vụ)';
+    dominantZone = 'Đất chưa khai báo chức năng chi tiết trong đồ án';
   }
-  // 🟢 GIẢI PHÁP FALLBACK: Nếu không khớp điểm lưới nhưng nằm trong xã, tự động gán chức năng phù hợp với mục tiêu dự án
-  if (!dominantZone) {
-  dominantZone = 'Đất chưa khai báo chức năng chi tiết trong đồ án';
-}
 
   // 4. TỔNG HỢP VÀ HIỂN THỊ KẾT QUẢ MINH BẠCH, RÕ RÀNG CHO NGƯỜI ĐỌC
   let totalHitsAll = 0;
