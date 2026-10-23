@@ -961,6 +961,16 @@ function App() {
 // =========================================================================
 const LAND_USE_FUNCTION_MAP = [
   {
+    nhom: "Đất công cộng đô thị",
+    loaiChucNang: "Đất công cộng đô thị",
+    congTrinhDuocPhep: [
+      "giáo dục", "trường học", "y tế", "bệnh viện", "trung tâm y tế", "trạm y tế",
+      "văn hóa", "thể dục thể thao", "sân thể thao", "sân vận động", "trung tâm văn hóa",
+      "thể thao", "nhà văn hóa", "cung văn hóa", "nhà thiếu nhi", "cung thiếu nhi",
+      "chợ dân sinh", "sân chơi", "sân luyện tập", "công trình công cộng", "công trình hạ tầng kỹ thuật"
+    ]
+  },
+  {
     nhom: "Đất công trình hạ tầng xã hội",
     loaiChucNang: "Đất văn hóa, thể dục thể thao, sân vận động",
     congTrinhDuocPhep: [
@@ -1069,7 +1079,31 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   else if (queryDat.includes("thủy sản") && (queryMucTieu.includes("thủy sản") || queryMucTieu.includes("nuôi trồng") || queryMucTieu.includes("ao") || queryMucTieu.includes("hồ"))) {
     isSmartMatched = true;
   }
-
+// Kiểm tra chuyên ngành Đất công cộng đô thị (Giáo dục, Y tế, Văn hóa, Thể thao, Chợ...)
+  const isPublicUrbanLand = queryDat.includes("công cộng đô thị") || queryDat.includes("đất công cộng");
+  if (isPublicUrbanLand) {
+    const isPublicProject = queryMucTieu.includes("giáo dục") || 
+                            queryMucTieu.includes("trường") || 
+                            queryMucTieu.includes("y tế") || 
+                            queryMucTieu.includes("bệnh viện") || 
+                            queryMucTieu.includes("trạm y tế") || 
+                            queryMucTieu.includes("văn hóa") || 
+                            queryMucTieu.includes("thể thao") || 
+                            queryMucTieu.includes("thể dục") || 
+                            queryMucTieu.includes("sân vận động") || 
+                            queryMucTieu.includes("nhà văn hóa") || 
+                            queryMucTieu.includes("thiếu nhi") || 
+                            queryMucTieu.includes("chợ") || 
+                            queryMucTieu.includes("sân chơi") ||
+                            queryMucTieu.includes("công cộng");
+    if (isPublicProject) {
+      return {
+        phuHop: true,
+        loaiCongTrinhPhep: congTrinhPhep,
+        ketLuan: `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch chức năng ${tenChucNangDat} (cho phép xây dựng các công trình công cộng như giáo dục, y tế, văn hóa, thể dục thể thao và chợ dân sinh).`
+      };
+    }
+  }
   let isPhuHop = isSmartMatched || congTrinhPhep.some(ct => queryMucTieu.includes(ct.toLowerCase()) || ct.toLowerCase().includes(queryMucTieu));
 
   return {
