@@ -995,6 +995,15 @@ const LAND_USE_FUNCTION_MAP = [
     congTrinhDuocPhep: ["Nhà ở riêng lẻ", "nhà ở liền kề", "khu dân cư", "khu đô thị", "nhà ở tái định cư", "chung cư", "công trình hạ tầng kỹ thuật", "công viên cây xanh"]
   },
   {
+    nhom: "Đất công trình hạ tầng xã hội",
+    loaiChucNang: "Đất giáo dục (trường học)",
+    congTrinhDuocPhep: [
+      "giáo dục", "trường học", "trường mầm non", "trường tiểu học", 
+      "trường trung học", "trường trung cấp", "trường cao đẳng", "trường đại học", 
+      "cơ sở giáo dục", "phòng học", "nhà hiệu trưởng", "công trình giáo dục"
+    ]
+  },
+  {
     nhom: "Đất di tích, tôn giáo, an ninh, quốc phòng",
     loaiChucNang: "Đất quốc phòng",
     congTrinhDuocPhep: ["Công trình quân sự", "doanh trại quân đội", "cơ sở quốc phòng", "thao trường", "trường bắn"]
@@ -1101,6 +1110,24 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
         phuHop: true,
         loaiCongTrinhPhep: congTrinhPhep,
         ketLuan: `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch chức năng ${tenChucNangDat} (cho phép xây dựng các công trình công cộng như giáo dục, y tế, văn hóa, thể dục thể thao và chợ dân sinh).`
+      };
+    }
+  }
+  // Kiểm tra chuyên ngành Đất giáo dục
+  const isEducationLand = queryDat.includes("giáo dục") || queryDat.includes("trường học");
+  if (isEducationLand) {
+    const isEducationProject = queryMucTieu.includes("giáo dục") || 
+                               queryMucTieu.includes("trường") || 
+                               queryMucTieu.includes("mầm non") || 
+                               queryMucTieu.includes("tiểu học") || 
+                               queryMucTieu.includes("trung học") || 
+                               queryMucTieu.includes("đại học") || 
+                               queryMucTieu.includes("học sinh");
+    if (isEducationProject) {
+      return {
+        phuHop: true,
+        loaiCongTrinhPhep: congTrinhPhep,
+        ketLuan: `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch chức năng ${tenChucNangDat} (cho phép xây dựng các công trình giáo dục, trường học các cấp).`
       };
     }
   }
