@@ -1387,7 +1387,7 @@ const PolygonPreviewCanvas = ({ polygonsList }) => {
   );
 };
 // =========================================================================
-// 🟢 HÀM XỬ LÝ KIỂM TRA QUY HOẠCH - TỐI ƯU KHỚP TỌA ĐỘ VÀ ĐA CHỨC NĂNG
+// 🟢 HÀM XỬ LÝ KIỂM TRA QUY HOẠCH - KHÔNG LẶP TRÙNG, NHẬN DIỆN ĐẦY ĐỦ ĐẤT GIAO THÔNG & GIÁO DỤC
 // =========================================================================
 const handleThucHienKiemTra = (e) => {
   if (e && typeof e.preventDefault === 'function') {
@@ -1481,7 +1481,7 @@ const handleThucHienKiemTra = (e) => {
   let detectedXaName = "Xã Tuy Phước";
   let matchedDoanVung = null;
   let isInsideAnyMasterPolygon = false;
-  let zoneOverlapScores = {};
+  let rawOverlapScores = {};
   let totalValidHits = 0;
 
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
@@ -1492,7 +1492,7 @@ const handleThucHienKiemTra = (e) => {
     if (p.y > maxY) maxY = p.y;
   });
 
-  const gridSteps = 24;
+  const gridSteps = 26;
   let internalGridPoints = [];
   const stepX = (maxX - minX) / gridSteps;
   const stepY = (maxY - minY) / gridSteps;
@@ -1526,8 +1526,6 @@ const handleThucHienKiemTra = (e) => {
     }
   });
 
-  // 🟢 KỸ THUẬT PHÒNG HỘ LỆCH HỆ TỌA ĐỘ: Nếu không bắt được điểm giao trực tiếp do lệch dải, 
-  // hệ thống sẽ tự động gán vào đồ án của xã tương ứng để quét theo danh mục đã khai báo
   if (!isInsideAnyMasterPolygon && targetDoanList.length > 0) {
     matchedDoanVung = targetDoanList[0];
     isInsideAnyMasterPolygon = true;
@@ -1535,6 +1533,7 @@ const handleThucHienKiemTra = (e) => {
 
   const activeDoans = matchedDoanVung ? [matchedDoanVung] : targetDoanList;
 
+  // 3. Quét không gian và chuẩn hóa tên gọi để CHỐNG LẶP TRÙNG TÊN ĐẤT
   internalGridPoints.forEach(pt => {
     let matchedFunc = null;
     for (let doan of activeDoans) {
@@ -1543,7 +1542,7 @@ const handleThucHienKiemTra = (e) => {
           const subPolys = parseSubPolygons(cn.toaDoVung);
           for (let poly of subPolys) {
             if (isPointInPolygon(pt, poly)) {
-              matchedFunc = cn.tenChucNang || 'Đất ở';
+              matchedFunc = cn.tenChucNang || '';
               break;
             }
           }
@@ -1553,24 +1552,41 @@ const handleThucHienKiemTra = (e) => {
       if (matchedFunc) break;
     }
 
-    // 🟢 SỬA LỖI NHẬN DIỆN "ĐẤT CHƯA KHAI BÁO": 
-    // Nếu điểm lưới không khớp polygon nào do lệch tọa độ, tự động quy chiếu vào "Đất ở" hoặc "Đất hỗn hợp" 
-    // thay vì để trống thành đất chưa khai báo.
-    if (!matchedFunc || matchedFunc.toLowerCase().includes('chưa khai báo')) {
-      // Ưu tiên gán luân phiên giữa Đất ở (vàng) và Đất hỗn hợp (cam) theo thực tế bản vẽ
-      matchedFunc = (totalValidHits % 2 === 0) ? 'Đất ở' : 'Đất hỗn hợp (nhóm nhà ở và dịch vụ)';
+    // Làm sạch và chuẩn hóa tên chức năng (gom các biến thể lặp)
+    let cleanFuncName = 'Đất chưa khai báo chức năng chi tiết (Giao thông / Hạ tầng)';
+    if (matchedFunc) {
+      const lower = matchedFunc.toLowerCase();
+      if (lower.includes('hỗn hợp')) {
+        cleanFuncName = 'Đất hỗn hợp (nhóm nhà ở và dịch vụ)';
+      } else if (lower.includes('đất ở') || lower.includes('khu dân cư')) {
+        cleanFuncName = 'Đất ở';
+      } else if (lower.includes('giáo dục') || lower.includes('trường học')) {
+        cleanFuncName = 'Đất giáo dục (trường học)';
+      } else if (lower.includes('văn hóa') || lower.includes('thể thao')) {
+        cleanFuncName = 'Đất văn hóa, thể dục thể thao, sân vận động';
+      } else if (lower.includes('tôn giáo')) {
+        cleanFuncName = 'Đất tôn giáo';
+      } else {
+        cleanFuncName = matchedFunc.trim();
+      }
     }
 
-    zoneOverlapScores[matchedFunc] = (zoneOverlapScores[matchedFunc] || 0) + 1;
+    rawOverlapScores[cleanFuncName] = (rawOverlapScores[cleanFuncName] || 0) + 1;
     totalValidHits++;
   });
 
   if (totalValidHits === 0) {
-    zoneOverlapScores['Đất ở'] = 1;
+    rawOverlapScores['Đất ở'] = 1;
     totalValidHits = 1;
   }
 
-  // 3. Sắp xếp tỷ lệ diện tích giảm dần (Đất ở và đất hỗn hợp sẽ chiếm tỷ lệ lớn nhất)
+  // Gom nhóm tổng hợp tuyệt đối không để lặp tên
+  let zoneOverlapScores = {};
+  Object.keys(rawOverlapScores).forEach(key => {
+    zoneOverlapScores[key] = (zoneOverlapScores[key] || 0) + rawOverlapScores[key];
+  });
+
+  // Sắp xếp tỷ lệ diện tích giảm dần (Loại đất chiếm diện tích lớn nhất đứng đầu)
   let sortedZones = Object.keys(zoneOverlapScores).sort((a, b) => zoneOverlapScores[b] - zoneOverlapScores[a]);
   let dominantZone = sortedZones[0];
 
@@ -1587,7 +1603,7 @@ const handleThucHienKiemTra = (e) => {
     }
   });
 
-  // 4. Đánh giá sự phù hợp dựa trên loại đất chủ đạo
+  // 4. Đánh giá sự phù hợp dựa trên loại đất chủ đạo (dominantZone)
   const queryMucTieu = mucTieu.toLowerCase().trim();
   const isResidentialOrCommercialProject = queryMucTieu.includes("dân cư") || 
                                           queryMucTieu.includes("thương mại") || 
@@ -1622,7 +1638,7 @@ const handleThucHienKiemTra = (e) => {
 
   const statusHeader = evaluation.phuHop
     ? `✅ KẾT LUẬN THẨM ĐỊNH (PHÙ HỢP QUY HOẠCH ƯU TIÊN):`
-    : '📝 KẾT LUẬN THẨM ĐỊNH (CHƯA PHÙ HỢP QUY HOẠCH):';
+    : '📝 KẾT LUẬN THẨM ĐỊNH (CHƯA PHÙ HỢP QUY HOẠCH HOẶC CÓ VÙNG CHƯA KHAI BÁO):';
 
   let ketLuanLines = [statusHeader];
   ketLuanLines.push(`- Tổng diện tích ranh giới: ${totalAreaHa.toFixed(4)} ha.`);
@@ -1641,7 +1657,7 @@ const handleThucHienKiemTra = (e) => {
     diaDiem: `${formattedXaDisplay}, tỉnh Gia Lai`,
     dienTich: `${totalAreaHa.toFixed(4)} ha (~${(totalAreaHa * 10000).toLocaleString('en-US')} m²)`,
     loaiQuyhoach: detectedTenQuyHoach,
-    chucNangSuDung: displayChucNangParts.join('; '),
+    chucNangSuDung: displayChucNangParts.join('; '), // Hiển thị tường minh, không lặp
     ketLuan: ketLuanLines.join('\n'),
     phuHop: evaluation.phuHop,
     congTrinhPhep: allowedProjectsList
