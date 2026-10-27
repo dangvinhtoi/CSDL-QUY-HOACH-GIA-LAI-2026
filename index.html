@@ -1234,7 +1234,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
 }
  
 // =========================================================================
-// 🟢 HÀM PHÂN TÁCH ĐA VÙNG (MULTI-POLYGON) TỪ FILE LISP XTTH MỘT CÁCH CHUẨN XÁC
+// 🟢 HÀM PHÂN TÁCH ĐA VÙNG TỰ ĐỘNG NHẬN DIỆN KHỐI TỌA ĐỘ ĐỘC LẬP
 // =========================================================================
 const parseSubPolygons = (inputStr) => {
   if (!inputStr || typeof inputStr !== 'string') return [];
@@ -1243,10 +1243,10 @@ const parseSubPolygons = (inputStr) => {
   const polygons = [];
   let currentPoly = [];
   
-  lines.forEach(line => {
+  lines.forEach((line, index) => {
     const trimmed = line.trim();
     
-    // Gặp dòng trống hoặc từ khóa phân cách vùng thì kết thúc 1 polygon hiện tại
+    // Nếu gặp dòng trống hoặc khi tọa độ X bắt đầu quay vòng nhỏ lại (dấu hiệu bắt đầu một ô đất mới liền kề)
     if (trimmed === '' || trimmed.toUpperCase().includes('VÙNG') || trimmed.toUpperCase().includes('VUNG')) {
       if (currentPoly.length >= 3) {
         polygons.push(currentPoly);
@@ -1265,6 +1265,15 @@ const parseSubPolygons = (inputStr) => {
     
     if (x !== null && y !== null && !isNaN(x) && !isNaN(y)) {
       if (Math.abs(x - y) < 0.001) y = y + 1.0;
+      
+      // Nếu mảng hiện tại đã có điểm và điểm mới bị lặp lại điểm đầu tiên của ô đất -> Tự động đóng khung ô đất đó và mở ô đất tiếp theo
+      if (currentPoly.length > 0 && Math.abs(currentPoly[0].x - x) < 0.01 && Math.abs(currentPoly[0].y - y) < 0.01) {
+        if (currentPoly.length >= 3) {
+          polygons.push(currentPoly);
+          currentPoly = [];
+        }
+      }
+      
       currentPoly.push({ x, y });
     }
   });
@@ -1274,26 +1283,6 @@ const parseSubPolygons = (inputStr) => {
   }
   
   return polygons;
-};
-// =========================================================================
-// 🟢 2. HÀM TẠO ĐIỂM KIỂM TRA CHUẨN NỘI BỘ (TRÁNH LIẾM MÉP BIÊN VÙNG LÂN CẬN)
-// =========================================================================
-const generateInternalTestPoints = (polygonPoints) => {
-  if (!polygonPoints || polygonPoints.length < 3) return [];
-
-  const centroidX = polygonPoints.reduce((sum, p) => sum + p.x, 0) / polygonPoints.length;
-  const centroidY = polygonPoints.reduce((sum, p) => sum + p.y, 0) / polygonPoints.length;
-  const centroidPt = { x: centroidX, y: centroidY };
-
-  const testPoints = [centroidPt];
-
-  // Tạo các điểm hướng tâm (50% và 75% về phía trọng tâm) nằm thuần túy bên trong ranh giới
-  polygonPoints.forEach(pt => {
-    testPoints.push({ x: (pt.x + centroidX) / 2, y: (pt.y + centroidY) / 2 });
-    testPoints.push({ x: (pt.x * 0.25 + centroidX * 0.75), y: (pt.y * 0.25 + centroidY * 0.75) });
-  });
-
-  return testPoints;
 };
 // =========================================================================
 // 🟢 HÀM MÔ PHỎNG HÌNH HỌC KHÔNG GIAN - CHỈ VẼ VIÊN RANH GIỚI CHUẨN XÁC
