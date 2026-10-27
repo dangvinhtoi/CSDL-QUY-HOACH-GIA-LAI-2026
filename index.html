@@ -1234,7 +1234,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
 }
  
 // =========================================================================
-// 🟢 HÀM PHÂN TÁCH TỌA ĐỘ VÙNG SIÊU THÔNG MINH (TỰ ĐỘNG BÓC TÁCH MỌI ĐỊNH DẠNG)
+// 🟢 HÀM PHÂN TÁCH ĐA VÙNG (MULTI-POLYGON) TỪ FILE LISP XTTH MỘT CÁCH CHUẨN XÁC
 // =========================================================================
 const parseSubPolygons = (inputStr) => {
   if (!inputStr || typeof inputStr !== 'string') return [];
@@ -1245,8 +1245,9 @@ const parseSubPolygons = (inputStr) => {
   
   lines.forEach(line => {
     const trimmed = line.trim();
-    if (!trimmed) {
-      // Gặp dòng trống thì ngắt, lưu polygon hiện tại vào danh sách nếu đủ từ 3 đỉnh trở lên
+    
+    // Gặp dòng trống hoặc từ khóa phân cách vùng thì kết thúc 1 polygon hiện tại
+    if (trimmed === '' || trimmed.toUpperCase().includes('VÙNG') || trimmed.toUpperCase().includes('VUNG')) {
       if (currentPoly.length >= 3) {
         polygons.push(currentPoly);
         currentPoly = [];
@@ -1257,13 +1258,7 @@ const parseSubPolygons = (inputStr) => {
     let x = null, y = null;
     const nums = line.match(/-?\d+(\.\d+)?/g);
     
-    if (trimmed.toUpperCase().includes('X') && trimmed.toUpperCase().includes('Y') && nums && nums.length >= 2) {
-      const pX = line.split(/X[\s=:]+/i);
-      if (pX.length > 1) x = parseFloat(pX[1].trim().split(/[\s,]+/)[0]);
-      const pY = line.split(/Y[\s=:]+/i);
-      if (pY.length > 1) y = parseFloat(pY[1].trim().split(/[\s,]+/)[0]);
-    } else if (nums && nums.length >= 2) {
-      // Tự động lấy 2 số đầu tiên trên mỗi dòng làm tọa độ X và Y
+    if (nums && nums.length >= 2) {
       x = parseFloat(nums[0]);
       y = parseFloat(nums[1]);
     }
@@ -1278,25 +1273,6 @@ const parseSubPolygons = (inputStr) => {
     polygons.push(currentPoly);
   }
   
-  // Trường hợp dữ liệu dán liên tục không có dòng trống phân cách
-  if (polygons.length === 0 && currentPoly.length >= 3) {
-    polygons.push(currentPoly);
-  }
-
-  // 🟢 BỔ SUNG CƠ CHẾ DỰ PHÒNG: Nếu vẫn chưa tạo được polygon từ chuỗi, thử quét toàn bộ số trong ô
-  if (polygons.length === 0) {
-    const allNums = inputStr.match(/-?\d+(\.\d+)?/g);
-    if (allNums && allNums.length >= 6) {
-      let fallbackPoly = [];
-      for (let k = 0; k < allNums.length - 1; k += 2) {
-        fallbackPoly.push({ x: parseFloat(allNums[k]), y: parseFloat(allNums[k+1]) });
-      }
-      if (fallbackPoly.length >= 3) {
-        polygons.push(fallbackPoly);
-      }
-    }
-  }
-
   return polygons;
 };
 // =========================================================================
