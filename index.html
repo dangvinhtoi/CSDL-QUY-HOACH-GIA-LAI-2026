@@ -1234,7 +1234,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
 }
  
 // =========================================================================
-// 🟢 HÀM PHÂN TÁCH VÙNG TỌA ĐỘ THÔNG MINH - TỰ ĐỘNG LỌC NHIỄU VÀ GÓI ĐA GIÁC
+// 🟢 HÀM PHÂN TÁCH TỌA ĐỘ VÙNG SIÊU THÔNG MINH (TỰ ĐỘNG BÓC TÁCH MỌI ĐỊNH DẠNG)
 // =========================================================================
 const parseSubPolygons = (inputStr) => {
   if (!inputStr || typeof inputStr !== 'string') return [];
@@ -1245,8 +1245,8 @@ const parseSubPolygons = (inputStr) => {
   
   lines.forEach(line => {
     const trimmed = line.trim();
-    
-    if (trimmed === '' || ((trimmed.toUpperCase().startsWith('VÙNG') || trimmed.toUpperCase().startsWith('VUNG')) && !/\d/.test(trimmed))) {
+    if (!trimmed) {
+      // Gặp dòng trống thì ngắt, lưu polygon hiện tại vào danh sách nếu đủ từ 3 đỉnh trở lên
       if (currentPoly.length >= 3) {
         polygons.push(currentPoly);
         currentPoly = [];
@@ -1263,6 +1263,7 @@ const parseSubPolygons = (inputStr) => {
       const pY = line.split(/Y[\s=:]+/i);
       if (pY.length > 1) y = parseFloat(pY[1].trim().split(/[\s,]+/)[0]);
     } else if (nums && nums.length >= 2) {
+      // Tự động lấy 2 số đầu tiên trên mỗi dòng làm tọa độ X và Y
       x = parseFloat(nums[0]);
       y = parseFloat(nums[1]);
     }
@@ -1277,21 +1278,26 @@ const parseSubPolygons = (inputStr) => {
     polygons.push(currentPoly);
   }
   
-  // 🟢 LỌC BỎ CÁC ĐA GIÁC QUÁ NHỎ (NHIỄU HÌNH HỌC TỪ CÁC HATCH LI TI TRONG CAD)
-  const validPolygons = polygons.filter(poly => {
-    let area = 0;
-    const n = poly.length;
-    for (let i = 0; i < n; i++) {
-      const j = (i + 1) % n;
-      area += poly[i].x * poly[j].y;
-      area -= poly[j].x * poly[i].y;
+  // Trường hợp dữ liệu dán liên tục không có dòng trống phân cách
+  if (polygons.length === 0 && currentPoly.length >= 3) {
+    polygons.push(currentPoly);
+  }
+
+  // 🟢 BỔ SUNG CƠ CHẾ DỰ PHÒNG: Nếu vẫn chưa tạo được polygon từ chuỗi, thử quét toàn bộ số trong ô
+  if (polygons.length === 0) {
+    const allNums = inputStr.match(/-?\d+(\.\d+)?/g);
+    if (allNums && allNums.length >= 6) {
+      let fallbackPoly = [];
+      for (let k = 0; k < allNums.length - 1; k += 2) {
+        fallbackPoly.push({ x: parseFloat(allNums[k]), y: parseFloat(allNums[k+1]) });
+      }
+      if (fallbackPoly.length >= 3) {
+        polygons.push(fallbackPoly);
+      }
     }
-    area = Math.abs(area) / 2.0;
-    // Chỉ giữ lại các vùng có diện tích thực tế > 1 mét vuông (bỏ qua các điểm rác li ti)
-    return area > 1.0;
-  });
-  
-  return validPolygons.length > 0 ? validPolygons : polygons;
+  }
+
+  return polygons;
 };
 // =========================================================================
 // 🟢 2. HÀM TẠO ĐIỂM KIỂM TRA CHUẨN NỘI BỘ (TRÁNH LIẾM MÉP BIÊN VÙNG LÂN CẬN)
