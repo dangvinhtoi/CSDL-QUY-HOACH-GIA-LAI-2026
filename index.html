@@ -1340,6 +1340,14 @@ const handleThucHienKiemTra = (e) => {
   if (e && typeof e.preventDefault === 'function') {
     e.preventDefault();
   }
+// 🟢 KIỂM TRA QUYỀN SỬ DỤNG CỦA THÀNH VIÊN
+  if (userRole === 'MEMBER' && currentUser?.allowKTQH === false) {
+    showNotification('⚠️ Bạn chưa được cấp quyền sử dụng, hãy liên hệ với Quản trị hệ thống để sử dụng tính năng này');
+    if (typeof setKetQuaKiemTra === 'function') {
+      setKetQuaKiemTra(null); // Không hiển thị kết quả cũ hoặc kết quả trống
+    }
+    return;
+  }
 
   let mucTieu = '';
   let toaDoStr = '';
