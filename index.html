@@ -971,6 +971,16 @@ const LAND_USE_FUNCTION_MAP = [
     ]
   },
   {
+    nhom: "Đất xây dựng các chức năng khác",
+    loaiChucNang: "Đất xây dựng các chức năng khác",
+    congTrinhDuocPhep: [
+      "trụ sở cơ quan", "cơ quan", "y tế", "bệnh viện", "trung tâm y tế", "trạm y tế",
+      "giáo dục", "đào tạo", "trường học", "thể dục thể thao", "cơ sở thể dục thể thao",
+      "bãi tắm biển", "kinh doanh văn hóa", "dịch vụ xã hội", "khoa học và công nghệ",
+      "ngoại giao", "công trình sự nghiệp", "thương mại dịch vụ", "thương mại", "dịch vụ"
+    ]
+  },
+  {
     nhom: "Đất công trình hạ tầng xã hội",
     loaiChucNang: "Đất văn hóa, thể dục thể thao, sân vận động",
     congTrinhDuocPhep: [
@@ -1140,6 +1150,49 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
         ketLuan: `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch chức năng ${tenChucNangDat} (cho phép xây dựng các công trình giáo dục, trường học các cấp).`
       };
     }
+  }
+  // 🟢 Xử lý cho Đất xây dựng các chức năng khác
+  const isOtherFunctionsLand = queryDat.includes("chức năng khác") || queryDat.includes("xây dựng các chức năng khác");
+  if (isOtherFunctionsLand) {
+    // Các nhóm dự án KHÔNG ĐƯỢC PHÉP trên loại đất này (nhà ở, khu dân cư, nhà máy, trang trại, nghĩa trang, quốc phòng...)
+    const isForbiddenProject = queryMucTieu.includes("nhà ở") || 
+                               queryMucTieu.includes("khu dân cư") || 
+                               queryMucTieu.includes("đô thị") || 
+                               queryMucTieu.includes("chung cư") || 
+                               queryMucTieu.includes("tái định cư") ||
+                               queryMucTieu.includes("nhà máy") || 
+                               queryMucTieu.includes("xưởng") || 
+                               queryMucTieu.includes("trang trại") || 
+                               queryMucTieu.includes("chăn nuôi") || 
+                               queryMucTieu.includes("nghĩa trang") || 
+                               queryMucTieu.includes("nghĩa địa") || 
+                               queryMucTieu.includes("quốc phòng") || 
+                               queryMucTieu.includes("an ninh");
+
+    if (isForbiddenProject) {
+      return {
+        phuHop: false,
+        loaiCongTrinhPhep: [
+          "Trụ sở cơ quan", "Cơ sở y tế", "Cơ sở giáo dục và đào tạo", 
+          "Cơ sở thể dục thể thao", "Bãi tắm biển", "Cơ sở kinh doanh văn hóa", 
+          "Cơ sở dịch vụ xã hội", "Cơ sở khoa học và công nghệ", "Cơ sở ngoại giao", 
+          "Công trình sự nghiệp khác", "Thương mại dịch vụ"
+        ],
+        ketLuan: `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch Đất xây dựng các chức năng khác (không cho phép bố trí nhà ở, khu dân cư, nhà máy, trang trại hoặc quốc phòng an ninh).`
+      };
+    }
+
+    // Các dự án PHÙ HỢP thuộc danh mục cho phép
+    return {
+      phuHop: true,
+      loaiCongTrinhPhep: [
+        "Trụ sở cơ quan", "Cơ sở y tế", "Cơ sở giáo dục và đào tạo", 
+        "Cơ sở thể dục thể thao", "Bãi tắm biển", "Cơ sở kinh doanh văn hóa", 
+        "Cơ sở dịch vụ xã hội", "Cơ sở khoa học và công nghệ", "Cơ sở ngoại giao", 
+        "Công trình sự nghiệp khác", "Thương mại dịch vụ"
+      ],
+      ketLuan: `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với định hướng quy hoạch chức năng Đất xây dựng các chức năng khác.`
+    };
   }
   // 🟢 Nhận diện thông minh chuyên ngành Tôn giáo & Tín ngưỡng
   const isReligiousLand = queryDat.includes("tôn giáo") || queryDat.includes("tín ngưỡng");
