@@ -971,7 +971,7 @@ const isPointInPolygon = (point, polygonPoints) => {
         return parseFloat(ha.toFixed(4));
       };
 // =========================================================================
-// 🟢 1. BỔ SUNG ĐẦY ĐỦ DANH MỤC ĐẤT VĂN HÓA, THỂ THAO, Y TẾ, GIÁO DỤC
+// 🟢 1. BỔ SUNG ĐẦY ĐỦ DANH MỤC ĐẤT QUY HOẠCH & CÔNG TRÌNH ĐƯỢC PHÉP
 // =========================================================================
 const LAND_USE_FUNCTION_MAP = [
   {
@@ -1046,6 +1046,56 @@ const LAND_USE_FUNCTION_MAP = [
     nhom: "Đất nông nghiệp & mặt nước",
     loaiChucNang: "Đất nuôi trồng thủy sản",
     congTrinhDuocPhep: ["Nuôi trồng thủy sản", "công trình phục vụ nuôi trồng thủy sản", "ao hồ", "công trình hạ tầng kỹ thuật"]
+  },
+  // 🟢 BỔ SUNG CÁC NHÓM ĐẤT CHUYÊN NGÀNH MỚI
+  {
+    nhom: "Đất hạ tầng kỹ thuật & nghĩa trang",
+    loaiChucNang: "Đất HTKT đầu mối (nghĩa địa, nghĩa trang, cải táng, mai táng)",
+    congTrinhDuocPhep: [
+      "nghĩa trang", "nghĩa địa", "cải táng", "mai táng", "nhà hỏa táng", "cơ sở hỏa táng", 
+      "bãi chôn lấp", "khu xử lý chất thải", "cơ sở xử lý rác thải", "trạm biến áp", 
+      "nhà máy nước", "công trình hạ tầng kỹ thuật"
+    ]
+  },
+  {
+    nhom: "Đất công trình hạ tầng xã hội",
+    loaiChucNang: "Đất y tế (bệnh viện, trạm y tế)",
+    congTrinhDuocPhep: [
+      "bệnh viện", "trung tâm y tế", "trạm y tế", "phòng khám", "cơ sở y tế", 
+      "viện dưỡng lão", "cơ sở chăm sóc sức khỏe", "công trình y tế"
+    ]
+  },
+  {
+    nhom: "Đất sản xuất công nghiệp & tiểu thủ công nghiệp",
+    loaiChucNang: "Đất sản xuất công nghiệp",
+    congTrinhDuocPhep: [
+      "nhà máy", "xưởng sản xuất", "khu công nghiệp", "cụm công nghiệp", 
+      "kho bãi", "cơ sở chế biến", "công trình sản xuất công nghiệp"
+    ]
+  },
+  {
+    nhom: "Đất công viên cây xanh & thể dục thể thao",
+    loaiChucNang: "Đất công viên cây xanh",
+    congTrinhDuocPhep: [
+      "công viên", "cây xanh", "quảng trường", "sân chơi", "vườn hoa", 
+      "khu vui chơi giải trí", "sân thể thao đơn giản", "công trình hạ tầng kỹ thuật"
+    ]
+  },
+  {
+    nhom: "Đất giao thông & bãi đỗ xe",
+    loaiChucNang: "Đất giao thông",
+    congTrinhDuocPhep: [
+      "đường giao thông", "bãi đỗ xe", "bến xe", "bãi xe", "trạm dừng nghỉ", 
+      "cầu vượt", "hầm chui", "công trình giao thông"
+    ]
+  },
+  {
+    nhom: "Đất nông nghiệp & trang trại",
+    loaiChucNang: "Đất nông nghiệp",
+    congTrinhDuocPhep: [
+      "nông nghiệp", "trồng trọt", "chăn nuôi", "trang trại", "nhà kính", 
+      "cơ sở sản xuất nông nghiệp", "trồng cây lâu năm", "trồng cây hàng năm"
+    ]
   }
 ];
 
@@ -1095,8 +1145,34 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   // 3. Nhận diện thông minh theo nhóm chuyên ngành (Khớp linh hoạt mọi từ khóa)
   let isSmartMatched = false;
 
+  // 🟢 THUẬT TOÁN MỚI: Kiểm tra giao thoa từ khóa trực tiếp giữa Tên Chức Năng Đất và Mục Tiêu Dự Án
+  const targetWords = queryMucTieu.split(/[\s,;.()/-]+/).filter(w => w.length >= 2);
+  const datWords = queryDat.split(/[\s,;.()/-]+/).filter(w => w.length >= 2);
+
+  const hasDirectKeywordOverlap = targetWords.some(tw => queryDat.includes(tw)) || 
+                                  datWords.some(dw => queryMucTieu.includes(dw));
+
+  if (hasDirectKeywordOverlap) {
+    isSmartMatched = true;
+  }
+
+  // Nhóm HTKT / Nghĩa trang / Nghĩa địa / Cải táng / Mai táng / Hạ tầng kỹ thuật
+  if ((queryDat.includes("htkt") || queryDat.includes("hạ tầng kỹ thuật") || queryDat.includes("nghĩa trang") || queryDat.includes("nghĩa địa") || queryDat.includes("cải táng") || queryDat.includes("mai táng") || queryDat.includes("rác") || queryDat.includes("xử lý chất thải")) && 
+      (queryMucTieu.includes("nghĩa trang") || queryMucTieu.includes("nghĩa địa") || queryMucTieu.includes("cải táng") || queryMucTieu.includes("mai táng") || queryMucTieu.includes("hỏa táng") || queryMucTieu.includes("rác") || queryMucTieu.includes("chất thải") || queryMucTieu.includes("hạ tầng kỹ thuật") || queryMucTieu.includes("htkt"))) {
+    isSmartMatched = true;
+  }
+  // Nhóm Y tế
+  else if ((queryDat.includes("y tế") || queryDat.includes("bệnh viện") || queryDat.includes("phòng khám") || queryDat.includes("trạm y tế")) && 
+           (queryMucTieu.includes("y tế") || queryMucTieu.includes("bệnh viện") || queryMucTieu.includes("phòng khám") || queryMucTieu.includes("trạm y tế") || queryMucTieu.includes("chữa bệnh"))) {
+    isSmartMatched = true;
+  }
+  // Nhóm Giáo dục
+  else if ((queryDat.includes("giáo dục") || queryDat.includes("trường học") || queryDat.includes("mầm non") || queryDat.includes("tiểu học") || queryDat.includes("trung học") || queryDat.includes("đại học") || queryDat.includes("cao đẳng")) && 
+           (queryMucTieu.includes("giáo dục") || queryMucTieu.includes("trường học") || queryMucTieu.includes("mầm non") || queryMucTieu.includes("tiểu học") || queryMucTieu.includes("trung học") || queryMucTieu.includes("đại học") || queryMucTieu.includes("cao đẳng") || queryMucTieu.includes("đào tạo") || queryMucTieu.includes("dạy nghề"))) {
+    isSmartMatched = true;
+  }
   // Nhóm Văn hóa - Thể thao
-  if ((queryDat.includes("văn hóa") || queryDat.includes("thể thao") || queryDat.includes("sân vận động")) && 
+  else if ((queryDat.includes("văn hóa") || queryDat.includes("thể thao") || queryDat.includes("sân vận động")) && 
       (queryMucTieu.includes("văn hóa") || queryMucTieu.includes("thể thao") || queryMucTieu.includes("thể dục") || queryMucTieu.includes("sân vận động") || queryMucTieu.includes("nhà thi đấu") || queryMucTieu.includes("hồ bơi") || queryMucTieu.includes("cộng đồng"))) {
     isSmartMatched = true;
   }
@@ -1114,61 +1190,30 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   else if (queryDat.includes("thương mại") && (queryMucTieu.includes("thương mại") || queryMucTieu.includes("dịch vụ") || queryMucTieu.includes("siêu thị") || queryMucTieu.includes("chợ"))) {
     isSmartMatched = true;
   }
-  // Nhóm Quốc phòng / An ninh
-  else if (queryDat.includes("quốc phòng") && (queryMucTieu.includes("quốc phòng") || queryMucTieu.includes("quân sự") || queryMucTieu.includes("thao trường"))) {
+  // Nhóm Công nghiệp / Sản xuất
+  else if ((queryDat.includes("công nghiệp") || queryDat.includes("nhà máy") || queryDat.includes("xưởng") || queryDat.includes("cụm công nghiệp")) && 
+           (queryMucTieu.includes("công nghiệp") || queryMucTieu.includes("nhà máy") || queryMucTieu.includes("xưởng") || queryMucTieu.includes("sản xuất") || queryMucTieu.includes("kho bãi"))) {
     isSmartMatched = true;
   }
-  // Nhóm Thủy sản
-  else if (queryDat.includes("thủy sản") && (queryMucTieu.includes("thủy sản") || queryMucTieu.includes("nuôi trồng") || queryMucTieu.includes("ao") || queryMucTieu.includes("hồ"))) {
+  // Nhóm Nông nghiệp / Trang trại
+  else if ((queryDat.includes("nông nghiệp") || queryDat.includes("trồng trọt") || queryDat.includes("chăn nuôi") || queryDat.includes("trang trại")) && 
+           (queryMucTieu.includes("nông nghiệp") || queryMucTieu.includes("trồng trọt") || queryMucTieu.includes("chăn nuôi") || queryMucTieu.includes("trang trại") || queryMucTieu.includes("trồng cây"))) {
     isSmartMatched = true;
   }
-// Kiểm tra chuyên ngành Đất công cộng đô thị (Giáo dục, Y tế, Văn hóa, Thể thao, Chợ...)
-  const isPublicUrbanLand = queryDat.includes("công cộng đô thị") || queryDat.includes("đất công cộng");
-  if (isPublicUrbanLand) {
-    const isPublicProject = queryMucTieu.includes("giáo dục") || 
-                            queryMucTieu.includes("trường") || 
-                            queryMucTieu.includes("y tế") || 
-                            queryMucTieu.includes("bệnh viện") || 
-                            queryMucTieu.includes("trạm y tế") || 
-                            queryMucTieu.includes("văn hóa") || 
-                            queryMucTieu.includes("thể thao") || 
-                            queryMucTieu.includes("thể dục") || 
-                            queryMucTieu.includes("sân vận động") || 
-                            queryMucTieu.includes("nhà văn hóa") || 
-                            queryMucTieu.includes("thiếu nhi") || 
-                            queryMucTieu.includes("chợ") || 
-                            queryMucTieu.includes("sân chơi") ||
-                            queryMucTieu.includes("công cộng");
-    if (isPublicProject) {
-      return {
-        phuHop: true,
-        loaiCongTrinhPhep: congTrinhPhep,
-        ketLuan: `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch chức năng ${tenChucNangDat} (cho phép xây dựng các công trình công cộng như giáo dục, y tế, văn hóa, thể dục thể thao và chợ dân sinh).`
-      };
-    }
+  // Nhóm Công viên / Cây xanh
+  else if ((queryDat.includes("cây xanh") || queryDat.includes("công viên") || queryDat.includes("quảng trường")) && 
+           (queryMucTieu.includes("cây xanh") || queryMucTieu.includes("công viên") || queryMucTieu.includes("quảng trường") || queryMucTieu.includes("vui chơi"))) {
+    isSmartMatched = true;
   }
-  // Kiểm tra chuyên ngành Đất giáo dục
-  const isEducationLand = queryDat.includes("giáo dục") || queryDat.includes("trường học");
-  if (isEducationLand) {
-    const isEducationProject = queryMucTieu.includes("giáo dục") || 
-                               queryMucTieu.includes("trường") || 
-                               queryMucTieu.includes("mầm non") || 
-                               queryMucTieu.includes("tiểu học") || 
-                               queryMucTieu.includes("trung học") || 
-                               queryMucTieu.includes("đại học") || 
-                               queryMucTieu.includes("học sinh");
-    if (isEducationProject) {
-      return {
-        phuHop: true,
-        loaiCongTrinhPhep: congTrinhPhep,
-        ketLuan: `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch chức năng ${tenChucNangDat} (cho phép xây dựng các công trình giáo dục, trường học các cấp).`
-      };
-    }
+  // Nhóm Giao thông
+  else if ((queryDat.includes("giao thông") || queryDat.includes("đường") || queryDat.includes("bãi xe") || queryDat.includes("bến xe")) && 
+           (queryMucTieu.includes("giao thông") || queryMucTieu.includes("đường") || queryMucTieu.includes("bãi xe") || queryMucTieu.includes("bến xe") || queryMucTieu.includes("đỗ xe"))) {
+    isSmartMatched = true;
   }
-  // 🟢 Xử lý cho Đất xây dựng các chức năng khác
+
+  // 4. Nhóm Đất xây dựng các chức năng khác
   const isOtherFunctionsLand = queryDat.includes("chức năng khác") || queryDat.includes("xây dựng các chức năng khác");
   if (isOtherFunctionsLand) {
-    // Các nhóm dự án KHÔNG ĐƯỢC PHÉP trên loại đất này (nhà ở, khu dân cư, nhà máy, trang trại, nghĩa trang, quốc phòng...)
     const isForbiddenProject = queryMucTieu.includes("nhà ở") || 
                                queryMucTieu.includes("khu dân cư") || 
                                queryMucTieu.includes("đô thị") || 
@@ -1186,56 +1231,18 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
     if (isForbiddenProject) {
       return {
         phuHop: false,
-        loaiCongTrinhPhep: [
-          "Trụ sở cơ quan", "Cơ sở y tế", "Cơ sở giáo dục và đào tạo", 
-          "Cơ sở thể dục thể thao", "Bãi tắm biển", "Cơ sở kinh doanh văn hóa", 
-          "Cơ sở dịch vụ xã hội", "Cơ sở khoa học và công nghệ", "Cơ sở ngoại giao", 
-          "Công trình sự nghiệp khác", "Thương mại dịch vụ"
-        ],
-        ketLuan: `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch Đất xây dựng các chức năng khác (không cho phép bố trí nhà ở, khu dân cư, nhà máy, trang trại hoặc quốc phòng an ninh).`
+        loaiCongTrinhPhep: congTrinhPhep,
+        ketLuan: `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch Đất xây dựng các chức năng khác.`
       };
     }
 
-    // Các dự án PHÙ HỢP thuộc danh mục cho phép
     return {
       phuHop: true,
-      loaiCongTrinhPhep: [
-        "Trụ sở cơ quan", "Cơ sở y tế", "Cơ sở giáo dục và đào tạo", 
-        "Cơ sở thể dục thể thao", "Bãi tắm biển", "Cơ sở kinh doanh văn hóa", 
-        "Cơ sở dịch vụ xã hội", "Cơ sở khoa học và công nghệ", "Cơ sở ngoại giao", 
-        "Công trình sự nghiệp khác", "Thương mại dịch vụ"
-      ],
+      loaiCongTrinhPhep: congTrinhPhep,
       ketLuan: `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với định hướng quy hoạch chức năng Đất xây dựng các chức năng khác.`
     };
   }
-  // 🟢 Nhận diện thông minh chuyên ngành Tôn giáo & Tín ngưỡng
-  const isReligiousLand = queryDat.includes("tôn giáo") || queryDat.includes("tín ngưỡng");
-  if (isReligiousLand) {
-    const isReligiousProject = queryMucTieu.includes("chùa") || 
-                               queryMucTieu.includes("niệm phật") || 
-                               queryMucTieu.includes("thiền viện") || 
-                               queryMucTieu.includes("nhà thờ") || 
-                               queryMucTieu.includes("nhà nguyện") || 
-                               queryMucTieu.includes("thánh đường") || 
-                               queryMucTieu.includes("thánh thất") || 
-                               queryMucTieu.includes("thánh tịnh") || 
-                               queryMucTieu.includes("đình") || 
-                               queryMucTieu.includes("đền") || 
-                               queryMucTieu.includes("miếu") || 
-                               queryMucTieu.includes("phủ") || 
-                               queryMucTieu.includes("am") || 
-                               queryMucTieu.includes("điện thờ") || 
-                               queryMucTieu.includes("từ đường") || 
-                               queryMucTieu.includes("tôn giáo") || 
-                               queryMucTieu.includes("tín ngưỡng");
-    if (isReligiousProject) {
-      return {
-        phuHop: true,
-        loaiCongTrinhPhep: congTrinhPhep,
-        ketLuan: `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch chức năng ${tenChucNangDat} (cho phép xây dựng các công trình tôn giáo và tín ngưỡng theo quy định).`
-      };
-    }
-  }
+
   let isPhuHop = isSmartMatched || congTrinhPhep.some(ct => queryMucTieu.includes(ct.toLowerCase()) || ct.toLowerCase().includes(queryMucTieu));
 
   return {
