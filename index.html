@@ -1356,7 +1356,7 @@ const PolygonPreviewCanvas = ({ polygonsList }) => {
   );
 };
 // =========================================================================
-// 🟢 HÀM XỬ LÝ KIỂM TRA QUY HOẠCH NÂNG CẤP (HOÀN CHỈNH)
+// 🟢 HÀM XỬ LÝ KIỂM TRA QUY HOẠCH NÂNG CẤP (ĐÃ SỬA LỖI sortedZones & TỰ ĐỘNG KHỬ RANH LẸM)
 // =========================================================================
 const handleThucHienKiemTra = (e) => {
   if (e && typeof e.preventDefault === 'function') {
@@ -1540,7 +1540,7 @@ const handleThucHienKiemTra = (e) => {
     totalValidHits = 1;
   }
 
-  // 6. Tổng hợp tỷ lệ phần trăm và LỌC BỎ RANH LẸM NHIỄU (< 10%) THEO QHC
+  // 6. Tổng hợp tỷ lệ phần trăm và LỌC BỎ RANH LẸM NHIỄU (< 15%) THEO QHC XÃ
   let totalHitsCount = totalValidHits || 1;
   let rawSorted = Object.keys(rawOverlapScores).sort((a, b) => rawOverlapScores[b] - rawOverlapScores[a]);
   let dominantFuncName = rawSorted[0] || 'Đất chưa khai báo chức năng chi tiết';
@@ -1549,12 +1549,11 @@ const handleThucHienKiemTra = (e) => {
   let displayChucNangParts = [];
   let breakdownTextLines = [];
 
-  // 🟢 NẾU LOẠI ĐẤT CHỦ ĐẠO THEO QHC CHIẾM TỶ LỆ > 85%, TỰ ĐỘNG LỌC BỎ PHẦN RANH LẸM CHIẾM TỶ LỆ NHỎ (< 15%)
+  // 🟢 NẾU LOẠI ĐẤT CHỦ ĐẠO THEO QHC CHIẾM TỶ LỆ > 85%, TỰ ĐỘNG KHỬ SAI SỐ RANH LẸM NHỎ (< 15%)
   if (dominantRatio >= 85.0) {
     displayChucNangParts.push(`${dominantFuncName} (~100.0%)`);
     breakdownTextLines.push(`• ${dominantFuncName}: chiếm 100.0% diện tích (đã lọc bỏ sai số ranh lẹm nhỏ theo QHC xã)`);
   } else {
-    // Trường hợp khu đất thực sự nằm trên 2 phân khu lớn, hiển thị đầy đủ cơ cấu
     rawSorted.forEach(funcName => {
       const hits = rawOverlapScores[funcName];
       const ratio = ((hits / totalHitsCount) * 100).toFixed(1);
@@ -1564,7 +1563,9 @@ const handleThucHienKiemTra = (e) => {
       }
     });
   }
+
   let dominantZone = dominantFuncName;
+
   // 7. Đánh giá sự phù hợp dựa trên loại đất chủ đạo (dominantZone)
   const queryMucTieu = mucTieu.toLowerCase().trim();
   const isResidentialOrCommercialProject = queryMucTieu.includes("dân cư") || 
@@ -1587,12 +1588,8 @@ const handleThucHienKiemTra = (e) => {
     evaluation = evaluateProjectSuitability(dominantZone, mucTieu);
   }
 
-  sortedZones.forEach(funcName => {
-    const subEval = evaluateProjectSuitability(funcName, mucTieu);
-    if (subEval && subEval.loaiCongTrinhPhep) {
-      allowedProjectsList = [...new Set([...allowedProjectsList, ...subEval.loaiCongTrinhPhep])];
-    }
-  });
+  // 🟢 CHỈ LẤY DANH MỤC CÔNG TRÌNH THEO LOẠI ĐẤT CHỦ ĐẠO
+  let allowedProjectsList = evaluation.loaiCongTrinhPhep || [];
 
   const formattedXaDisplay = detectedXaName.startsWith('Xã') || detectedXaName.startsWith('P.') || detectedXaName.startsWith('Phường') 
     ? detectedXaName 
