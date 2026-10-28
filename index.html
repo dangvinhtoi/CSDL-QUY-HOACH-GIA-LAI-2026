@@ -1155,7 +1155,7 @@ const LAND_USE_FUNCTION_MAP = [
 ];
 
 // =========================================================================
-// 🟢 HÀM ĐÁNH GIÁ THÔNG MINH SỰ PHÙ HỢP QUY HOẠCH (ĐÃ SỬA LỖI REGEX TRÍCH XUẤT NGOẶC)
+// 🟢 HÀM ĐÁNH GIÁ THÔNG MINH SỰ PHÙ HỢP QUY HOẠCH (ĐÃ SỬA CHUẨN CÚ PHÁP REGEX)
 // =========================================================================
 function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   if (!chucNangDat || !mucTieuDuAn || chucNangDat.includes('chưa khai báo')) {
@@ -1172,7 +1172,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   // 🔴 1. XỬ LÝ ĐẤT HẠ TẦNG KỸ THUẬT / HTKT ĐẦU MỐI CÓ GHI CHÚ CHUYÊN NGÀNH HẸP (...)
   const isHTKTLand = queryDat.includes("hạ tầng kỹ thuật") || queryDat.includes("htkt");
   
-  // 💥 CÚ PHÁP REGEX CHUẨN: /\\((.*?)\\)/ (Đã bỏ ký tự gạch chéo ngược thừa)
+  // 💥 CÚ PHÁP REGEX CHUẨN DÙNG 1 DẤU GẠCH CHÉO: /\\((.*?)\\)/
   const matchParentheses = queryDat.match(/\\((.*?)\\)/);
 
   if (isHTKTLand && matchParentheses && matchParentheses[1]) {
@@ -1294,7 +1294,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
     };
   }
 
-  // 🔴 4. ĐỐI CHIẾU DANH MỤC LỚN LAND_USE_FUNCTION_MAP CHO CÁC LOẠI ĐẤT KHÁC (ĐẤT Ở, CÔNG CỘNG, Y TẾ, GIÁO DỤC, CÔNG NGHIỆP, NÔNG NGHIỆP...)
+  // 🔴 4. ĐỐI CHIẾU DANH MỤC LỚN LAND_USE_FUNCTION_MAP CHO CÁC LOẠI ĐẤT KHÁC
   const matchedLand = LAND_USE_FUNCTION_MAP.find(item =>
     queryDat === item.loaiChucNang.toLowerCase() ||
     queryDat.includes(item.loaiChucNang.toLowerCase()) ||
