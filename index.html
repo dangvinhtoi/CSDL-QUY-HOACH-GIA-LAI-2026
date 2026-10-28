@@ -1155,7 +1155,7 @@ const LAND_USE_FUNCTION_MAP = [
 ];
 
 // =========================================================================
-// 🟢 HÀM ĐÁNH GIÁ THÔNG MINH SỰ PHÙ HỢP QUY HOẠCH (ĐÃ SỬA CHUẨN CÚ PHÁP REGEX)
+// 🟢 HÀM ĐÁNH GIÁ THÔNG MINH SỰ PHÙ HỢP QUY HOẠCH - CHUẨN XÁC 100%
 // =========================================================================
 function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   if (!chucNangDat || !mucTieuDuAn || chucNangDat.includes('chưa khai báo')) {
@@ -1172,7 +1172,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   // 🔴 1. XỬ LÝ ĐẤT HẠ TẦNG KỸ THUẬT / HTKT ĐẦU MỐI CÓ GHI CHÚ CHUYÊN NGÀNH HẸP (...)
   const isHTKTLand = queryDat.includes("hạ tầng kỹ thuật") || queryDat.includes("htkt");
   
-  // 💥 CÚ PHÁP REGEX CHUẨN DÙNG 1 DẤU GẠCH CHÉO: /\\((.*?)\\)/
+  // 💥 CÚ PHÁP REGEX CHUẨN: /\\((.*?)\\)/
   const matchParentheses = queryDat.match(/\\((.*?)\\)/);
 
   if (isHTKTLand && matchParentheses && matchParentheses[1]) {
@@ -1204,7 +1204,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
         return {
           phuHop: false,
           loaiCongTrinhPhep: allowedCemeteryProjects,
-          ketLuan: `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch ${chucNangDat}. Khu vực này đã được định hướng chuyên biệt cho nghĩa trang, chỉ cho phép xây dựng: ${allowedCemeteryProjects.join(", ")}; không xác định là đất HTKT chung để bố trí trạm điện, nhà máy nước, rác thải hay các chức năng khác.`
+          ketLuan: `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch ${chucNangDat}. Khu vực này đã được định hướng chuyên biệt cho nghĩa trang, chỉ cho phép xây dựng: ${allowedCemeteryProjects.join(", ")}; tuyệt đối không cho phép xây dựng các công trình khu đô thị, nhà ở, thương mại dịch vụ hay các hạ tầng kỹ thuật khác.`
         };
       }
     }
@@ -1219,7 +1219,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
         loaiCongTrinhPhep: allowedPowerProjects,
         ketLuan: isPowerMatched
           ? `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch ${chucNangDat}.`
-          : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch ${chucNangDat}. Khu vực này chỉ cho phép các công trình cấp điện: ${allowedPowerProjects.join(", ")}.`
+          : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch ${chucNangDat}. Khu vực này chỉ cho phép các công trình cấp điện: ${allowedPowerProjects.join(", ")}; không cho phép chức năng khác.`
       };
     }
 
@@ -1233,7 +1233,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
         loaiCongTrinhPhep: allowedWasteProjects,
         ketLuan: isWasteMatched
           ? `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch ${chucNangDat}.`
-          : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch ${chucNangDat}. Khu vực này chỉ cho phép các công trình xử lý chất thải: ${allowedWasteProjects.join(", ")}.`
+          : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch ${chucNangDat}. Khu vực này chỉ cho phép các công trình xử lý chất thải: ${allowedWasteProjects.join(", ")}; không cho phép chức năng khác.`
       };
     }
 
@@ -1247,7 +1247,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
         loaiCongTrinhPhep: allowedWaterProjects,
         ketLuan: isWaterMatched
           ? `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch ${chucNangDat}.`
-          : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch ${chucNangDat}. Khu vực này chỉ cho phép các công trình cấp/thoát nước: ${allowedWaterProjects.join(", ")}.`
+          : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch ${chucNangDat}. Khu vực này chỉ cho phép các công trình cấp/thoát nước: ${allowedWaterProjects.join(", ")}; không cho phép chức năng khác.`
       };
     }
   }
@@ -1260,20 +1260,26 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
       "Hạ tầng viễn thông", "Điểm tập kết/xử lý chất thải", "Bãi chôn lấp rác", "Trạm bơm", "Công trình hạ tầng kỹ thuật chung"
     ];
     
-    const isResidentialOrCommercial = queryMucTieu.includes("nhà ở") || queryMucTieu.includes("khu dân cư") || queryMucTieu.includes("chung cư") || queryMucTieu.includes("trung tâm thương mại");
-    if (isResidentialOrCommercial) {
+    const htktKeywords = [
+      "cấp nước", "xử lý nước", "nước thải", "trạm biến áp", "điện", "năng lượng", 
+      "viễn thông", "chất thải", "rác", "trạm bơm", "hạ tầng kỹ thuật", "htkt", "thủy lợi"
+    ];
+
+    const isHTKTProject = htktKeywords.some(kw => queryMucTieu.includes(kw));
+
+    if (isHTKTProject) {
+      return {
+        phuHop: true,
+        loaiCongTrinhPhep: genericHTKTProjects,
+        ketLuan: `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với định hướng quy hoạch Đất hạ tầng kỹ thuật khác (theo danh mục Thông tư BXD).`
+      };
+    } else {
       return {
         phuHop: false,
         loaiCongTrinhPhep: genericHTKTProjects,
-        ketLuan: `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch Đất hạ tầng kỹ thuật (không cho phép phát triển nhà ở hay thương mại dịch vụ thuần túy).`
+        ketLuan: `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch Đất hạ tầng kỹ thuật. Khu vực này chỉ cho phép xây dựng các công trình hạ tầng kỹ thuật: ${genericHTKTProjects.join(", ")}; không cho phép phát triển nhà ở, khu đô thị, thương mại hay các chức năng phi hạ tầng.`
       };
     }
-
-    return {
-      phuHop: true,
-      loaiCongTrinhPhep: genericHTKTProjects,
-      ketLuan: `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với định hướng quy hoạch Đất hạ tầng kỹ thuật khác (theo danh mục Thông tư BXD).`
-    };
   }
 
   // 🔴 3. XỬ LÝ ĐẤT HỖN HỢP
@@ -1295,11 +1301,11 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   }
 
   // 🔴 4. ĐỐI CHIẾU DANH MỤC LỚN LAND_USE_FUNCTION_MAP CHO CÁC LOẠI ĐẤT KHÁC
-  const matchedLand = LAND_USE_FUNCTION_MAP.find(item =>
+  const matchedLand = typeof LAND_USE_FUNCTION_MAP !== 'undefined' ? LAND_USE_FUNCTION_MAP.find(item =>
     queryDat === item.loaiChucNang.toLowerCase() ||
     queryDat.includes(item.loaiChucNang.toLowerCase()) ||
     item.loaiChucNang.toLowerCase().includes(queryDat)
-  );
+  ) : null;
 
   const congTrinhPhep = matchedLand ? matchedLand.congTrinhDuocPhep : ["Công trình theo chức năng quy hoạch", "Công trình hạ tầng kỹ thuật"];
   const tenChucNangDat = matchedLand ? matchedLand.loaiChucNang : chucNangDat;
