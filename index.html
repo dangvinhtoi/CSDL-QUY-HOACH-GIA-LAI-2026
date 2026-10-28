@@ -1540,23 +1540,31 @@ const handleThucHienKiemTra = (e) => {
     totalValidHits = 1;
   }
 
-  // 6. Tổng hợp tỷ lệ phần trăm
-  let sortedZones = Object.keys(rawOverlapScores).sort((a, b) => rawOverlapScores[b] - rawOverlapScores[a]);
-  let dominantZone = sortedZones[0] || 'Đất chưa khai báo chức năng chi tiết';
+  // 6. Tổng hợp tỷ lệ phần trăm và LỌC BỎ RANH LẸM NHIỄU (< 10%) THEO QHC
+  let totalHitsCount = totalValidHits || 1;
+  let rawSorted = Object.keys(rawOverlapScores).sort((a, b) => rawOverlapScores[b] - rawOverlapScores[a]);
+  let dominantFuncName = rawSorted[0] || 'Đất chưa khai báo chức năng chi tiết';
+  let dominantRatio = (rawOverlapScores[dominantFuncName] / totalHitsCount) * 100;
 
   let displayChucNangParts = [];
   let breakdownTextLines = [];
-  let allowedProjectsList = [];
 
-  sortedZones.forEach(funcName => {
-    const hits = rawOverlapScores[funcName];
-    const ratio = ((hits / totalValidHits) * 100).toFixed(1);
-    if (parseFloat(ratio) > 0) {
-      displayChucNangParts.push(`${funcName} (~${ratio}%)`);
-      breakdownTextLines.push(`• ${funcName}: chiếm khoảng ${ratio}% diện tích`);
-    }
-  });
-
+  // 🟢 NẾU LOẠI ĐẤT CHỦ ĐẠO THEO QHC CHIẾM TỶ LỆ > 85%, TỰ ĐỘNG LỌC BỎ PHẦN RANH LẸM CHIẾM TỶ LỆ NHỎ (< 15%)
+  if (dominantRatio >= 85.0) {
+    displayChucNangParts.push(`${dominantFuncName} (~100.0%)`);
+    breakdownTextLines.push(`• ${dominantFuncName}: chiếm 100.0% diện tích (đã lọc bỏ sai số ranh lẹm nhỏ theo QHC xã)`);
+  } else {
+    // Trường hợp khu đất thực sự nằm trên 2 phân khu lớn, hiển thị đầy đủ cơ cấu
+    rawSorted.forEach(funcName => {
+      const hits = rawOverlapScores[funcName];
+      const ratio = ((hits / totalHitsCount) * 100).toFixed(1);
+      if (parseFloat(ratio) > 0) {
+        displayChucNangParts.push(`${funcName} (~${ratio}%)`);
+        breakdownTextLines.push(`• ${funcName}: chiếm khoảng ${ratio}% diện tích`);
+      }
+    });
+  }
+  let dominantZone = dominantFuncName;
   // 7. Đánh giá sự phù hợp dựa trên loại đất chủ đạo (dominantZone)
   const queryMucTieu = mucTieu.toLowerCase().trim();
   const isResidentialOrCommercialProject = queryMucTieu.includes("dân cư") || 
