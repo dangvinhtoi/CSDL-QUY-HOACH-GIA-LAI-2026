@@ -1155,7 +1155,7 @@ const LAND_USE_FUNCTION_MAP = [
 ];
 
 // =========================================================================
-// 🟢 HÀM ĐÁNH GIÁ THÔNG MINH SỰ PHÙ HỢP QUY HOẠCH (CHUẨN CHUYÊN NGÀNH BXD)
+// 🟢 HÀM ĐÁNH GIÁ THÔNG MINH SỰ PHÙ HỢP QUY HOẠCH (ĐÃ SỬA LỖI REGEX TRÍCH XUẤT NGOẶC)
 // =========================================================================
 function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   if (!chucNangDat || !mucTieuDuAn || chucNangDat.includes('chưa khai báo')) {
@@ -1171,6 +1171,8 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
 
   // 🔴 1. XỬ LÝ ĐẤT HẠ TẦNG KỸ THUẬT / HTKT ĐẦU MỐI CÓ GHI CHÚ CHUYÊN NGÀNH HẸP (...)
   const isHTKTLand = queryDat.includes("hạ tầng kỹ thuật") || queryDat.includes("htkt");
+  
+  // 💥 CÚ PHÁP REGEX CHUẨN: /\\((.*?)\\)/ (Đã bỏ ký tự gạch chéo ngược thừa)
   const matchParentheses = queryDat.match(/\\((.*?)\\)/);
 
   if (isHTKTLand && matchParentheses && matchParentheses[1]) {
@@ -1187,8 +1189,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
 
       const cemeteryKeywords = [
         "nghĩa trang", "nghĩa địa", "cải táng", "mai táng", "hỏa táng", "tang lễ", 
-        "quản lý nghĩa trang", "dịch vụ nghĩa trang", "an táng", "từ đường nghĩa trang", 
-        "hoa viên nghĩa trang", "am thờ nghĩa trang", "nhà quàn"
+        "quản lý nghĩa trang", "dịch vụ nghĩa trang", "an táng", "mộ", "nhà quàn", "hoa viên", "từ đường"
       ];
 
       const isCemeteryMatched = cemeteryKeywords.some(kw => queryMucTieu.includes(kw));
@@ -1259,7 +1260,6 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
       "Hạ tầng viễn thông", "Điểm tập kết/xử lý chất thải", "Bãi chôn lấp rác", "Trạm bơm", "Công trình hạ tầng kỹ thuật chung"
     ];
     
-    // Chặn nhà ở, khu dân cư, thương mại lớn trên đất HTKT
     const isResidentialOrCommercial = queryMucTieu.includes("nhà ở") || queryMucTieu.includes("khu dân cư") || queryMucTieu.includes("chung cư") || queryMucTieu.includes("trung tâm thương mại");
     if (isResidentialOrCommercial) {
       return {
