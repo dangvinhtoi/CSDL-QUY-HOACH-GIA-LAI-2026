@@ -1155,7 +1155,7 @@ const LAND_USE_FUNCTION_MAP = [
 ];
 
 // =========================================================================
-// 🟢 HÀM ĐÁNH GIÁ SỰ PHÙ HỢP QUY HOẠCH - QUÉT THÔNG MINH THEO TTH 16/2025/TT-BXD
+// 🟢 HÀM ĐÁNH GIÁ THÔNG MINH SỰ PHÙ HỢP QUY HOẠCH (CHUẨN CHUYÊN NGÀNH BXD)
 // =========================================================================
 function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   if (!chucNangDat || !mucTieuDuAn || chucNangDat.includes('chưa khai báo')) {
@@ -1169,98 +1169,132 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   const queryDat = chucNangDat.toLowerCase().trim();
   const queryMucTieu = mucTieuDuAn.toLowerCase().trim();
 
-  // 🔴 1. XỬ LÝ ĐẶC THÙ HẸP: Đất Hạ tầng kỹ thuật (HTKT) có phần ghi chú chuyên ngành trong ngoặc (...)
+  // 🔴 1. XỬ LÝ ĐẤT HẠ TẦNG KỸ THUẬT / HTKT ĐẦU MỐI CÓ GHI CHÚ CHUYÊN NGÀNH HẸP (...)
   const isHTKTLand = queryDat.includes("hạ tầng kỹ thuật") || queryDat.includes("htkt");
   const matchParentheses = queryDat.match(/\\((.*?)\\)/);
 
   if (isHTKTLand && matchParentheses && matchParentheses[1]) {
-    const insideNote = matchParentheses[1].trim(); 
-    const subFuncs = insideNote.split(/[,;/]+/).map(s => s.trim()).filter(Boolean);
+    const insideNote = matchParentheses[1].trim().toLowerCase();
     
-    let loaiCongTrinhPhep = [...subFuncs];
+    // ➔ TRƯỜNG HỢP A: Chuyên ngành Nghĩa trang / Mai táng / Cải táng
+    if (insideNote.includes("nghĩa trang") || insideNote.includes("nghĩa địa") || insideNote.includes("cải táng") || insideNote.includes("mai táng") || insideNote.includes("hỏa táng")) {
+      const allowedCemeteryProjects = [
+        "Nghĩa trang", "Nghĩa địa", "Khu cải táng", "Khu mai táng", 
+        "Nhà tang lễ", "Cơ sở hỏa táng", "Nhà hỏa táng",
+        "Nhà quản lý nghĩa trang", "Công trình dịch vụ hỗ trợ nghĩa trang", 
+        "Hoa viên nghĩa trang", "Bãi đỗ xe nghĩa trang", "Công trình phụ trợ nghĩa trang"
+      ];
 
-    // Mở rộng thông minh các công trình thuộc đúng chuyên ngành hẹp ghi trong ngoặc
-    if (insideNote.includes("nghĩa trang") || insideNote.includes("nghĩa địa") || insideNote.includes("cải táng") || insideNote.includes("mai táng")) {
-      ["nhà hỏa táng", "cơ sở hỏa táng", "nghĩa trang gia đình", "khu an táng", "nhà tang lễ"].forEach(extra => {
-        if (!loaiCongTrinhPhep.includes(extra)) loaiCongTrinhPhep.push(extra);
-      });
-    } else if (insideNote.includes("rác") || insideNote.includes("chất thải") || insideNote.includes("bãi chôn lấp")) {
-      ["bãi chôn lấp rác", "trạm trung chuyển rác", "nhà máy xử lý rác", "khu xử lý chất thải"].forEach(extra => {
-        if (!loaiCongTrinhPhep.includes(extra)) loaiCongTrinhPhep.push(extra);
-      });
-    } else if (insideNote.includes("trạm biến áp") || insideNote.includes("điện") || insideNote.includes("năng lượng")) {
-      ["tuyến đường dây điện", "trạm ngắt điện", "công trình cấp điện"].forEach(extra => {
-        if (!loaiCongTrinhPhep.includes(extra)) loaiCongTrinhPhep.push(extra);
-      });
-    } else if (insideNote.includes("nước") || insideNote.includes("cấp nước") || insideNote.includes("xử lý nước thải")) {
-      ["nhà máy nước", "trạm bơm nước", "bể chứa nước", "trạm xử lý nước thải"].forEach(extra => {
-        if (!loaiCongTrinhPhep.includes(extra)) loaiCongTrinhPhep.push(extra);
-      });
-    }
+      const cemeteryKeywords = [
+        "nghĩa trang", "nghĩa địa", "cải táng", "mai táng", "hỏa táng", "tang lễ", 
+        "quản lý nghĩa trang", "dịch vụ nghĩa trang", "an táng", "từ đường nghĩa trang", 
+        "hoa viên nghĩa trang", "am thờ nghĩa trang", "nhà quàn"
+      ];
 
-    const stopWords = new Set(["nhà", "trạm", "khu", "bãi", "công", "trình", "máy", "cơ", "sở", "đất", "dự", "án", "xây", "dựng"]);
+      const isCemeteryMatched = cemeteryKeywords.some(kw => queryMucTieu.includes(kw));
 
-    let isMatch = false;
-
-    // So khớp cụm từ
-    for (let ct of loaiCongTrinhPhep) {
-      const ctLower = ct.toLowerCase();
-      if (queryMucTieu.includes(ctLower) || ctLower.includes(queryMucTieu)) {
-        isMatch = true;
-        break;
+      if (isCemeteryMatched) {
+        return {
+          phuHop: true,
+          loaiCongTrinhPhep: allowedCemeteryProjects,
+          ketLuan: `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch ${chucNangDat} (xác định đây là Đất HTKT chuyên ngành nghĩa trang, cho phép các công trình nghĩa trang, nhà tang lễ, hỏa táng và dịch vụ hỗ trợ).`
+        };
+      } else {
+        return {
+          phuHop: false,
+          loaiCongTrinhPhep: allowedCemeteryProjects,
+          ketLuan: `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch ${chucNangDat}. Khu vực này đã được định hướng chuyên biệt cho nghĩa trang, chỉ cho phép xây dựng: ${allowedCemeteryProjects.join(", ")}; không xác định là đất HTKT chung để bố trí trạm điện, nhà máy nước, rác thải hay các chức năng khác.`
+        };
       }
     }
 
-    // So khớp từ khóa chuyên ngành loại trừ từ chung chung
-    if (!isMatch) {
-      const targetWords = queryMucTieu.split(/[\s,;.()/-]+/).filter(w => w.length >= 2 && !stopWords.has(w));
-      const insideWords = insideNote.split(/[\s,;.()/-]+/).filter(w => w.length >= 2 && !stopWords.has(w));
-      let allowedWords = new Set();
-      loaiCongTrinhPhep.forEach(ct => {
-        ct.toLowerCase().split(/[\s,;.()/-]+/).forEach(w => {
-          if (w.length >= 2 && !stopWords.has(w)) allowedWords.add(w);
-        });
-      });
+    // ➔ TRƯỜNG HỢP B: Chuyên ngành Cấp điện / Trạm biến áp
+    if (insideNote.includes("trạm biến áp") || insideNote.includes("tuyến điện") || insideNote.includes("cấp điện")) {
+      const allowedPowerProjects = ["Trạm biến áp", "Tuyến đường dây điện", "Trạm ngắt điện", "Công trình cấp điện", "Nhà điều hành trạm điện"];
+      const isPowerMatched = ["trạm biến áp", "điện", "biến áp", "đường dây", "cấp điện"].some(kw => queryMucTieu.includes(kw));
 
-      if (targetWords.some(tw => insideWords.includes(tw) || allowedWords.has(tw))) {
-        isMatch = true;
-      }
-    }
-
-    if (isMatch) {
       return {
-        phuHop: true,
-        loaiCongTrinhPhep: loaiCongTrinhPhep,
-        ketLuan: `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch chức năng ${chucNangDat}.`
+        phuHop: isPowerMatched,
+        loaiCongTrinhPhep: allowedPowerProjects,
+        ketLuan: isPowerMatched
+          ? `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch ${chucNangDat}.`
+          : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch ${chucNangDat}. Khu vực này chỉ cho phép các công trình cấp điện: ${allowedPowerProjects.join(", ")}.`
       };
-    } else {
+    }
+
+    // ➔ TRƯỜNG HỢP C: Chuyên ngành Xử lý chất thải / Rác thải
+    if (insideNote.includes("rác") || insideNote.includes("chất thải") || insideNote.includes("bãi chôn lấp")) {
+      const allowedWasteProjects = ["Khu xử lý chất thải", "Nhà máy xử lý rác", "Bãi chôn lấp rác", "Trạm trung chuyển rác", "Nhà điều hành khu xử lý rác"];
+      const isWasteMatched = ["rác", "chất thải", "chôn lấp", "xử lý rác", "phế thải"].some(kw => queryMucTieu.includes(kw));
+
       return {
-        phuHop: false,
-        loaiCongTrinhPhep: loaiCongTrinhPhep,
-        ketLuan: `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch ${chucNangDat}. Khu vực này có quy hoạch hẹp theo ghi chú trong ngoặc, chỉ cho phép xây dựng các công trình: ${loaiCongTrinhPhep.join(", ")}; tuyệt đối không cho phép các công trình HTKT khác hay các chức năng khác.`
+        phuHop: isWasteMatched,
+        loaiCongTrinhPhep: allowedWasteProjects,
+        ketLuan: isWasteMatched
+          ? `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch ${chucNangDat}.`
+          : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch ${chucNangDat}. Khu vực này chỉ cho phép các công trình xử lý chất thải: ${allowedWasteProjects.join(", ")}.`
+      };
+    }
+
+    // ➔ TRƯỜNG HỢP D: Chuyên ngành Cấp nước / Xử lý nước thải
+    if (insideNote.includes("nước") || insideNote.includes("cấp nước") || insideNote.includes("nước thải")) {
+      const allowedWaterProjects = ["Nhà máy nước", "Trạm cấp nước", "Bể chứa nước", "Trạm bơm", "Trạm xử lý nước thải", "Tuyến ống cấp nước"];
+      const isWaterMatched = ["nước", "cấp nước", "nước thải", "trạm bơm", "bể chứa"].some(kw => queryMucTieu.includes(kw));
+
+      return {
+        phuHop: isWaterMatched,
+        loaiCongTrinhPhep: allowedWaterProjects,
+        ketLuan: isWaterMatched
+          ? `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch ${chucNangDat}.`
+          : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch ${chucNangDat}. Khu vực này chỉ cho phép các công trình cấp/thoát nước: ${allowedWaterProjects.join(", ")}.`
       };
     }
   }
 
-  // 🔴 2. XỬ LÝ ĐẶC THÙ: Đất hỗn hợp
+  // 🔴 2. TRƯỜNG HỢP ĐẤT "HẠ TẦNG KỸ THUẬT KHÁC" HOẶC HTKT CHUNG (KHÔNG CÓ NGOẶC CHUYÊN NGÀNH HẸP)
+  const isGenericHTKTLand = queryDat.includes("hạ tầng kỹ thuật khác") || (isHTKTLand && !matchParentheses);
+  if (isGenericHTKTLand) {
+    const genericHTKTProjects = [
+      "Trạm cấp nước", "Nhà máy xử lý nước thải", "Trạm biến áp", "Công trình năng lượng", 
+      "Hạ tầng viễn thông", "Điểm tập kết/xử lý chất thải", "Bãi chôn lấp rác", "Trạm bơm", "Công trình hạ tầng kỹ thuật chung"
+    ];
+    
+    // Chặn nhà ở, khu dân cư, thương mại lớn trên đất HTKT
+    const isResidentialOrCommercial = queryMucTieu.includes("nhà ở") || queryMucTieu.includes("khu dân cư") || queryMucTieu.includes("chung cư") || queryMucTieu.includes("trung tâm thương mại");
+    if (isResidentialOrCommercial) {
+      return {
+        phuHop: false,
+        loaiCongTrinhPhep: genericHTKTProjects,
+        ketLuan: `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch Đất hạ tầng kỹ thuật (không cho phép phát triển nhà ở hay thương mại dịch vụ thuần túy).`
+      };
+    }
+
+    return {
+      phuHop: true,
+      loaiCongTrinhPhep: genericHTKTProjects,
+      ketLuan: `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với định hướng quy hoạch Đất hạ tầng kỹ thuật khác (theo danh mục Thông tư BXD).`
+    };
+  }
+
+  // 🔴 3. XỬ LÝ ĐẤT HỖN HỢP
   const isMixedLand = queryDat.includes("đất hỗn hợp") || queryDat.includes("hỗn hợp") || queryDat.includes("nhà ở và dịch vụ");
   if (isMixedLand) {
     const isForbiddenProject = queryMucTieu.includes("nhà máy") || queryMucTieu.includes("xưởng") || queryMucTieu.includes("trang trại") || queryMucTieu.includes("chăn nuôi") || queryMucTieu.includes("nghĩa trang") || queryMucTieu.includes("nghĩa địa") || queryMucTieu.includes("quốc phòng") || queryMucTieu.includes("an ninh");
     if (isForbiddenProject) {
       return {
         phuHop: false,
-        loaiCongTrinhPhep: ["Nhà ở", "Khu dân cư", "Trung tâm thương mại", "Công viên"],
+        loaiCongTrinhPhep: ["Nhà ở", "Khu dân cư", "Trung tâm thương mại", "Công viên cây xanh"],
         ketLuan: `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch Đất hỗn hợp.`
       };
     }
     return {
       phuHop: true,
-      loaiCongTrinhPhep: ["Nhà ở", "Khu dân cư", "Khu đô thị", "Chung cư", "Trung tâm thương mại", "Siêu thị", "Công viên", "Quảng trường", "Trung tâm văn hóa", "Thể dục thể thao"],
+      loaiCongTrinhPhep: ["Nhà ở", "Khu dân cư", "Khu đô thị", "Chung cư", "Trung tâm thương mại", "Siêu thị", "Công viên cây xanh", "Quảng trường", "Trung tâm văn hóa", "Thể dục thể thao"],
       ketLuan: `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với định hướng quy hoạch chức năng Đất hỗn hợp.`
     };
   }
 
-  // 🔴 3. ĐỐI CHIẾU TRONG DANH MỤC LỚN LAND_USE_FUNCTION_MAP
+  // 🔴 4. ĐỐI CHIẾU DANH MỤC LỚN LAND_USE_FUNCTION_MAP CHO CÁC LOẠI ĐẤT KHÁC (ĐẤT Ở, CÔNG CỘNG, Y TẾ, GIÁO DỤC, CÔNG NGHIỆP, NÔNG NGHIỆP...)
   const matchedLand = LAND_USE_FUNCTION_MAP.find(item =>
     queryDat === item.loaiChucNang.toLowerCase() ||
     queryDat.includes(item.loaiChucNang.toLowerCase()) ||
@@ -1270,10 +1304,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   const congTrinhPhep = matchedLand ? matchedLand.congTrinhDuocPhep : ["Công trình theo chức năng quy hoạch", "Công trình hạ tầng kỹ thuật"];
   const tenChucNangDat = matchedLand ? matchedLand.loaiChucNang : chucNangDat;
 
-  // 🔴 4. THUẬT TOÁN QUÉT THÔNG MINH ĐA NGÀNH
   let isSmartMatched = false;
-
-  // So khớp giao thoa từ khóa trực tiếp giữa Tên Chức Năng Đất và Mục Tiêu Dự Án
   const targetWords = queryMucTieu.split(/[\s,;.()/-]+/).filter(w => w.length >= 2);
   const datWords = queryDat.split(/[\s,;.()/-]+/).filter(w => w.length >= 2);
 
@@ -1281,32 +1312,6 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
                                   datWords.some(dw => queryMucTieu.includes(dw));
 
   if (hasDirectKeywordOverlap) {
-    isSmartMatched = true;
-  }
-
-  // Quét linh hoạt theo các nhóm chuyên ngành
-  if ((queryDat.includes("y tế") || queryDat.includes("bệnh viện") || queryDat.includes("trạm y tế")) && 
-      (queryMucTieu.includes("y tế") || queryMucTieu.includes("bệnh viện") || queryMucTieu.includes("phòng khám") || queryMucTieu.includes("chữa bệnh"))) {
-    isSmartMatched = true;
-  }
-  else if ((queryDat.includes("giáo dục") || queryDat.includes("trường học") || queryDat.includes("mầm non") || queryDat.includes("tiểu học") || queryDat.includes("đại học")) && 
-           (queryMucTieu.includes("giáo dục") || queryMucTieu.includes("trường") || queryMucTieu.includes("mầm non") || queryMucTieu.includes("đào tạo"))) {
-    isSmartMatched = true;
-  }
-  else if ((queryDat.includes("văn hóa") || queryDat.includes("thể thao") || queryDat.includes("sân vận động")) && 
-           (queryMucTieu.includes("văn hóa") || queryMucTieu.includes("thể thao") || queryMucTieu.includes("sân vận động") || queryMucTieu.includes("thi đấu") || queryMucTieu.includes("bể bơi"))) {
-    isSmartMatched = true;
-  }
-  else if ((queryDat.includes("công nghiệp") || queryDat.includes("nhà máy") || queryDat.includes("xưởng") || queryDat.includes("kho tàng") || queryDat.includes("làng nghề")) && 
-           (queryMucTieu.includes("công nghiệp") || queryMucTieu.includes("nhà máy") || queryMucTieu.includes("xưởng") || queryMucTieu.includes("sản xuất") || queryMucTieu.includes("kho bãi"))) {
-    isSmartMatched = true;
-  }
-  else if ((queryDat.includes("nông nghiệp") || queryDat.includes("trồng trọt") || queryDat.includes("chăn nuôi") || queryDat.includes("lâm nghiệp") || queryDat.includes("thủy sản")) && 
-           (queryMucTieu.includes("nông nghiệp") || queryMucTieu.includes("trồng") || queryMucTieu.includes("chăn nuôi") || queryMucTieu.includes("trang trại") || queryMucTieu.includes("rừng") || queryMucTieu.includes("thủy sản"))) {
-    isSmartMatched = true;
-  }
-  else if ((queryDat.includes("giao thông") || queryDat.includes("bãi đỗ xe") || queryDat.includes("bến xe")) && 
-           (queryMucTieu.includes("giao thông") || queryMucTieu.includes("đường") || queryMucTieu.includes("bãi xe") || queryMucTieu.includes("bến xe") || queryMucTieu.includes("đỗ xe"))) {
     isSmartMatched = true;
   }
 
