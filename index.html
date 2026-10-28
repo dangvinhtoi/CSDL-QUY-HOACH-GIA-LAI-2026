@@ -971,7 +971,7 @@ const isPointInPolygon = (point, polygonPoints) => {
         return parseFloat(ha.toFixed(4));
       };
 // =========================================================================
-// 🟢 1. BỔ SUNG ĐẦY ĐỦ DANH MỤC ĐẤT QUY HOẠCH & CÔNG TRÌNH ĐƯỢC PHÉP
+// 🟢 1. DANH MỤC ĐẤT QUY HOẠCH CHUẨN HÓA
 // =========================================================================
 const LAND_USE_FUNCTION_MAP = [
   {
@@ -1046,61 +1046,11 @@ const LAND_USE_FUNCTION_MAP = [
     nhom: "Đất nông nghiệp & mặt nước",
     loaiChucNang: "Đất nuôi trồng thủy sản",
     congTrinhDuocPhep: ["Nuôi trồng thủy sản", "công trình phục vụ nuôi trồng thủy sản", "ao hồ", "công trình hạ tầng kỹ thuật"]
-  },
-  // 🟢 BỔ SUNG CÁC NHÓM ĐẤT CHUYÊN NGÀNH MỚI
-  {
-    nhom: "Đất hạ tầng kỹ thuật & nghĩa trang",
-    loaiChucNang: "Đất HTKT đầu mối (nghĩa địa, nghĩa trang, cải táng, mai táng)",
-    congTrinhDuocPhep: [
-      "nghĩa trang", "nghĩa địa", "cải táng", "mai táng", "nhà hỏa táng", "cơ sở hỏa táng", 
-      "bãi chôn lấp", "khu xử lý chất thải", "cơ sở xử lý rác thải", "trạm biến áp", 
-      "nhà máy nước", "công trình hạ tầng kỹ thuật"
-    ]
-  },
-  {
-    nhom: "Đất công trình hạ tầng xã hội",
-    loaiChucNang: "Đất y tế (bệnh viện, trạm y tế)",
-    congTrinhDuocPhep: [
-      "bệnh viện", "trung tâm y tế", "trạm y tế", "phòng khám", "cơ sở y tế", 
-      "viện dưỡng lão", "cơ sở chăm sóc sức khỏe", "công trình y tế"
-    ]
-  },
-  {
-    nhom: "Đất sản xuất công nghiệp & tiểu thủ công nghiệp",
-    loaiChucNang: "Đất sản xuất công nghiệp",
-    congTrinhDuocPhep: [
-      "nhà máy", "xưởng sản xuất", "khu công nghiệp", "cụm công nghiệp", 
-      "kho bãi", "cơ sở chế biến", "công trình sản xuất công nghiệp"
-    ]
-  },
-  {
-    nhom: "Đất công viên cây xanh & thể dục thể thao",
-    loaiChucNang: "Đất công viên cây xanh",
-    congTrinhDuocPhep: [
-      "công viên", "cây xanh", "quảng trường", "sân chơi", "vườn hoa", 
-      "khu vui chơi giải trí", "sân thể thao đơn giản", "công trình hạ tầng kỹ thuật"
-    ]
-  },
-  {
-    nhom: "Đất giao thông & bãi đỗ xe",
-    loaiChucNang: "Đất giao thông",
-    congTrinhDuocPhep: [
-      "đường giao thông", "bãi đỗ xe", "bến xe", "bãi xe", "trạm dừng nghỉ", 
-      "cầu vượt", "hầm chui", "công trình giao thông"
-    ]
-  },
-  {
-    nhom: "Đất nông nghiệp & trang trại",
-    loaiChucNang: "Đất nông nghiệp",
-    congTrinhDuocPhep: [
-      "nông nghiệp", "trồng trọt", "chăn nuôi", "trang trại", "nhà kính", 
-      "cơ sở sản xuất nông nghiệp", "trồng cây lâu năm", "trồng cây hàng năm"
-    ]
   }
 ];
 
 // =========================================================================
-// 🟢 HÀM ĐÁNH GIÁ SỰ PHÙ HỢP QUY HOẠCH - NÂNG CẤP XỬ LÝ CHUYÊN NGÀNH HẸP CHO ĐẤT HTKT
+// 🟢 2. HÀM ĐÁNH GIÁ SỰ PHÙ HỢP QUY HOẠCH (XỬ LÝ ĐỘNG GHI CHÚ TRONG NGOẶC HẸP)
 // =========================================================================
 function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   if (!chucNangDat || !mucTieuDuAn || chucNangDat.includes('chưa khai báo')) {
@@ -1114,7 +1064,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   const queryDat = chucNangDat.toLowerCase().trim();
   const queryMucTieu = mucTieuDuAn.toLowerCase().trim();
 
-  // 🔴 1. XỬ LÝ ĐẶC THÙ: Đất Hạ tầng kỹ thuật (HTKT) hoặc HTKT đầu mối có ghi chú chuyên ngành trong ngoặc (...)
+  // 🔴 XỬ LÝ ĐẶC THÙ HẸP: Đất HTKT hoặc HTKT đầu mối có phần ghi chú chuyên ngành trong ngoặc (...)
   const isHTKTLand = queryDat.includes("hạ tầng kỹ thuật") || queryDat.includes("htkt");
   const matchParentheses = queryDat.match(/\\((.*?)\\)/);
 
@@ -1125,7 +1075,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
     // Tạo danh sách công trình cho phép hẹp chỉ thuộc phạm vi ghi chú trong ngoặc
     let loaiCongTrinhPhep = [...subFuncs];
 
-    // Mở rộng thông minh các công trình cùng chuyên ngành hẹp với ghi chú trong ngoặc
+    // Mở rộng các công trình thuộc đúng chuyên ngành hẹp đó
     if (insideNote.includes("nghĩa trang") || insideNote.includes("nghĩa địa") || insideNote.includes("cải táng") || insideNote.includes("mai táng")) {
       ["nhà hỏa táng", "cơ sở hỏa táng", "nghĩa trang gia đình", "khu an táng", "đất mai táng"].forEach(extra => {
         if (!loaiCongTrinhPhep.includes(extra)) loaiCongTrinhPhep.push(extra);
@@ -1144,12 +1094,11 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
       });
     }
 
-    // Các từ ngữ chung chung không dùng để so khớp từ đơn độc lập
     const stopWords = new Set(["nhà", "trạm", "khu", "bãi", "công", "trình", "máy", "cơ", "sở", "đất", "dự", "án", "xây", "dựng"]);
 
     let isMatch = false;
 
-    // 1. So khớp cụm từ đầy đủ/mở rộng
+    // So khớp cụm từ
     for (let ct of loaiCongTrinhPhep) {
       const ctLower = ct.toLowerCase();
       if (queryMucTieu.includes(ctLower) || ctLower.includes(queryMucTieu)) {
@@ -1158,7 +1107,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
       }
     }
 
-    // 2. So khớp từ khóa đặc trưng chuyên ngành (đã loại trừ từ ngữ chung chung)
+    // So khớp từ khóa đặc trưng chuyên ngành
     if (!isMatch) {
       const targetWords = queryMucTieu.split(/[\s,;.()/-]+/).filter(w => w.length >= 2 && !stopWords.has(w));
       const insideWords = insideNote.split(/[\s,;.()/-]+/).filter(w => w.length >= 2 && !stopWords.has(w));
@@ -1184,7 +1133,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
       return {
         phuHop: false,
         loaiCongTrinhPhep: loaiCongTrinhPhep,
-        ketLuan: `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch ${chucNangDat}. Khu vực này có quy hoạch hẹp theo ghi chú trong ngoặc, chỉ cho phép xây dựng các công trình: ${loaiCongTrinhPhep.join(", ")}; tuyệt đối không cho phép các công trình HTKT khác hay các chức năng khác.`
+        ketLuan: `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch ${chucNangDat}. Khu vực này có quy hoạch hẹp theo ghi chú trong ngoặc, chỉ cho phép xây dựng các công trình: ${loaiCongTrinhPhep.join(", ")}; tuyệt đối không cho phép các công trình HTKT khác (như nhà máy nước, trạm biến áp, bãi rác...) hay các chức năng khác.`
       };
     }
   }
@@ -1207,7 +1156,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
     };
   }
 
-  // 3. Tìm kiếm trong danh mục chuẩn LAND_USE_FUNCTION_MAP
+  // 3. Đối chiếu trong danh mục LAND_USE_FUNCTION_MAP
   const matchedLand = LAND_USE_FUNCTION_MAP.find(item =>
     queryDat === item.loaiChucNang.toLowerCase() ||
     queryDat.includes(item.loaiChucNang.toLowerCase()) ||
@@ -1217,9 +1166,8 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   const congTrinhPhep = matchedLand ? matchedLand.congTrinhDuocPhep : ["Công trình theo chức năng quy hoạch", "Công trình hạ tầng kỹ thuật"];
   const tenChucNangDat = matchedLand ? matchedLand.loaiChucNang : chucNangDat;
 
-  // 4. Nhận diện thông minh cho các loại đất khác (không có ngoặc hẹp)
+  // 4. Nhận diện thông minh cho các loại đất khác không có ngoặc hẹp
   let isSmartMatched = false;
-
   const targetWords = queryMucTieu.split(/[\s,;.()/-]+/).filter(w => w.length >= 2);
   const datWords = queryDat.split(/[\s,;.()/-]+/).filter(w => w.length >= 2);
 
@@ -1594,7 +1542,7 @@ const handleThucHienKiemTra = (e) => {
 
   // 6. Tổng hợp tỷ lệ phần trăm
   let sortedZones = Object.keys(rawOverlapScores).sort((a, b) => rawOverlapScores[b] - rawOverlapScores[a]);
-  let dominantZone = sortedZones[0];
+  let dominantZone = sortedZones[0] || 'Đất chưa khai báo chức năng chi tiết';
 
   let displayChucNangParts = [];
   let breakdownTextLines = [];
