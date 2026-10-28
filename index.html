@@ -1414,7 +1414,7 @@ const PolygonPreviewCanvas = ({ polygonsList }) => {
   );
 };
 // =========================================================================
-// 🟢 HÀM XỬ LÝ KIỂM TRA QUY HOẠCH - KHÔNG LẶP TRÙNG, NHẬN DIỆN ĐẦY ĐỦ ĐẤT GIAO THÔNG & GIÁO DỤC
+// 🟢 HÀM XỬ LÝ KIỂM TRA QUY HOẠCH NÂNG CẤP (HOÀN CHỈNH)
 // =========================================================================
 const handleThucHienKiemTra = (e) => {
   if (e && typeof e.preventDefault === 'function') {
@@ -1502,7 +1502,10 @@ const handleThucHienKiemTra = (e) => {
     cy = parsedPolygon[0].y;
   }
 
-    // 1. Phẳng hóa toàn bộ tất cả các vùng chức năng đã khai báo từ Bảng 3
+  // ĐIỂM TRỌNG TÂM KHU ĐẤT
+  const centerPoint = { x: cx, y: cy };
+
+  // 3. Phẳng hóa toàn bộ tất cả các vùng chức năng đã khai báo từ Bảng 3
   let allDeclaredZones = [];
   const targetDoanList = typeof vungChucNangDaKhaiBao !== 'undefined' ? vungChucNangDaKhaiBao : [];
 
@@ -1516,8 +1519,8 @@ const handleThucHienKiemTra = (e) => {
         subPolys.forEach(poly => {
           allDeclaredZones.push({
             tenChucNang: cn.tenChucNang || '',
-            tenQuyHoach: doan.tenQuyHoach || detectedTenQuyHoach,
-            xa: doan.xa || detectedXaName,
+            tenQuyHoach: doan.tenQuyHoach || '',
+            xa: doan.xa || '',
             poly: poly
           });
         });
@@ -1525,7 +1528,7 @@ const handleThucHienKiemTra = (e) => {
     }
   });
 
-  // 2. Tạo tập hợp điểm kiểm tra nội bộ khu đất (lưới 26x26 + Trọng tâm + Tất cả đỉnh)
+  // 4. Tạo tập hợp điểm kiểm tra nội bộ khu đất (lưới 26x26 + Trọng tâm + Tất cả đỉnh)
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
   parsedPolygon.forEach(p => {
     if (p.x < minX) minX = p.x;
@@ -1550,7 +1553,7 @@ const handleThucHienKiemTra = (e) => {
   internalGridPoints.push(centerPoint);
   parsedPolygon.forEach(p => internalGridPoints.push(p));
 
-  // 3. Quét không gian trên TOÀN BỘ các vùng quy hoạch đã khai báo
+  // 5. Quét không gian trên TOÀN BỘ các vùng quy hoạch đã khai báo
   let rawOverlapScores = {};
   let totalValidHits = 0;
 
@@ -1595,12 +1598,13 @@ const handleThucHienKiemTra = (e) => {
     totalValidHits = 1;
   }
 
-  // 4. Tổng hợp tỷ lệ phần trăm
+  // 6. Tổng hợp tỷ lệ phần trăm
   let sortedZones = Object.keys(rawOverlapScores).sort((a, b) => rawOverlapScores[b] - rawOverlapScores[a]);
   let dominantZone = sortedZones[0];
 
   let displayChucNangParts = [];
   let breakdownTextLines = [];
+  let allowedProjectsList = [];
 
   sortedZones.forEach(funcName => {
     const hits = rawOverlapScores[funcName];
@@ -1611,7 +1615,7 @@ const handleThucHienKiemTra = (e) => {
     }
   });
 
-  // 4. Đánh giá sự phù hợp dựa trên loại đất chủ đạo (dominantZone)
+  // 7. Đánh giá sự phù hợp dựa trên loại đất chủ đạo (dominantZone)
   const queryMucTieu = mucTieu.toLowerCase().trim();
   const isResidentialOrCommercialProject = queryMucTieu.includes("dân cư") || 
                                           queryMucTieu.includes("thương mại") || 
@@ -1635,14 +1639,14 @@ const handleThucHienKiemTra = (e) => {
 
   sortedZones.forEach(funcName => {
     const subEval = evaluateProjectSuitability(funcName, mucTieu);
-    if (subEval.loaiCongTrinhPhep) {
+    if (subEval && subEval.loaiCongTrinhPhep) {
       allowedProjectsList = [...new Set([...allowedProjectsList, ...subEval.loaiCongTrinhPhep])];
     }
   });
 
   const formattedXaDisplay = detectedXaName.startsWith('Xã') || detectedXaName.startsWith('P.') || detectedXaName.startsWith('Phường') 
     ? detectedXaName 
-    : `Xã ${detectedXaName}`;
+    : (detectedXaName ? `Xã ${detectedXaName}` : 'Tỉnh Gia Lai');
 
   const statusHeader = evaluation.phuHop
     ? `✅ KẾT LUẬN THẨM ĐỊNH (PHÙ HỢP QUY HOẠCH ƯU TIÊN):`
@@ -1665,7 +1669,7 @@ const handleThucHienKiemTra = (e) => {
     diaDiem: `${formattedXaDisplay}, tỉnh Gia Lai`,
     dienTich: `${totalAreaHa.toFixed(4)} ha (~${(totalAreaHa * 10000).toLocaleString('en-US')} m²)`,
     loaiQuyhoach: detectedTenQuyHoach,
-    chucNangSuDung: displayChucNangParts.join('; '), // Hiển thị tường minh, không lặp
+    chucNangSuDung: displayChucNangParts.join('; '),
     ketLuan: ketLuanLines.join('\n'),
     phuHop: evaluation.phuHop,
     congTrinhPhep: allowedProjectsList
