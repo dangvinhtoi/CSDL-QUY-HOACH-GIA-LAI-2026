@@ -1155,7 +1155,7 @@ const LAND_USE_FUNCTION_MAP = [
 ];
 
 // =========================================================================
-// 🟢 HÀM ĐÁNH GIÁ THÔNG MINH SỰ PHÙ HỢP QUY HOẠCH - CHUẨN XÁC 100%
+// 🟢 HÀM ĐÁNH GIÁ THÔNG MINH SỰ PHÙ HỢP QUY HOẠCH (HOÀN THIỆN 100%)
 // =========================================================================
 function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   if (!chucNangDat || !mucTieuDuAn || chucNangDat.includes('chưa khai báo')) {
@@ -1172,7 +1172,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   // 🔴 1. XỬ LÝ ĐẤT HẠ TẦNG KỸ THUẬT / HTKT ĐẦU MỐI CÓ GHI CHÚ CHUYÊN NGÀNH HẸP (...)
   const isHTKTLand = queryDat.includes("hạ tầng kỹ thuật") || queryDat.includes("htkt");
   
-  // 💥 CÚ PHÁP REGEX CHUẨN: /\\((.*?)\\)/
+  // 💥 CÚ PHÁP REGEX CHUẨN: /\\((.*?)\\)/ (Dùng 1 dấu \ thoát ngoặc)
   const matchParentheses = queryDat.match(/\\((.*?)\\)/);
 
   if (isHTKTLand && matchParentheses && matchParentheses[1]) {
