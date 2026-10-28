@@ -1234,7 +1234,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
 }
  
 // =========================================================================
-// 🟢 HÀM PHÂN TÁCH ĐA VÙNG (MULTI-POLYGON) - XỬ LÝ TRIỆT ĐỂ MỌI ĐỊNH DẠNG TỌA ĐỘ
+// 🟢 HÀM PHÂN TÁCH VÙNG TỌA ĐỘ THÔNG MINH - TỰ ĐỘNG LỌC NHIỄU VÀ GÓI ĐA GIÁC
 // =========================================================================
 const parseSubPolygons = (inputStr) => {
   if (!inputStr || typeof inputStr !== 'string') return [];
@@ -1246,8 +1246,7 @@ const parseSubPolygons = (inputStr) => {
   lines.forEach(line => {
     const trimmed = line.trim();
     
-    // Gặp dòng trống hoặc từ khóa phân vùng thì kết thúc 1 polygon hiện tại
-    if (trimmed === '' || trimmed.toUpperCase().includes('VÙNG') || trimmed.toUpperCase().includes('VUNG')) {
+    if (trimmed === '' || ((trimmed.toUpperCase().startsWith('VÙNG') || trimmed.toUpperCase().startsWith('VUNG')) && !/\d/.test(trimmed))) {
       if (currentPoly.length >= 3) {
         polygons.push(currentPoly);
         currentPoly = [];
@@ -1258,22 +1257,18 @@ const parseSubPolygons = (inputStr) => {
     let x = null, y = null;
     const nums = line.match(/-?\d+(\.\d+)?/g);
     
-    if (nums && nums.length >= 2) {
+    if (trimmed.toUpperCase().includes('X') && trimmed.toUpperCase().includes('Y') && nums && nums.length >= 2) {
+      const pX = line.split(/X[\s=:]+/i);
+      if (pX.length > 1) x = parseFloat(pX[1].trim().split(/[\s,]+/)[0]);
+      const pY = line.split(/Y[\s=:]+/i);
+      if (pY.length > 1) y = parseFloat(pY[1].trim().split(/[\s,]+/)[0]);
+    } else if (nums && nums.length >= 2) {
       x = parseFloat(nums[0]);
       y = parseFloat(nums[1]);
     }
     
     if (x !== null && y !== null && !isNaN(x) && !isNaN(y)) {
       if (Math.abs(x - y) < 0.001) y = y + 1.0;
-      
-      // Nếu điểm mới trùng với điểm đầu tiên -> Khép kín đa giác và tách ô đất tiếp theo
-      if (currentPoly.length > 0 && Math.abs(currentPoly[0].x - x) < 0.05 && Math.abs(currentPoly[0].y - y) < 0.05) {
-        if (currentPoly.length >= 3) {
-          polygons.push(currentPoly);
-          currentPoly = [];
-        }
-      }
-      
       currentPoly.push({ x, y });
     }
   });
@@ -1282,11 +1277,117 @@ const parseSubPolygons = (inputStr) => {
     polygons.push(currentPoly);
   }
   
-  return polygons;
+  // 🟢 LỌC BỎ CÁC ĐA GIÁC QUÁ NHỎ (NHIỄU HÌNH HỌC TỪ CÁC HATCH LI TI TRONG CAD)
+  const validPolygons = polygons.filter(poly => {
+    let area = 0;
+    const n = poly.length;
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n;
+      area += poly[i].x * poly[j].y;
+      area -= poly[j].x * poly[i].y;
+    }
+    area = Math.abs(area) / 2.0;
+    // Chỉ giữ lại các vùng có diện tích thực tế > 1 mét vuông (bỏ qua các điểm rác li ti)
+    return area > 1.0;
+  });
+  
+  return validPolygons.length > 0 ? validPolygons : polygons;
 };
-
 // =========================================================================
-// 🟢 THUẬT TOÁN KIỂM TRA QUY HOẠCH NÂNG CẤP - QUÉT TOÀN DIỆN, KHÔNG BỎ SÓT 100%
+// 🟢 2. HÀM TẠO ĐIỂM KIỂM TRA CHUẨN NỘI BỘ (TRÁNH LIẾM MÉP BIÊN VÙNG LÂN CẬN)
+// =========================================================================
+const generateInternalTestPoints = (polygonPoints) => {
+  if (!polygonPoints || polygonPoints.length < 3) return [];
+
+  const centroidX = polygonPoints.reduce((sum, p) => sum + p.x, 0) / polygonPoints.length;
+  const centroidY = polygonPoints.reduce((sum, p) => sum + p.y, 0) / polygonPoints.length;
+  const centroidPt = { x: centroidX, y: centroidY };
+
+  const testPoints = [centroidPt];
+
+  // Tạo các điểm hướng tâm (50% và 75% về phía trọng tâm) nằm thuần túy bên trong ranh giới
+  polygonPoints.forEach(pt => {
+    testPoints.push({ x: (pt.x + centroidX) / 2, y: (pt.y + centroidY) / 2 });
+    testPoints.push({ x: (pt.x * 0.25 + centroidX * 0.75), y: (pt.y * 0.25 + centroidY * 0.75) });
+  });
+
+  return testPoints;
+};
+// =========================================================================
+// 🟢 HÀM MÔ PHỎNG HÌNH HỌC KHÔNG GIAN - CHỈ VẼ VIÊN RANH GIỚI CHUẨN XÁC
+// =========================================================================
+const PolygonPreviewCanvas = ({ polygonsList }) => {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (!polygonsList || polygonsList.length === 0) {
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '12px Inter, sans-serif';
+      ctx.fillText('Chưa có dữ liệu tọa độ hợp lệ', 35, 75);
+      return;
+    }
+
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    polygonsList.forEach(poly => {
+      if (poly && poly.length >= 3) {
+        poly.forEach(pt => {
+          if (pt.x < minX) minX = pt.x;
+          if (pt.x > maxX) maxX = pt.x;
+          if (pt.y < minY) minY = pt.y;
+          if (pt.y > maxY) maxY = pt.y;
+        });
+      }
+    });
+
+    if (minX === Infinity || maxX === -Infinity) {
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '12px Inter, sans-serif';
+      ctx.fillText('Đang cập nhật tọa độ...', 45, 75);
+      return;
+    }
+
+    const padding = 15;
+    const cWidth = canvas.width - padding * 2;
+    const cHeight = canvas.height - padding * 2;
+    const rangeX = maxX - minX || 1;
+    const rangeY = maxY - minY || 1;
+    const scale = Math.min(cWidth / rangeX, cHeight / rangeY);
+
+    const colors = ['#2563eb', '#16a34a', '#d97706', '#dc2626', '#7c3aed', '#0891b2'];
+
+    polygonsList.forEach((poly, pIdx) => {
+      if (!poly || poly.length < 3) return;
+      ctx.beginPath();
+      poly.forEach((pt, idx) => {
+        const cx = padding + (pt.x - minX) * scale + (cWidth - rangeX * scale) / 2;
+        const cy = canvas.height - (padding + (pt.y - minY) * scale + (cHeight - rangeY * scale) / 2);
+        if (idx === 0) ctx.moveTo(cx, cy);
+        else ctx.lineTo(cx, cy);
+      });
+      ctx.closePath();
+      // Chỉ tô màu nhẹ và viền rõ nét biên ranh giới
+      ctx.fillStyle = colors[pIdx % colors.length] + '22';
+      ctx.fill();
+      ctx.strokeStyle = colors[pIdx % colors.length];
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    });
+  }, [polygonsList]);
+
+  return (
+    <div className="flex flex-col items-center bg-slate-100 p-2 rounded-lg border border-slate-300 shadow-sm">
+      <canvas ref={canvasRef} width="200" height="140" className="bg-white rounded shadow-inner"></canvas>
+      <span className="text-[10px] text-slate-500 mt-1 font-semibold">Mô phỏng ranh giới khu đất</span>
+    </div>
+  );
+};
+// =========================================================================
+// 🟢 HÀM XỬ LÝ KIỂM TRA QUY HOẠCH - KHÔNG LẶP TRÙNG, NHẬN DIỆN ĐẦY ĐỦ ĐẤT GIAO THÔNG & GIÁO DỤC
 // =========================================================================
 const handleThucHienKiemTra = (e) => {
   if (e && typeof e.preventDefault === 'function') {
@@ -1391,8 +1492,7 @@ const handleThucHienKiemTra = (e) => {
     if (p.y > maxY) maxY = p.y;
   });
 
-  // 🟢 NÂNG CẤP MẬT ĐỘ QUÉT LƯỚI LÊN 40x40 = 1,600 ĐIỂM MẪU (Đảm bảo vét cạn toàn diện, không bỏ sót bất kỳ ô đất nhỏ nào)
-  const gridSteps = 40;
+  const gridSteps = 26;
   let internalGridPoints = [];
   const stepX = (maxX - minX) / gridSteps;
   const stepY = (maxY - minY) / gridSteps;
@@ -1405,12 +1505,7 @@ const handleThucHienKiemTra = (e) => {
       }
     }
   }
-  
-  // Bổ sung thêm các điểm đặc biệt để tối ưu hóa độ chính xác biên ranh giới
   internalGridPoints.push(centerPoint, parsedPolygon[0]);
-  parsedPolygon.forEach(pt => {
-    internalGridPoints.push({ x: (pt.x + centerPoint.x) / 2, y: (pt.y + centerPoint.y) / 2 });
-  });
 
   const targetDoanList = typeof vungChucNangDaKhaiBao !== 'undefined' ? vungChucNangDaKhaiBao : [];
 
@@ -1438,7 +1533,7 @@ const handleThucHienKiemTra = (e) => {
 
   const activeDoans = matchedDoanVung ? [matchedDoanVung] : targetDoanList;
 
-  // 3. THUẬT TOÁN QUÉT KHÔNG GIAN ĐA TẦNG - NHẬN DIỆN CHUẨN XÁC 100% TỪNG LOẠI ĐẤT
+  // 3. Quét không gian và chuẩn hóa tên gọi để CHỐNG LẶP TRÙNG TÊN ĐẤT
   internalGridPoints.forEach(pt => {
     let matchedFunc = null;
     for (let doan of activeDoans) {
@@ -1457,7 +1552,7 @@ const handleThucHienKiemTra = (e) => {
       if (matchedFunc) break;
     }
 
-    // Chuẩn hóa tên gọi và phân loại chính xác các chức năng đất theo đồ án
+    // Làm sạch và chuẩn hóa tên chức năng (gom các biến thể lặp)
     let cleanFuncName = 'Đất chưa khai báo chức năng chi tiết (Giao thông / Hạ tầng)';
     if (matchedFunc) {
       const lower = matchedFunc.toLowerCase();
@@ -1467,14 +1562,10 @@ const handleThucHienKiemTra = (e) => {
         cleanFuncName = 'Đất ở';
       } else if (lower.includes('giáo dục') || lower.includes('trường học')) {
         cleanFuncName = 'Đất giáo dục (trường học)';
-      } else if (lower.includes('công cộng đô thị') || lower.includes('công cộng')) {
-        cleanFuncName = 'Đất công cộng đô thị';
       } else if (lower.includes('văn hóa') || lower.includes('thể thao')) {
         cleanFuncName = 'Đất văn hóa, thể dục thể thao, sân vận động';
       } else if (lower.includes('tôn giáo')) {
         cleanFuncName = 'Đất tôn giáo';
-      } else if (lower.includes('mặt nước') || lower.includes('thủy sản') || lower.includes('sông')) {
-        cleanFuncName = 'Đất nuôi trồng thủy sản';
       } else {
         cleanFuncName = matchedFunc.trim();
       }
@@ -1489,13 +1580,13 @@ const handleThucHienKiemTra = (e) => {
     totalValidHits = 1;
   }
 
-  // Tổng hợp kết quả không trùng lặp
+  // Gom nhóm tổng hợp tuyệt đối không để lặp tên
   let zoneOverlapScores = {};
   Object.keys(rawOverlapScores).forEach(key => {
     zoneOverlapScores[key] = (zoneOverlapScores[key] || 0) + rawOverlapScores[key];
   });
 
-  // Sắp xếp tỷ lệ diện tích giảm dần (Loại đất chiếm diện tích lớn nhất đứng đầu tiên)
+  // Sắp xếp tỷ lệ diện tích giảm dần (Loại đất chiếm diện tích lớn nhất đứng đầu)
   let sortedZones = Object.keys(zoneOverlapScores).sort((a, b) => zoneOverlapScores[b] - zoneOverlapScores[a]);
   let dominantZone = sortedZones[0];
 
@@ -1551,7 +1642,7 @@ const handleThucHienKiemTra = (e) => {
 
   let ketLuanLines = [statusHeader];
   ketLuanLines.push(`- Tổng diện tích ranh giới: ${totalAreaHa.toFixed(4)} ha.`);
-  ketLuanLines.push(`- Cơ cấu phân bổ quy hoạch tại khu vực ranh giới dự án (Quét toàn diện 100% diện tích):`);
+  ketLuanLines.push(`- Cơ cấu phân bổ quy hoạch tại khu vực ranh giới dự án (Ưu tiên xét từ loại đất chiếm tỷ lệ lớn nhất):`);
   breakdownTextLines.forEach(line => ketLuanLines.push(`  ${line}`));
   
   if (evaluation.phuHop) {
@@ -1566,7 +1657,7 @@ const handleThucHienKiemTra = (e) => {
     diaDiem: `${formattedXaDisplay}, tỉnh Gia Lai`,
     dienTich: `${totalAreaHa.toFixed(4)} ha (~${(totalAreaHa * 10000).toLocaleString('en-US')} m²)`,
     loaiQuyhoach: detectedTenQuyHoach,
-    chucNangSuDung: displayChucNangParts.join('; '),
+    chucNangSuDung: displayChucNangParts.join('; '), // Hiển thị tường minh, không lặp
     ketLuan: ketLuanLines.join('\n'),
     phuHop: evaluation.phuHop,
     congTrinhPhep: allowedProjectsList
