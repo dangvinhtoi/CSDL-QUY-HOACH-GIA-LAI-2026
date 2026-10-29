@@ -1099,9 +1099,25 @@ const LAND_USE_FUNCTION_MAP = [
 
   // --- [V] NHÓM ĐẤT DI TÍCH, TÔN GIÁO & QUỐC PHÒNG AN NINH ---
   {
-    nhom: "Di tích & Tôn giáo",
-    loaiChucNang: "Đất di tích, tôn giáo",
-    congTrinhDuocPhep: ["chùa", "nhà thờ", "thánh thất", "cơ sở tín ngưỡng", "công trình di tích lịch sử - văn hóa", "đình", "đền", "miếu", "phủ", "am", "từ đường"]
+    nhom: "Đất di tích, tôn giáo, an ninh, quốc phòng",
+    loaiChucNang: "Đất tôn giáo",
+    congTrinhDuocPhep: [
+      "chùa", "nhà thờ", "đền", "đình", "thánh thất", "thánh đường", 
+      "tu viện", "học viện tôn giáo", "trụ sở của tổ chức tôn giáo", 
+      "tổ chức tôn giáo trực thuộc", "nhà ăn", "nhà khách", 
+      "khu vực sinh hoạt của chức sắc", "tu sĩ", "nhà kho", 
+      "công trình phục vụ trực tiếp cho đời sống tôn giáo", "công trình tín ngưỡng"
+    ]
+  },
+  {
+    nhom: "Đất di tích, tôn giáo, an ninh, quốc phòng",
+    loaiChucNang: "Đất di tích",
+    congTrinhDuocPhep: ["công trình di tích lịch sử - văn hóa", "công trình danh lam thắng cảnh", "các công trình phục vụ việc bảo vệ và phát huy giá trị di tích như: nhà trưng bày, nhà đón tiếp khách tham quan, nhà vệ sinh công cộng, bãi đỗ xe, đường đi bộ, cây xanh cảnh quan và các công trình hạ tầng kỹ thuật hỗ trợ du lịch"]
+  },
+   {
+    nhom: "Đất di tích, tôn giáo, an ninh, quốc phòng",
+    loaiChucNang: "Đất tín ngưỡng",
+    congTrinhDuocPhep: ["đình, đền, miếu, am, từ đường, nhà thờ họ, phủ, điện thờ, nhà bảo tín và các công trình tương tự khác phục vụ cho hoạt động tín ngưỡng"]
   },
   {
     nhom: "Quốc phòng & An ninh",
@@ -1303,7 +1319,52 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
     }
   }
 
-  // 🔴 5. XỬ LÝ ĐẤT HỖN HỢP
+// 🔴 5. XỬ LÝ CHUYÊN NGÀNH: ĐẤT TÔN GIÁO
+  if (queryDat === "đất tôn giáo" || queryDat.includes("đất tôn giáo")) {
+    const allowedProjects = LAND_USE_FUNCTION_MAP.find(i => i.loaiChucNang === "Đất tôn giáo")?.congTrinhDuocPhep || [];
+    const keywords = ["chùa", "nhà thờ", "đền", "đình", "thánh thất", "thánh đường", "tu viện", "học viện", "tôn giáo", "chức sắc", "tu sĩ", "nhà khách", "nhà ăn"];
+    const isMatched = keywords.some(kw => queryMucTieu.includes(kw));
+
+    return {
+      phuHop: isMatched,
+      loaiCongTrinhPhep: allowedProjects,
+      ketLuan: isMatched
+        ? `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch Đất tôn giáo (phục vụ sinh hoạt tôn giáo và các công trình phụ trợ hợp pháp).`
+        : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch Đất tôn giáo. Chức năng này chỉ cho phép xây dựng: ${allowedProjects.join(", ")}.`
+    };
+  }
+
+  // 🔴 6. XỬ LÝ CHUYÊN NGÀNH: ĐẤT DI TÍCH
+  if (queryDat === "đất di tích" || queryDat.includes("đất di tích")) {
+    const allowedProjects = LAND_USE_FUNCTION_MAP.find(i => i.loaiChucNang === "Đất di tích")?.congTrinhDuocPhep || [];
+    const keywords = ["di tích", "lịch sử", "văn hóa", "danh lam", "thắng cảnh", "nhà trưng bày", "đón tiếp", "tham quan", "bãi đỗ xe", "đường đi bộ"];
+    const isMatched = keywords.some(kw => queryMucTieu.includes(kw));
+
+    return {
+      phuHop: isMatched,
+      loaiCongTrinhPhep: allowedProjects,
+      ketLuan: isMatched
+        ? `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch Đất di tích (phục vụ bảo tồn, phát huy giá trị di tích và công trình hỗ trợ tham quan).`
+        : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch Đất di tích. Chức năng này chỉ cho phép: ${allowedProjects.join(", ")}.`
+    };
+  }
+
+  // 🔴 7. XỬ LÝ CHUYÊN NGÀNH: ĐẤT TÍN NGƯỠNG
+  if (queryDat === "đất tín ngưỡng" || queryDat.includes("đất tín ngưỡng")) {
+    const allowedProjects = LAND_USE_FUNCTION_MAP.find(i => i.loaiChucNang === "Đất tín ngưỡng")?.congTrinhDuocPhep || [];
+    const keywords = ["tín ngưỡng", "đình", "đền", "miếu", "am", "từ đường", "nhà thờ họ", "phủ", "điện thờ", "nhà bảo tín"];
+    const isMatched = keywords.some(kw => queryMucTieu.includes(kw));
+
+    return {
+      phuHop: isMatched,
+      loaiCongTrinhPhep: allowedProjects,
+      ketLuan: isMatched
+        ? `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch Đất tín ngưỡng (phục vụ cho các hoạt động tín ngưỡng dân gian).`
+        : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch Đất tín ngưỡng. Chức năng này chỉ cho phép: ${allowedProjects.join(", ")}.`
+    };
+  }
+  
+  // 🔴 8. XỬ LÝ ĐẤT HỖN HỢP
   const isMixedLand = queryDat.includes("đất hỗn hợp") || queryDat.includes("hỗn hợp") || queryDat.includes("nhà ở và dịch vụ");
   if (isMixedLand) {
     const isForbiddenProject = queryMucTieu.includes("nhà máy") || queryMucTieu.includes("xưởng") || queryMucTieu.includes("trang trại") || queryMucTieu.includes("nghĩa trang") || queryMucTieu.includes("nghĩa địa") || queryMucTieu.includes("quốc phòng") || queryMucTieu.includes("an ninh");
@@ -1321,14 +1382,14 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
     };
   }
 
-  // 6. ĐỐI CHIẾU DANH MỤC LỚN CHO CÁC LOẠI ĐẤT KHÁC
+  // 9. ĐỐI CHIẾU DANH MỤC LỚN CHO CÁC LOẠI ĐẤT KHÁC
   const matchedLand = typeof LAND_USE_FUNCTION_MAP !== 'undefined' ? LAND_USE_FUNCTION_MAP.find(item =>
     queryDat === item.loaiChucNang.toLowerCase() ||
     queryDat.includes(item.loaiChucNang.toLowerCase()) ||
     item.loaiChucNang.toLowerCase().includes(queryDat)
   ) : null;
 
-  const congTrinhPhep = matchedLand ? matchedLand.congTrinhDuocPhep : ["Công trình theo chức năng quy hoạch", "Công trình hạ tầng kỹ thuật"];
+  const congTrinhPhep = matchedLand ? matchedLand.congTrinhDuocPhep : ["Công trình theo chức năng quy hoạch"];
   const tenChucNangDat = matchedLand ? matchedLand.loaiChucNang : chucNangDat;
 
   let isSmartMatched = false;
