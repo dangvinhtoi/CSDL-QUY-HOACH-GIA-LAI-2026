@@ -1155,7 +1155,7 @@ const LAND_USE_FUNCTION_MAP = [
 ];
 
 // =========================================================================
-// 🟢 HÀM ĐÁNH GIÁ SỰ PHÙ HỢP QUY HOẠCH - SIÊU CHẶT CHẼ CHO ĐẤT QUỐC PHÒNG & AN NINH
+// 🟢 HÀM ĐÁNH GIÁ SỰ PHÙ HỢP QUY HOẠCH - TÁCH BIỆT TUYỆT ĐỐI ĐẤT QUỐC PHÒNG & AN NINH
 // =========================================================================
 function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   if (!chucNangDat || !mucTieuDuAn || chucNangDat.includes('chưa khai báo')) {
@@ -1169,13 +1169,23 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   const queryDat = chucNangDat.toLowerCase().trim();
   const queryMucTieu = mucTieuDuAn.toLowerCase().trim();
 
-  // 🔴 1. XỬ LÝ CHUYÊN NGÀNH: ĐẤT QUỐC PHÒNG
+  // 🔴 1. XỬ LÝ CHUYÊN NGÀNH: ĐẤT QUỐC PHÒNG (TUYỆT ĐỐI KHÔNG BAO GỒM AN NINH / CÔNG AN)
   const isNationalDefenseLand = queryDat.includes("quốc phòng") || queryDat.includes("ban chqs");
   if (isNationalDefenseLand) {
     const allowedDefenseProjects = [
       "Công trình quân sự", "Doanh trại quân đội", "Cơ sở quốc phòng", 
-      "Thao trường", "Trường bắn", "Trụ sở Ban CHQS", "Khu 	tập huấn quân sự", "Công trình quốc phòng an ninh"
+      "Thao trường", "Trường bắn", "Trụ sở Ban CHQS", "Khu tập huấn quân sự"
     ];
+
+    // Kiểm tra nếu mục tiêu dự án có chứa từ khóa an ninh / công an / PCCC -> Không phù hợp trên đất quốc phòng
+    const isSecurityProject = ["an ninh", "công an", "trụ sở công an", "cảnh sát", "pccc", "phòng cháy", "trại giam"].some(kw => queryMucTieu.includes(kw));
+    if (isSecurityProject) {
+      return {
+        phuHop: false,
+        loaiCongTrinhPhep: allowedDefenseProjects,
+        ketLuan: `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch ${chucNangDat}. Đất quốc phòng và Đất an ninh là hai loại đất độc lập; các công trình an ninh, công an hoặc PCCC thuộc thẩm quyền của Đất an ninh, tuyệt đối không được bố trí trên đất quốc phòng.`
+      };
+    }
 
     const defenseKeywords = [
       "quốc phòng", "quân sự", "thao trường", "trường bắn", "doanh trại", 
@@ -1189,20 +1199,30 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
       loaiCongTrinhPhep: allowedDefenseProjects,
       ketLuan: isDefenseMatched
         ? `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch ${chucNangDat} (phục vụ mục đích quân sự, quốc phòng).`
-        : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch ${chucNangDat}. Khu vực này là đất quốc phòng chuyên biệt, tuyệt đối không cho phép xây dựng các công trình hạ tầng kỹ thuật dân dụng, trạm cấp nước, nhà ở hay thương mại. Chỉ cho phép: ${allowedDefenseProjects.join(", ")}.`
+        : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch ${chucNangDat}. Khu vực này là đất quốc phòng chuyên biệt, chỉ cho phép xây dựng: ${allowedDefenseProjects.join(", ")}.`
     };
   }
 
-  // 🔴 2. XỬ LÝ CHUYÊN NGÀNH: ĐẤT AN NINH
+  // 🔴 2. XỬ LÝ CHUYÊN NGÀNH: ĐẤT AN NINH (DÀNH RIÊNG CHO NGÀNH CÔNG AN)
   const isSecurityLand = queryDat.includes("an ninh") || queryDat.includes("công an");
   if (isSecurityLand) {
     const allowedSecurityProjects = [
       "Trụ sở công an", "Công trình an ninh", "Trại giam", "Trại tạm giam", 
-      "Cơ sở giữ trẻ nghiệp vụ an ninh", "Doanh trại công an", "Đồn công an"
+      "Doanh trại công an", "Đồn công an", "Phòng cảnh sát", "Trụ sở PCCC"
     ];
 
+    // Kiểm tra nếu mục tiêu dự án là quân sự / quốc phòng thuần túy -> Không phù hợp trên đất an ninh
+    const isDefenseProject = ["quốc phòng", "quân sự", "thao trường", "trường bắn", "ban chqs"].some(kw => queryMucTieu.includes(kw));
+    if (isDefenseProject) {
+      return {
+        phuHop: false,
+        loaiCongTrinhPhep: allowedSecurityProjects,
+        ketLuan: `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch ${chucNangDat}. Đất an ninh là quỹ đất chuyên dùng dành riêng cho ngành công an, không bố trí cho các công trình quốc phòng (quân sự).`
+      };
+    }
+
     const securityKeywords = [
-      "an ninh", "công an", "trụ sở công an", "trại giam", "trại tạm giam", "đồn công an", "phòng cảnh sát"
+      "an ninh", "công an", "trụ sở công an", "trại giam", "trại tạm giam", "đồn công an", "phòng cảnh sát", "pccc"
     ];
 
     const isSecurityMatched = securityKeywords.some(kw => queryMucTieu.includes(kw));
@@ -1211,12 +1231,12 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
       phuHop: isSecurityMatched,
       loaiCongTrinhPhep: allowedSecurityProjects,
       ketLuan: isSecurityMatched
-        ? `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch ${chucNangDat}.`
+        ? `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch ${chucNangDat} (phục vụ mục đích an ninh, ngành công an).`
         : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch ${chucNangDat}. Khu vực này là đất an ninh, chỉ cho phép các công trình: ${allowedSecurityProjects.join(", ")}.`
     };
   }
 
-  // 🔴 3. XỬ LÝ ĐẤT HẠ TẦNG KỸ THUẬT / HTKT ĐẦU MỐI CÓ GHI CHÚ CHUYÊN NGÀNH HẸP (...)
+  // 🔴 3. XỬ LÝ ĐẤT HẠ TẦNG KỸ THUẬT CÓ GHI CHÚ CHUYÊN NGÀNH
   const isHTKTLand = queryDat.includes("hạ tầng kỹ thuật") || queryDat.includes("htkt");
   const matchParentheses = queryDat.match(/\((.*?)\)/);
 
@@ -1237,7 +1257,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
         loaiCongTrinhPhep: allowedCemeteryProjects,
         ketLuan: isCemeteryMatched
           ? `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch ${chucNangDat}.`
-          : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch ${chucNangDat} (khu vực định hướng chuyên biệt cho nghĩa trang, không cho phép xây dựng công trình dân dụng hay hạ tầng khác).`
+          : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch ${chucNangDat} (khu vực định hướng chuyên biệt cho nghĩa trang).`
       };
     }
   }
@@ -1245,7 +1265,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   // 🔴 4. XỬ LÝ ĐẤT HỖN HỢP
   const isMixedLand = queryDat.includes("đất hỗn hợp") || queryDat.includes("hỗn hợp") || queryDat.includes("nhà ở và dịch vụ");
   if (isMixedLand) {
-    const isForbiddenProject = queryMucTieu.includes("nhà máy") || queryMucTieu.includes("xưởng") || queryMucTieu.includes("trang trại") || queryMucTieu.includes("nghĩa trang") || queryMucTieu.includes("nghĩa địa") || queryMucTieu.includes("quốc phòng");
+    const isForbiddenProject = queryMucTieu.includes("nhà máy") || queryMucTieu.includes("xưởng") || queryMucTieu.includes("trang trại") || queryMucTieu.includes("nghĩa trang") || queryMucTieu.includes("nghĩa địa") || queryMucTieu.includes("quốc phòng") || queryMucTieu.includes("an ninh");
     if (isForbiddenProject) {
       return {
         phuHop: false,
@@ -1260,7 +1280,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
     };
   }
 
-  // 5. ĐỐI CHIẾU DANH MỤC LỚN LAND_USE_FUNCTION_MAP CHO CÁC LOẠI ĐẤT KHÁC
+  // 5. ĐỐI CHIẾU DANH MỤC LỚN CHO CÁC LOẠI ĐẤT KHÁC
   const matchedLand = typeof LAND_USE_FUNCTION_MAP !== 'undefined' ? LAND_USE_FUNCTION_MAP.find(item =>
     queryDat === item.loaiChucNang.toLowerCase() ||
     queryDat.includes(item.loaiChucNang.toLowerCase()) ||
