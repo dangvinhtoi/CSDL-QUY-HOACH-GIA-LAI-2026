@@ -1155,7 +1155,7 @@ const LAND_USE_FUNCTION_MAP = [
 ];
 
 // =========================================================================
-// 🟢 HÀM ĐÁNH GIÁ SỰ PHÙ HỢP QUY HOẠCH - CHUẨN XÁC DANH MỤC CÔNG TRÌNH 100%
+// 🟢 HÀM ĐÁNH GIÁ SỰ PHÙ HỢP QUY HOẠCH - SIÊU CHẶT CHẼ CHO ĐẤT QUỐC PHÒNG & AN NINH
 // =========================================================================
 function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   if (!chucNangDat || !mucTieuDuAn || chucNangDat.includes('chưa khai báo')) {
@@ -1169,71 +1169,83 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   const queryDat = chucNangDat.toLowerCase().trim();
   const queryMucTieu = mucTieuDuAn.toLowerCase().trim();
 
-  // 1. XỬ LÝ ĐẤT HẠ TẦNG KỸ THUẬT / HTKT ĐẦU MỐI CÓ GHI CHÚ CHUYÊN NGÀNH HẸP (...)
+  // 🔴 1. XỬ LÝ CHUYÊN NGÀNH: ĐẤT QUỐC PHÒNG
+  const isNationalDefenseLand = queryDat.includes("quốc phòng") || queryDat.includes("ban chqs");
+  if (isNationalDefenseLand) {
+    const allowedDefenseProjects = [
+      "Công trình quân sự", "Doanh trại quân đội", "Cơ sở quốc phòng", 
+      "Thao trường", "Trường bắn", "Trụ sở Ban CHQS", "Khu 	tập huấn quân sự", "Công trình quốc phòng an ninh"
+    ];
+
+    const defenseKeywords = [
+      "quốc phòng", "quân sự", "thao trường", "trường bắn", "doanh trại", 
+      "ban chqs", "quân đội", "tập huấn quân sự", "trụ sở ban chỉ huy quân sự"
+    ];
+
+    const isDefenseMatched = defenseKeywords.some(kw => queryMucTieu.includes(kw));
+
+    return {
+      phuHop: isDefenseMatched,
+      loaiCongTrinhPhep: allowedDefenseProjects,
+      ketLuan: isDefenseMatched
+        ? `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch ${chucNangDat} (phục vụ mục đích quân sự, quốc phòng).`
+        : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch ${chucNangDat}. Khu vực này là đất quốc phòng chuyên biệt, tuyệt đối không cho phép xây dựng các công trình hạ tầng kỹ thuật dân dụng, trạm cấp nước, nhà ở hay thương mại. Chỉ cho phép: ${allowedDefenseProjects.join(", ")}.`
+    };
+  }
+
+  // 🔴 2. XỬ LÝ CHUYÊN NGÀNH: ĐẤT AN NINH
+  const isSecurityLand = queryDat.includes("an ninh") || queryDat.includes("công an");
+  if (isSecurityLand) {
+    const allowedSecurityProjects = [
+      "Trụ sở công an", "Công trình an ninh", "Trại giam", "Trại tạm giam", 
+      "Cơ sở giữ trẻ nghiệp vụ an ninh", "Doanh trại công an", "Đồn công an"
+    ];
+
+    const securityKeywords = [
+      "an ninh", "công an", "trụ sở công an", "trại giam", "trại tạm giam", "đồn công an", "phòng cảnh sát"
+    ];
+
+    const isSecurityMatched = securityKeywords.some(kw => queryMucTieu.includes(kw));
+
+    return {
+      phuHop: isSecurityMatched,
+      loaiCongTrinhPhep: allowedSecurityProjects,
+      ketLuan: isSecurityMatched
+        ? `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch ${chucNangDat}.`
+        : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch ${chucNangDat}. Khu vực này là đất an ninh, chỉ cho phép các công trình: ${allowedSecurityProjects.join(", ")}.`
+    };
+  }
+
+  // 🔴 3. XỬ LÝ ĐẤT HẠ TẦNG KỸ THUẬT / HTKT ĐẦU MỐI CÓ GHI CHÚ CHUYÊN NGÀNH HẸP (...)
   const isHTKTLand = queryDat.includes("hạ tầng kỹ thuật") || queryDat.includes("htkt");
   const matchParentheses = queryDat.match(/\((.*?)\)/);
 
   if (isHTKTLand && matchParentheses && matchParentheses[1]) {
     const insideNote = matchParentheses[1].trim().toLowerCase();
     
-    // ➔ CHUYÊN NGÀNH: NGHĨA TRANG / NGHĨA ĐỊA / MAI TÁNG / CẢI TÁNG
     if (insideNote.includes("nghĩa trang") || insideNote.includes("nghĩa địa") || insideNote.includes("cải táng") || insideNote.includes("mai táng") || insideNote.includes("hỏa táng")) {
       const allowedCemeteryProjects = [
         "Nghĩa trang", "Nghĩa địa", "Khu cải táng", "Khu mai táng", 
         "Nhà tang lễ", "Cơ sở hỏa táng", "Nhà hỏa táng",
-        "Nhà quản lý nghĩa trang", "Công trình dịch vụ hỗ trợ nghĩa trang", 
-        "Hoa viên nghĩa trang", "Bãi đỗ xe nghĩa trang"
+        "Nhà quản lý nghĩa trang", "Công trình dịch vụ hỗ trợ nghĩa trang", "Hoa viên nghĩa trang"
       ];
-
-      const cemeteryKeywords = [
-        "nghĩa trang", "nghĩa địa", "cải táng", "mai táng", "hỏa táng", "tang lễ", 
-        "quản lý nghĩa trang", "dịch vụ nghĩa trang", "an táng", "mộ", "nhà quàn", "hoa viên"
-      ];
-
+      const cemeteryKeywords = ["nghĩa trang", "nghĩa địa", "cải táng", "mai táng", "hỏa táng", "tang lễ", "an táng", "mộ"];
       const isCemeteryMatched = cemeteryKeywords.some(kw => queryMucTieu.includes(kw));
 
       return {
         phuHop: isCemeteryMatched,
-        loaiCongTrinhPhep: allowedCemeteryProjects, // 🟢 Đã gán đúng danh mục nghĩa trang
+        loaiCongTrinhPhep: allowedCemeteryProjects,
         ketLuan: isCemeteryMatched
-          ? `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch ${chucNangDat} (cho phép xây dựng các công trình nghĩa trang, nhà tang lễ, hỏa táng và dịch vụ hỗ trợ).`
-          : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch ${chucNangDat}. Khu vực này đã được định hướng chuyên biệt cho nghĩa trang, chỉ cho phép xây dựng các công trình: ${allowedCemeteryProjects.join(", ")}.`
-      };
-    }
-
-    // ➔ CHUYÊN NGÀNH: CẤP ĐIỆN / TRẠM BIẾN ÁP
-    if (insideNote.includes("trạm biến áp") || insideNote.includes("tuyến điện") || insideNote.includes("cấp điện")) {
-      const allowedPowerProjects = ["Trạm biến áp", "Tuyến đường dây điện", "Trạm ngắt điện", "Công trình cấp điện", "Nhà điều hành trạm điện"];
-      const isPowerMatched = ["trạm biến áp", "điện", "biến áp", "đường dây", "cấp điện"].some(kw => queryMucTieu.includes(kw));
-
-      return {
-        phuHop: isPowerMatched,
-        loaiCongTrinhPhep: allowedPowerProjects,
-        ketLuan: isPowerMatched
           ? `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch ${chucNangDat}.`
-          : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch ${chucNangDat}. Khu vực này chỉ cho phép các công trình cấp điện: ${allowedPowerProjects.join(", ")}.`
-      };
-    }
-
-    // ➔ CHUYÊN NGÀNH: XỬ LÝ CHẤT THẢI / RÁC THẢI
-    if (insideNote.includes("rác") || insideNote.includes("chất thải") || insideNote.includes("bãi chôn lấp")) {
-      const allowedWasteProjects = ["Khu xử lý chất thải", "Nhà máy xử lý rác", "Bãi chôn lấp rác", "Trạm trung chuyển rác", "Nhà điều hành khu xử lý rác"];
-      const isWasteMatched = ["rác", "chất thải", "chôn lấp", "xử lý rác", "phế thải"].some(kw => queryMucTieu.includes(kw));
-
-      return {
-        phuHop: isWasteMatched,
-        loaiCongTrinhPhep: allowedWasteProjects,
-        ketLuan: isWasteMatched
-          ? `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch ${chucNangDat}.`
-          : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch ${chucNangDat}. Khu vực này chỉ cho phép các công trình xử lý chất thải: ${allowedWasteProjects.join(", ")}.`
+          : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch ${chucNangDat} (khu vực định hướng chuyên biệt cho nghĩa trang, không cho phép xây dựng công trình dân dụng hay hạ tầng khác).`
       };
     }
   }
 
-  // 2. XỬ LÝ ĐẤT HỖN HỢP
+  // 🔴 4. XỬ LÝ ĐẤT HỖN HỢP
   const isMixedLand = queryDat.includes("đất hỗn hợp") || queryDat.includes("hỗn hợp") || queryDat.includes("nhà ở và dịch vụ");
   if (isMixedLand) {
-    const isForbiddenProject = queryMucTieu.includes("nhà máy") || queryMucTieu.includes("xưởng") || queryMucTieu.includes("trang trại") || queryMucTieu.includes("nghĩa trang") || queryMucTieu.includes("nghĩa địa");
+    const isForbiddenProject = queryMucTieu.includes("nhà máy") || queryMucTieu.includes("xưởng") || queryMucTieu.includes("trang trại") || queryMucTieu.includes("nghĩa trang") || queryMucTieu.includes("nghĩa địa") || queryMucTieu.includes("quốc phòng");
     if (isForbiddenProject) {
       return {
         phuHop: false,
@@ -1248,7 +1260,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
     };
   }
 
-  // 3. ĐỐI CHIẾU DANH MỤC LỚN LAND_USE_FUNCTION_MAP CHO CÁC LOẠI ĐẤT KHÁC
+  // 5. ĐỐI CHIẾU DANH MỤC LỚN LAND_USE_FUNCTION_MAP CHO CÁC LOẠI ĐẤT KHÁC
   const matchedLand = typeof LAND_USE_FUNCTION_MAP !== 'undefined' ? LAND_USE_FUNCTION_MAP.find(item =>
     queryDat === item.loaiChucNang.toLowerCase() ||
     queryDat.includes(item.loaiChucNang.toLowerCase()) ||
