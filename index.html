@@ -1177,7 +1177,40 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   const queryDat = chucNangDat.toLowerCase().trim();
   const queryMucTieu = mucTieuDuAn.toLowerCase().trim();
 
-  // 🔴 1. XỬ LÝ CHUYÊN NGÀNH: ĐẤT QUỐC PHÒNG (TUYỆT ĐỐI KHÔNG BAO GỒM AN NINH / CÔNG AN)
+  // 🔴 1. XỬ LÝ CHUYÊN NGÀNH: ĐẤT TRỤ SỞ CƠ QUAN
+  const isOfficeHeadquartersLand = queryDat.includes("trụ sở cơ quan") || queryDat.includes("cơ quan hành chính");
+  if (isOfficeHeadquartersLand) {
+    const allowedOfficeProjects = [
+      "Trụ sở làm việc của cơ quan hành chính nhà nước", 
+      "Trụ sở tổ chức chính trị - xã hội", 
+      "Cơ quan nhà nước", 
+      "Công trình trụ sở sự nghiệp công"
+    ];
+
+    // Kiểm tra nếu mục tiêu dự án là văn phòng doanh nghiệp, công ty thương mại, dịch vụ
+    const isCommercialOffice = ["công ty", "doanh nghiệp", "thương mại", "dịch vụ", "văn phòng cho thuê", "tập đoàn", "chi nhánh công ty"].some(kw => queryMucTieu.includes(kw));
+    
+    if (isCommercialOffice) {
+      return {
+        phuHop: false,
+        loaiCongTrinhPhep: allowedOfficeProjects,
+        ketLuan: `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch ${chucNangDat}. Theo quy định, đất trụ sở cơ quan chỉ dành riêng cho cơ quan hành chính nhà nước và tổ chức chính trị - xã hội; tuyệt đối không cho phép xây dựng văn phòng làm việc của tổ chức, công ty, doanh nghiệp có tính chất thương mại dịch vụ.`
+      };
+    }
+
+    const validOfficeKeywords = ["trụ sở", "cơ quan", "hành chính", "tổ chức chính trị", "ủy ban", "sở ban ngành"];
+    const isOfficeMatched = validOfficeKeywords.some(kw => queryMucTieu.includes(kw));
+
+    return {
+      phuHop: isOfficeMatched,
+      loaiCongTrinhPhep: allowedOfficeProjects,
+      ketLuan: isOfficeMatched
+        ? `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch ${chucNangDat} (phục vụ trụ sở cơ quan hành chính nhà nước / tổ chức chính trị - xã hội).`
+        : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch ${chucNangDat}. Khu vực này chỉ cho phép các công trình: ${allowedOfficeProjects.join(", ")}.`
+    };
+  }
+
+  // 🔴 2. XỬ LÝ CHUYÊN NGÀNH: ĐẤT QUỐC PHÒNG (TUYỆT ĐỐI KHÔNG BAO GỒM AN NINH / CÔNG AN)
   const isNationalDefenseLand = queryDat.includes("quốc phòng") || queryDat.includes("ban chqs");
   if (isNationalDefenseLand) {
     const allowedDefenseProjects = [
@@ -1211,7 +1244,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
     };
   }
 
-  // 🔴 2. XỬ LÝ CHUYÊN NGÀNH: ĐẤT AN NINH (DÀNH RIÊNG CHO NGÀNH CÔNG AN)
+  // 🔴 3. XỬ LÝ CHUYÊN NGÀNH: ĐẤT AN NINH (DÀNH RIÊNG CHO NGÀNH CÔNG AN)
   const isSecurityLand = queryDat.includes("an ninh") || queryDat.includes("công an");
   if (isSecurityLand) {
     const allowedSecurityProjects = [
@@ -1244,7 +1277,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
     };
   }
 
-  // 🔴 3. XỬ LÝ ĐẤT HẠ TẦNG KỸ THUẬT CÓ GHI CHÚ CHUYÊN NGÀNH
+  // 🔴 4. XỬ LÝ ĐẤT HẠ TẦNG KỸ THUẬT CÓ GHI CHÚ CHUYÊN NGÀNH
   const isHTKTLand = queryDat.includes("hạ tầng kỹ thuật") || queryDat.includes("htkt");
   const matchParentheses = queryDat.match(/\((.*?)\)/);
 
@@ -1270,7 +1303,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
     }
   }
 
-  // 🔴 4. XỬ LÝ ĐẤT HỖN HỢP
+  // 🔴 5. XỬ LÝ ĐẤT HỖN HỢP
   const isMixedLand = queryDat.includes("đất hỗn hợp") || queryDat.includes("hỗn hợp") || queryDat.includes("nhà ở và dịch vụ");
   if (isMixedLand) {
     const isForbiddenProject = queryMucTieu.includes("nhà máy") || queryMucTieu.includes("xưởng") || queryMucTieu.includes("trang trại") || queryMucTieu.includes("nghĩa trang") || queryMucTieu.includes("nghĩa địa") || queryMucTieu.includes("quốc phòng") || queryMucTieu.includes("an ninh");
@@ -1288,7 +1321,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
     };
   }
 
-  // 5. ĐỐI CHIẾU DANH MỤC LỚN CHO CÁC LOẠI ĐẤT KHÁC
+  // 6. ĐỐI CHIẾU DANH MỤC LỚN CHO CÁC LOẠI ĐẤT KHÁC
   const matchedLand = typeof LAND_USE_FUNCTION_MAP !== 'undefined' ? LAND_USE_FUNCTION_MAP.find(item =>
     queryDat === item.loaiChucNang.toLowerCase() ||
     queryDat.includes(item.loaiChucNang.toLowerCase()) ||
