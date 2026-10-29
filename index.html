@@ -1155,7 +1155,7 @@ const LAND_USE_FUNCTION_MAP = [
 ];
 
 // =========================================================================
-// 🟢 HÀM ĐÁNH GIÁ THÔNG MINH SỰ PHÙ HỢP QUY HOẠCH (HOÀN THIỆN 100%)
+// 🟢 HÀM ĐÁNH GIÁ SỰ PHÙ HỢP QUY HOẠCH - CHUẨN XÁC DANH MỤC CÔNG TRÌNH 100%
 // =========================================================================
 function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   if (!chucNangDat || !mucTieuDuAn || chucNangDat.includes('chưa khai báo')) {
@@ -1169,47 +1169,39 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   const queryDat = chucNangDat.toLowerCase().trim();
   const queryMucTieu = mucTieuDuAn.toLowerCase().trim();
 
-  // 🔴 1. XỬ LÝ ĐẤT HẠ TẦNG KỸ THUẬT / HTKT ĐẦU MỐI CÓ GHI CHÚ CHUYÊN NGÀNH HẸP (...)
+  // 1. XỬ LÝ ĐẤT HẠ TẦNG KỸ THUẬT / HTKT ĐẦU MỐI CÓ GHI CHÚ CHUYÊN NGÀNH HẸP (...)
   const isHTKTLand = queryDat.includes("hạ tầng kỹ thuật") || queryDat.includes("htkt");
-  
-  // 💥 CÚ PHÁP REGEX CHUẨN: /\\((.*?)\\)/ (Dùng 1 dấu \ thoát ngoặc)
-  const matchParentheses = queryDat.match(/\\((.*?)\\)/);
+  const matchParentheses = queryDat.match(/\((.*?)\)/);
 
   if (isHTKTLand && matchParentheses && matchParentheses[1]) {
     const insideNote = matchParentheses[1].trim().toLowerCase();
     
-    // ➔ TRƯỜNG HỢP A: Chuyên ngành Nghĩa trang / Mai táng / Cải táng
+    // ➔ CHUYÊN NGÀNH: NGHĨA TRANG / NGHĨA ĐỊA / MAI TÁNG / CẢI TÁNG
     if (insideNote.includes("nghĩa trang") || insideNote.includes("nghĩa địa") || insideNote.includes("cải táng") || insideNote.includes("mai táng") || insideNote.includes("hỏa táng")) {
       const allowedCemeteryProjects = [
         "Nghĩa trang", "Nghĩa địa", "Khu cải táng", "Khu mai táng", 
         "Nhà tang lễ", "Cơ sở hỏa táng", "Nhà hỏa táng",
         "Nhà quản lý nghĩa trang", "Công trình dịch vụ hỗ trợ nghĩa trang", 
-        "Hoa viên nghĩa trang", "Bãi đỗ xe nghĩa trang", "Công trình phụ trợ nghĩa trang"
+        "Hoa viên nghĩa trang", "Bãi đỗ xe nghĩa trang"
       ];
 
       const cemeteryKeywords = [
         "nghĩa trang", "nghĩa địa", "cải táng", "mai táng", "hỏa táng", "tang lễ", 
-        "quản lý nghĩa trang", "dịch vụ nghĩa trang", "an táng", "mộ", "nhà quàn", "hoa viên", "từ đường"
+        "quản lý nghĩa trang", "dịch vụ nghĩa trang", "an táng", "mộ", "nhà quàn", "hoa viên"
       ];
 
       const isCemeteryMatched = cemeteryKeywords.some(kw => queryMucTieu.includes(kw));
 
-      if (isCemeteryMatched) {
-        return {
-          phuHop: true,
-          loaiCongTrinhPhep: allowedCemeteryProjects,
-          ketLuan: `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch ${chucNangDat} (xác định đây là Đất HTKT chuyên ngành nghĩa trang, cho phép các công trình nghĩa trang, nhà tang lễ, hỏa táng và dịch vụ hỗ trợ).`
-        };
-      } else {
-        return {
-          phuHop: false,
-          loaiCongTrinhPhep: allowedCemeteryProjects,
-          ketLuan: `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch ${chucNangDat}. Khu vực này đã được định hướng chuyên biệt cho nghĩa trang, chỉ cho phép xây dựng: ${allowedCemeteryProjects.join(", ")}; tuyệt đối không cho phép xây dựng các công trình khu đô thị, nhà ở, thương mại dịch vụ hay các hạ tầng kỹ thuật khác.`
-        };
-      }
+      return {
+        phuHop: isCemeteryMatched,
+        loaiCongTrinhPhep: allowedCemeteryProjects, // 🟢 Đã gán đúng danh mục nghĩa trang
+        ketLuan: isCemeteryMatched
+          ? `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch ${chucNangDat} (cho phép xây dựng các công trình nghĩa trang, nhà tang lễ, hỏa táng và dịch vụ hỗ trợ).`
+          : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch ${chucNangDat}. Khu vực này đã được định hướng chuyên biệt cho nghĩa trang, chỉ cho phép xây dựng các công trình: ${allowedCemeteryProjects.join(", ")}.`
+      };
     }
 
-    // ➔ TRƯỜNG HỢP B: Chuyên ngành Cấp điện / Trạm biến áp
+    // ➔ CHUYÊN NGÀNH: CẤP ĐIỆN / TRẠM BIẾN ÁP
     if (insideNote.includes("trạm biến áp") || insideNote.includes("tuyến điện") || insideNote.includes("cấp điện")) {
       const allowedPowerProjects = ["Trạm biến áp", "Tuyến đường dây điện", "Trạm ngắt điện", "Công trình cấp điện", "Nhà điều hành trạm điện"];
       const isPowerMatched = ["trạm biến áp", "điện", "biến áp", "đường dây", "cấp điện"].some(kw => queryMucTieu.includes(kw));
@@ -1219,11 +1211,11 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
         loaiCongTrinhPhep: allowedPowerProjects,
         ketLuan: isPowerMatched
           ? `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch ${chucNangDat}.`
-          : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch ${chucNangDat}. Khu vực này chỉ cho phép các công trình cấp điện: ${allowedPowerProjects.join(", ")}; không cho phép chức năng khác.`
+          : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch ${chucNangDat}. Khu vực này chỉ cho phép các công trình cấp điện: ${allowedPowerProjects.join(", ")}.`
       };
     }
 
-    // ➔ TRƯỜNG HỢP C: Chuyên ngành Xử lý chất thải / Rác thải
+    // ➔ CHUYÊN NGÀNH: XỬ LÝ CHẤT THẢI / RÁC THẢI
     if (insideNote.includes("rác") || insideNote.includes("chất thải") || insideNote.includes("bãi chôn lấp")) {
       const allowedWasteProjects = ["Khu xử lý chất thải", "Nhà máy xử lý rác", "Bãi chôn lấp rác", "Trạm trung chuyển rác", "Nhà điều hành khu xử lý rác"];
       const isWasteMatched = ["rác", "chất thải", "chôn lấp", "xử lý rác", "phế thải"].some(kw => queryMucTieu.includes(kw));
@@ -1233,59 +1225,15 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
         loaiCongTrinhPhep: allowedWasteProjects,
         ketLuan: isWasteMatched
           ? `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch ${chucNangDat}.`
-          : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch ${chucNangDat}. Khu vực này chỉ cho phép các công trình xử lý chất thải: ${allowedWasteProjects.join(", ")}; không cho phép chức năng khác.`
-      };
-    }
-
-    // ➔ TRƯỜNG HỢP D: Chuyên ngành Cấp nước / Xử lý nước thải
-    if (insideNote.includes("nước") || insideNote.includes("cấp nước") || insideNote.includes("nước thải")) {
-      const allowedWaterProjects = ["Nhà máy nước", "Trạm cấp nước", "Bể chứa nước", "Trạm bơm", "Trạm xử lý nước thải", "Tuyến ống cấp nước"];
-      const isWaterMatched = ["nước", "cấp nước", "nước thải", "trạm bơm", "bể chứa"].some(kw => queryMucTieu.includes(kw));
-
-      return {
-        phuHop: isWaterMatched,
-        loaiCongTrinhPhep: allowedWaterProjects,
-        ketLuan: isWaterMatched
-          ? `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với quy hoạch ${chucNangDat}.`
-          : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch ${chucNangDat}. Khu vực này chỉ cho phép các công trình cấp/thoát nước: ${allowedWaterProjects.join(", ")}; không cho phép chức năng khác.`
+          : `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch ${chucNangDat}. Khu vực này chỉ cho phép các công trình xử lý chất thải: ${allowedWasteProjects.join(", ")}.`
       };
     }
   }
 
-  // 🔴 2. TRƯỜNG HỢP ĐẤT "HẠ TẦNG KỸ THUẬT KHÁC" HOẶC HTKT CHUNG (KHÔNG CÓ NGOẶC CHUYÊN NGÀNH HẸP)
-  const isGenericHTKTLand = queryDat.includes("hạ tầng kỹ thuật khác") || (isHTKTLand && !matchParentheses);
-  if (isGenericHTKTLand) {
-    const genericHTKTProjects = [
-      "Trạm cấp nước", "Nhà máy xử lý nước thải", "Trạm biến áp", "Công trình năng lượng", 
-      "Hạ tầng viễn thông", "Điểm tập kết/xử lý chất thải", "Bãi chôn lấp rác", "Trạm bơm", "Công trình hạ tầng kỹ thuật chung"
-    ];
-    
-    const htktKeywords = [
-      "cấp nước", "xử lý nước", "nước thải", "trạm biến áp", "điện", "năng lượng", 
-      "viễn thông", "chất thải", "rác", "trạm bơm", "hạ tầng kỹ thuật", "htkt", "thủy lợi"
-    ];
-
-    const isHTKTProject = htktKeywords.some(kw => queryMucTieu.includes(kw));
-
-    if (isHTKTProject) {
-      return {
-        phuHop: true,
-        loaiCongTrinhPhep: genericHTKTProjects,
-        ketLuan: `✅ Dự án "${mucTieuDuAn}" PHÙ HỢP với định hướng quy hoạch Đất hạ tầng kỹ thuật khác (theo danh mục Thông tư BXD).`
-      };
-    } else {
-      return {
-        phuHop: false,
-        loaiCongTrinhPhep: genericHTKTProjects,
-        ketLuan: `❌ Dự án "${mucTieuDuAn}" KHÔNG PHÙ HỢP với quy hoạch Đất hạ tầng kỹ thuật. Khu vực này chỉ cho phép xây dựng các công trình hạ tầng kỹ thuật: ${genericHTKTProjects.join(", ")}; không cho phép phát triển nhà ở, khu đô thị, thương mại hay các chức năng phi hạ tầng.`
-      };
-    }
-  }
-
-  // 🔴 3. XỬ LÝ ĐẤT HỖN HỢP
+  // 2. XỬ LÝ ĐẤT HỖN HỢP
   const isMixedLand = queryDat.includes("đất hỗn hợp") || queryDat.includes("hỗn hợp") || queryDat.includes("nhà ở và dịch vụ");
   if (isMixedLand) {
-    const isForbiddenProject = queryMucTieu.includes("nhà máy") || queryMucTieu.includes("xưởng") || queryMucTieu.includes("trang trại") || queryMucTieu.includes("chăn nuôi") || queryMucTieu.includes("nghĩa trang") || queryMucTieu.includes("nghĩa địa") || queryMucTieu.includes("quốc phòng") || queryMucTieu.includes("an ninh");
+    const isForbiddenProject = queryMucTieu.includes("nhà máy") || queryMucTieu.includes("xưởng") || queryMucTieu.includes("trang trại") || queryMucTieu.includes("nghĩa trang") || queryMucTieu.includes("nghĩa địa");
     if (isForbiddenProject) {
       return {
         phuHop: false,
@@ -1300,7 +1248,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
     };
   }
 
-  // 🔴 4. ĐỐI CHIẾU DANH MỤC LỚN LAND_USE_FUNCTION_MAP CHO CÁC LOẠI ĐẤT KHÁC
+  // 3. ĐỐI CHIẾU DANH MỤC LỚN LAND_USE_FUNCTION_MAP CHO CÁC LOẠI ĐẤT KHÁC
   const matchedLand = typeof LAND_USE_FUNCTION_MAP !== 'undefined' ? LAND_USE_FUNCTION_MAP.find(item =>
     queryDat === item.loaiChucNang.toLowerCase() ||
     queryDat.includes(item.loaiChucNang.toLowerCase()) ||
@@ -1314,10 +1262,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
   const targetWords = queryMucTieu.split(/[\s,;.()/-]+/).filter(w => w.length >= 2);
   const datWords = queryDat.split(/[\s,;.()/-]+/).filter(w => w.length >= 2);
 
-  const hasDirectKeywordOverlap = targetWords.some(tw => queryDat.includes(tw)) || 
-                                  datWords.some(dw => queryMucTieu.includes(dw));
-
-  if (hasDirectKeywordOverlap) {
+  if (targetWords.some(tw => queryDat.includes(tw)) || datWords.some(dw => queryMucTieu.includes(dw))) {
     isSmartMatched = true;
   }
 
