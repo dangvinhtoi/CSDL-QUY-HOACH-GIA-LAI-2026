@@ -1333,7 +1333,7 @@ function evaluateProjectSuitability(chucNangDat, mucTieuDuAn) {
 }
  
 // =========================================================================
-// 🟢 HÀM PHÂN TÁCH VÙNG TỌA ĐỘ THÔNG MINH - TỰ ĐỘNG LỌC NHIỄU VÀ GÓI ĐA GIÁC
+// 🟢 HÀM PHÂN TÁCH ĐA VÙNG (MULTI-POLYGON) CHUYÊN BIỆT CHO LISP XTTH
 // =========================================================================
 const parseSubPolygons = (inputStr) => {
   if (!inputStr || typeof inputStr !== 'string') return [];
@@ -1344,22 +1344,9 @@ const parseSubPolygons = (inputStr) => {
   
   lines.forEach(line => {
     const trimmed = line.trim();
-    if (!trimmed) {
-      if (currentPoly.length >= 3) {
-        polygons.push(currentPoly);
-        currentPoly = [];
-      }
-      return;
-    }
     
-    const upper = trimmed.toUpperCase();
-    
-    // Nhận diện chuẩn xác mọi dạng tiêu đề phân tách vùng (Vùng 1, Vùng 2, Region, Polygon...)
-    const isHeader = upper.startsWith('VÙNG') || upper.startsWith('VUNG') || 
-                     upper.startsWith('REGION') || upper.startsWith('POLYGON') || 
-                     upper.startsWith('BẢNG') || upper.startsWith('BANG');
-
-    if (isHeader && !upper.includes('X=') && !upper.includes('Y=')) {
+    // Bỏ qua dòng tiêu đề rác hoặc từ khóa
+    if (trimmed === '' || trimmed.toUpperCase().includes('VÙNG') || trimmed.toUpperCase().includes('VUNG')) {
       if (currentPoly.length >= 3) {
         polygons.push(currentPoly);
         currentPoly = [];
@@ -1368,23 +1355,24 @@ const parseSubPolygons = (inputStr) => {
     }
     
     let x = null, y = null;
-    // Chuẩn hóa phẩy thập phân
-    const normalized = trimmed.replace(/(\d+),(\d+)/g, '$1.$2');
-
-    if (upper.includes('X') && upper.includes('Y')) {
-      const pX = normalized.split(/X[\s=:]+/i);
-      if (pX.length > 1) x = parseFloat(pX[1].trim().split(/[\s,]+/)[0]);
-      const pY = normalized.split(/Y[\s=:]+/i);
-      if (pY.length > 1) y = parseFloat(pY[1].trim().split(/[\s,]+/)[0]);
-    } else {
-      const nums = normalized.match(/-?\d+(?:\.\d+)?/g);
-      if (nums && nums.length >= 2) {
-        x = parseFloat(nums[0]);
-        y = parseFloat(nums[1]);
-      }
+    const nums = line.match(/-?\d+(\.\d+)?/g);
+    
+    if (nums && nums.length >= 2) {
+      x = parseFloat(nums[0]);
+      y = parseFloat(nums[1]);
     }
     
     if (x !== null && y !== null && !isNaN(x) && !isNaN(y)) {
+      if (Math.abs(x - y) < 0.001) y = y + 1.0;
+      
+      // Kiểm tra điểm khép kín: Điểm mới trùng khớp với điểm bắt đầu của polygon hiện tại
+      if (currentPoly.length > 0 && Math.abs(currentPoly[0].x - x) < 0.1 && Math.abs(currentPoly[0].y - y) < 0.1) {
+        currentPoly.push({ x, y }); // Đưa điểm đóng vào polygon
+        polygons.push(currentPoly);
+        currentPoly = []; // Bắt đầu ô đất mới
+        return;
+      }
+      
       currentPoly.push({ x, y });
     }
   });
@@ -1393,7 +1381,7 @@ const parseSubPolygons = (inputStr) => {
     polygons.push(currentPoly);
   }
   
-  // 🟢 LỌC BỎ CÁC ĐA GIÁC QUÁ NHỎ (< 0.1m2)
+  // Lọc bỏ các vùng có diện tích quá nhỏ (nhiễu rác hình học)
   return polygons.filter(poly => {
     let area = 0;
     const n = poly.length;
@@ -1402,7 +1390,7 @@ const parseSubPolygons = (inputStr) => {
       area += poly[i].x * poly[j].y;
       area -= poly[j].x * poly[i].y;
     }
-    return (Math.abs(area) / 2.0) > 0.1;
+    return (Math.abs(area) / 2.0) > 0.5;
   });
 };
 // =========================================================================
