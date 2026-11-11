@@ -725,17 +725,26 @@ function App() {
       };
   
 // =========================================================================
-// 🟢 HÀM GHI NHẬN NHẬT KÝ ĐĂNG NHẬP & TẢI FILE (CHUẨN XÁC 100%)
+// 🟢 HÀM GHI NHẬN NHẬT KÝ ĐĂNG NHẬP & TẢI FILE (CHUẨN XÁC 100% THÔNG TIN)
 // =========================================================================
 const recordAuditLog = (actionType, targetName = '', tabName = '', customActorName = '') => {
   let actorName = 'Khách vãng lai';
 
+  // 1. Ưu tiên lấy tên truyền trực tiếp vào hàm
   if (customActorName && customActorName.trim() !== '') {
     actorName = customActorName;
-  } else if (userRole === 'ADMIN') {
+  } 
+  // 2. Nếu đang là Admin
+  else if (userRole === 'ADMIN') {
     actorName = 'Quản trị viên (Admin) - Sở Xây dựng Gia Lai';
-  } else if (currentUser && currentUser.fullName) {
-    actorName = `${currentUser.fullName} (${currentUser.unit || 'Cán bộ địa phương'})`;
+  } 
+  // 3. Nếu đang là Thành viên đã đăng nhập (lấy trực tiếp từ currentUser)
+  else if (currentUser && currentUser.fullName) {
+    actorName = `${currentUser.fullName} (${currentUser.unit || currentUser.position || 'Cán bộ địa phương'})`;
+  }
+  // 4. Dự phòng: Nếu có đối tượng người dùng lưu tạm
+  else if (window._tempLoginUser && window._tempLoginUser.fullName) {
+    actorName = `${window._tempLoginUser.fullName} (${window._tempLoginUser.unit || 'Cán bộ địa phương'})`;
   }
 
   let content = '';
@@ -2536,11 +2545,10 @@ const handleSaveVung = async (e) => {
       setIsLoggedIn(true);
       setUserRole('MEMBER');
       setCurrentUser(found);
+      window._tempLoginUser = found; // Lưu tạm để chống trễ state
       
-      // 🟢 Ghép tên đầy đủ và đơn vị công tác của thành viên
-      const memberDisplayName = `${found.fullName} (${found.unit || found.position || 'Cán bộ địa phương'})`;
-      
-      // Gọi hàm ghi log chuẩn
+      // 🟢 Truyền trực tiếp họ tên và đơn vị vào đây
+      const memberDisplayName = `${found.fullName} (${found.unit || 'Cán bộ địa phương'})`;
       recordAuditLog('LOGIN', '', '', memberDisplayName);
 
       setShowLoginModal(false);
