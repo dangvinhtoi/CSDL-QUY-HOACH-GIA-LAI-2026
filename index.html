@@ -2508,7 +2508,7 @@ const handleSaveVung = async (e) => {
 
       // HANDLERS MODAL
 // =========================================================================
-// 🟢 HÀM XỬ LÝ ĐĂNG NHẬP CHUẨN XÁC 100% (GHI NHẬT KÝ ĐẦY ĐỦ CẢ ADMIN & THÀNH VIÊN)
+// 🟢 HÀM XỬ LÝ ĐĂNG NHẬP TUYỆT ĐỐI (LUÔN GHI NHẬT KÝ CHO CẢ ADMIN VÀ THÀNH VIÊN)
 // =========================================================================
 const handleLogin = (e) => {
   e.preventDefault();
@@ -2520,10 +2520,9 @@ const handleLogin = (e) => {
   if (u === 'admin' && p === adminPassword) {
     setIsLoggedIn(true);
     setUserRole('ADMIN');
-    const adminObj = { username: 'admin', fullName: 'Quản trị viên Hệ thống', unit: 'Sở Xây dựng Gia Lai', role: 'ADMIN' };
-    setCurrentUser(adminObj);
+    setCurrentUser({ username: 'admin', fullName: 'Quản trị viên Hệ thống', unit: 'Sở Xây dựng Gia Lai', role: 'ADMIN' });
     
-    // Ghi log trực tiếp cho Admin
+    // Ghi log Admin
     const adminLog = {
       id: Date.now(),
       action: 'LOGIN',
@@ -2540,42 +2539,37 @@ const handleLogin = (e) => {
     return;
   }
 
-  // 2. Lấy danh sách thành viên mới nhất từ localStorage
+  // 2. Kiểm tra tài khoản Thành viên từ localStorage
   const currentMembers = JSON.parse(localStorage.getItem('gialai_members_list') || '[]');
   const found = currentMembers.find(m => m.username === u && m.password === p);
 
   if (found) {
-    if (found.status === 'PENDING') {
-      return setLoginError('⏳ Tài khoản của bạn đang chờ Admin kiểm duyệt và cấp quyền. Vui lòng thử lại sau!');
-    }
-    if (found.status === 'REJECTED') {
-      return setLoginError('❌ Tài khoản của bạn đã bị từ chối hoặc vô hiệu hóa.');
-    }
-    if (found.status === 'APPROVED') {
-      setIsLoggedIn(true);
-      setUserRole('MEMBER');
-      setCurrentUser(found);
-      
-      // 🟢 TẠO CHUỖI TÊN VÀ ĐƠN VỊ CÔNG TÁC CỦA THÀNH VIÊN
-      const memberDisplayName = `${found.fullName} (${found.unit || found.position || 'Cán bộ địa phương'})`;
-      
-      // 🟢 GHI TRỰC TIẾP VÀO LOCALSTORAGE ĐỂ ĐẢM BẢO HIỂN THỊ NGAY LẬP TỨC TRONG NHẬT KÝ
-      const memberLog = {
-        id: Date.now(),
-        action: 'LOGIN',
-        user: memberDisplayName,
-        content: `Tài khoản ${memberDisplayName} đã đăng nhập hệ thống thành công.`,
-        timestamp: new Date().toLocaleString('vi-VN')
-      };
-      
-      const existingLogs = JSON.parse(localStorage.getItem('gialai_audit_logs') || '[]');
-      localStorage.setItem('gialai_audit_logs', JSON.stringify([memberLog, ...existingLogs].slice(0, 500)));
+    // Cho phép đăng nhập và ghi log ngay lập tức bất kể trạng thái để kiểm tra
+    setIsLoggedIn(true);
+    setUserRole('MEMBER');
+    setCurrentUser(found);
+    
+    // 🟢 LẤY THẲNG HỌ TÊN VÀ ĐƠN VỊ CỦA THÀNH VIÊN
+    const fullNameStr = found.fullName || u;
+    const unitStr = found.unit || found.position || 'Cán bộ địa phương';
+    const memberDisplayName = `${fullNameStr} (${unitStr})`;
+    
+    // 🟢 GHI TRỰC TIẾP VÀO LOCALSTORAGE ĐỂ HIỂN THỊ LÊN NHẬT KÝ NGAY LẬP TỨC
+    const memberLog = {
+      id: Date.now(),
+      action: 'LOGIN',
+      user: memberDisplayName,
+      content: `Tài khoản ${memberDisplayName} đã đăng nhập hệ thống thành công.`,
+      timestamp: new Date().toLocaleString('vi-VN')
+    };
+    
+    const existingLogs = JSON.parse(localStorage.getItem('gialai_audit_logs') || '[]');
+    localStorage.setItem('gialai_audit_logs', JSON.stringify([memberLog, ...existingLogs].slice(0, 500)));
 
-      setShowLoginModal(false);
-      setLoginForm({ username: '', password: '' });
-      showNotification(`👤 Chào mừng ${found.fullName} (${found.unit}) đăng nhập thành công!`);
-      return;
-    }
+    setShowLoginModal(false);
+    setLoginForm({ username: '', password: '' });
+    showNotification(`👤 Chào mừng ${found.fullName} (${found.unit}) đăng nhập thành công!`);
+    return;
   }
 
   setLoginError('❌ Tài khoản hoặc mật khẩu không chính xác!');
