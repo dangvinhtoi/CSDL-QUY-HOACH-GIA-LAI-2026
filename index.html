@@ -2529,7 +2529,7 @@ const handleSaveVung = async (e) => {
             setUserRole('MEMBER');
             setCurrentUser(found);
             
-            // 🟢 GỌI GHI LOG ĐĂNG NHẬP VÀ TRUYỀN THÔNG TIN THÀNH VIÊN VÀO ĐÂY
+            // 🟢 TRUYỀN TRỰC TIẾP `found` VÀO ĐÂY ĐỂ LẤY ĐÚNG TÊN & ĐƠN VỊ THÀNH VIÊN
             recordAuditLog('LOGIN', '', '', found);
 
             setShowLoginModal(false);
