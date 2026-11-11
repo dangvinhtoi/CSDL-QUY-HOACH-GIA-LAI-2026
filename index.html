@@ -2911,40 +2911,49 @@ const handleLogin = (e) => {
   showNotification('Đã lưu hồ sơ thành công & đồng bộ Đám mây!');
 };
       
-  // =========================================================================
-// 🟢 HÀM KIỂM SOÁT QUYỀN TẢI HỒ SƠ CHẶT CHẼ 100% THEO TÀI KHOẢN
+ // =========================================================================
+// 🟢 HÀM KIỂM SOÁT QUYỀN VÀ GHI NHẬT KÝ TẢI HỒ SƠ CHUẨN XÁC 100%
 // =========================================================================
 const handleDownloadFile = (row, tabTitle) => {
-  // 1. Nếu là Admin -> Cho phép tải tất cả các tab không giới hạn
+  // 1. Xác định tên người thực hiện (Admin hoặc Thành viên)
+  let actorName = 'Khách vãng lai';
   if (userRole === 'ADMIN') {
-    recordAuditLog('DOWNLOAD', row.tenQh || row.noiDung || 'Tài liệu đồ án', tabTitle);
-    const fileUrl = row.file;
-    if (fileUrl) {
-      window.open(fileUrl.startsWith('http') ? fileUrl : `https://${fileUrl}`, '_blank');
-    } else {
-      showNotification('⚠️ Hồ sơ này chưa đính kèm tệp tài liệu.');
-    }
-    return;
+    actorName = 'Quản trị viên (Admin) - Sở Xây dựng Gia Lai';
+  } else if (currentUser && currentUser.fullName) {
+    actorName = `${currentUser.fullName} (${currentUser.unit || currentUser.position || 'Cán bộ địa phương'})`;
   }
 
-  // 2. Nếu là Thành viên (MEMBER): Kiểm tra trạng thái phân quyền mới nhất trong membersList
+  // 2. Nếu là Thành viên (MEMBER): Kiểm tra trạng thái phân quyền tải file
   if (userRole === 'MEMBER' && currentUser) {
-    const currentMemberInDb = (membersList || []).find(m => m.username === currentUser.username);
+    const currentMembers = JSON.parse(localStorage.getItem('gialai_members_list') || '[]');
+    const currentMemberInDb = currentMembers.find(m => m.username === currentUser.username);
     
-    // Nếu Admin đã bấm khóa (allowDownloadAllTabs === false) và tab đang bấm KHÔNG PHẢI là 'Quy hoạch Chung'
+    // Nếu bị bật tính năng khóa tải tab khác (allowDownloadAllTabs === false) và không phải tab 'Quy hoạch Chung'
     if (currentMemberInDb && currentMemberInDb.allowDownloadAllTabs === false && tabTitle !== 'Quy hoạch Chung') {
       showNotification('⚠️ Tài khoản của bạn bị giới hạn: Chỉ được phép tải hồ sơ trong Tab Quy hoạch chung!');
       return;
     }
   }
 
-  // 3. Nếu hợp lệ -> Ghi nhật ký và tiến hành mở/tải file
-  recordAuditLog('DOWNLOAD', row.tenQh || row.noiDung || 'Tài liệu đồ án', tabTitle);
+  // 3. 🟢 GHI NHẬN TRỰC TIẾP VÀO LOCALSTORAGE CHO HÀNH ĐỘNG TẢI FILE
+  const docName = row.tenQh || row.noiDung || 'Tài liệu đồ án quy hoạch';
+  const downloadLog = {
+    id: Date.now(),
+    action: 'DOWNLOAD',
+    user: actorName,
+    content: `Tài khoản ${actorName} đã tải hồ sơ [${docName}] tại mục [${tabTitle}].`,
+    timestamp: new Date().toLocaleString('vi-VN')
+  };
 
+  const existingLogs = JSON.parse(localStorage.getItem('gialai_audit_logs') || '[]');
+  localStorage.setItem('gialai_audit_logs', JSON.stringify([downloadLog, ...existingLogs].slice(0, 500)));
+
+  // 4. Tiến hành mở/tải file tài liệu
   const fileUrl = row.file;
   if (fileUrl) {
     const targetUrl = fileUrl.startsWith('http') ? fileUrl : `https://${fileUrl}`;
     window.open(targetUrl, '_blank');
+    showNotification('📥 Đã ghi nhận lịch sử tải file thành công!');
   } else {
     showNotification('⚠️ Hồ sơ này chưa đính kèm tệp tài liệu.');
   }
