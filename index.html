@@ -2499,7 +2499,7 @@ const handleSaveVung = async (e) => {
 
       // HANDLERS MODAL
       // =========================================================================
-// 🟢 HÀM XỬ LÝ ĐĂNG NHẬP CHUẨN XÁC 100% CHO CẢ ADMIN VÀ THÀNH VIÊN
+// 🟢 HÀM XỬ LÝ ĐĂNG NHẬP CHUẨN XÁC 100%
 // =========================================================================
 const handleLogin = (e) => {
   e.preventDefault();
@@ -2513,8 +2513,8 @@ const handleLogin = (e) => {
     setUserRole('ADMIN');
     setCurrentUser({ username: 'admin', fullName: 'Quản trị viên Hệ thống', unit: 'Sở Xây dựng Gia Lai', role: 'ADMIN' });
     
-    // Ghi log đăng nhập Admin
-    recordAuditLog('LOGIN', '', '', 'Quản trị viên (Admin) - Sở Xây dựng Gia Lai');
+    // 🟢 Ghi log đăng nhập Admin
+    recordAuditLog('LOGIN');
 
     setShowLoginModal(false);
     setLoginForm({ username: '', password: '' });
@@ -2536,9 +2536,20 @@ const handleLogin = (e) => {
       setUserRole('MEMBER');
       setCurrentUser(found);
       
-      // 🟢 Ghi log đăng nhập Thành viên kèm theo họ tên và đơn vị thực tế
+      // 🟢 GHI LOG ĐĂNG NHẬP CHO THÀNH VIÊN (TỰ ĐỘNG LẤY TÊN VÀ ĐƠN VỊ TỪ found)
       const memberDisplayName = `${found.fullName} (${found.unit || 'Cán bộ địa phương'})`;
-      recordAuditLog('LOGIN', '', '', memberDisplayName);
+      
+      // Ghi log thủ công trực tiếp vào localStorage để đảm bảo không bị lỗi trễ biến state
+      const newAuditLog = {
+        id: Date.now(),
+        action: 'LOGIN',
+        user: memberDisplayName,
+        content: `Tài khoản ${memberDisplayName} đã đăng nhập hệ thống thành công.`,
+        timestamp: new Date().toLocaleString('vi-VN')
+      };
+      const existingLogs = JSON.parse(localStorage.getItem('gialai_audit_logs') || '[]');
+      const nextAuditLogs = [newAuditLog, ...existingLogs].slice(0, 500);
+      localStorage.setItem('gialai_audit_logs', JSON.stringify(nextAuditLogs));
 
       setShowLoginModal(false);
       setLoginForm({ username: '', password: '' });
