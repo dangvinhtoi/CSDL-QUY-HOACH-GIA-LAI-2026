@@ -2498,52 +2498,57 @@ const handleSaveVung = async (e) => {
       }, [detailData]);
 
       // HANDLERS MODAL
-      const handleLogin = (e) => {
-        e.preventDefault();
-        setLoginError('');
-        const u = (loginForm.username || '').trim();
-        const p = (loginForm.password || '').trim();
+      // =========================================================================
+// 🟢 HÀM XỬ LÝ ĐĂNG NHẬP CHUẨN XÁC 100% CHO CẢ ADMIN VÀ THÀNH VIÊN
+// =========================================================================
+const handleLogin = (e) => {
+  e.preventDefault();
+  setLoginError('');
+  const u = (loginForm.username || '').trim();
+  const p = (loginForm.password || '').trim();
 
-        if (u === 'admin' && p === adminPassword) {
-          setIsLoggedIn(true);
-          setUserRole('ADMIN');
-          setCurrentUser({ username: 'admin', fullName: 'Quản trị viên Hệ thống', unit: 'Sở Xây dựng Gia Lai', role: 'ADMIN' });
-          
-          // 🟢 Ghi log cho Admin
-          recordAuditLog('LOGIN', '', '', 'Quản trị viên (Admin) - Sở Xây dựng Gia Lai');
+  // 1. Kiểm tra tài khoản Quản trị viên (Admin)
+  if (u === 'admin' && p === adminPassword) {
+    setIsLoggedIn(true);
+    setUserRole('ADMIN');
+    setCurrentUser({ username: 'admin', fullName: 'Quản trị viên Hệ thống', unit: 'Sở Xây dựng Gia Lai', role: 'ADMIN' });
+    
+    // Ghi log đăng nhập Admin
+    recordAuditLog('LOGIN', '', '', 'Quản trị viên (Admin) - Sở Xây dựng Gia Lai');
 
-          setShowLoginModal(false);
-          setLoginForm({ username: '', password: '' });
-          showNotification('🔑 Đăng nhập Quản trị viên (Admin) thành công!');
-          return;
-        }
+    setShowLoginModal(false);
+    setLoginForm({ username: '', password: '' });
+    showNotification('🔑 Đăng nhập Quản trị viên (Admin) thành công!');
+    return;
+  }
 
-        const found = (membersList || []).find(m => m.username === u && m.password === p);
-        if (found) {
-          if (found.status === 'PENDING') {
-            return setLoginError('⏳ Tài khoản của bạn đang chờ Admin kiểm duyệt và cấp quyền. Vui lòng thử lại sau!');
-          }
-          if (found.status === 'REJECTED') {
-            return setLoginError('❌ Tài khoản của bạn đã bị từ chối hoặc vô hiệu hóa.');
-          }
-          if (found.status === 'APPROVED') {
-          setIsLoggedIn(true);
-          setUserRole('MEMBER');
-          setCurrentUser(found);
-          
-          // 🟢 BỔ SUNG ĐOẠN NÀY VÀO NGAY SAU setCurrentUser(found);
-          const memberDisplayName = `${found.fullName} (${found.unit || 'Cán bộ địa phương'})`;
-          recordAuditLog('LOGIN', '', '', memberDisplayName);
+  // 2. Kiểm tra tài khoản Thành viên
+  const found = (membersList || []).find(m => m.username === u && m.password === p);
+  if (found) {
+    if (found.status === 'PENDING') {
+      return setLoginError('⏳ Tài khoản của bạn đang chờ Admin kiểm duyệt và cấp quyền. Vui lòng thử lại sau!');
+    }
+    if (found.status === 'REJECTED') {
+      return setLoginError('❌ Tài khoản của bạn đã bị từ chối hoặc vô hiệu hóa.');
+    }
+    if (found.status === 'APPROVED') {
+      setIsLoggedIn(true);
+      setUserRole('MEMBER');
+      setCurrentUser(found);
+      
+      // 🟢 Ghi log đăng nhập Thành viên kèm theo họ tên và đơn vị thực tế
+      const memberDisplayName = `${found.fullName} (${found.unit || 'Cán bộ địa phương'})`;
+      recordAuditLog('LOGIN', '', '', memberDisplayName);
 
-          setShowLoginModal(false);
-          setLoginForm({ username: '', password: '' });
-          showNotification(`👤 Chào mừng ${found.fullName} (${found.unit}) đăng nhập thành công!`);
-          return;
-        }
-        }
+      setShowLoginModal(false);
+      setLoginForm({ username: '', password: '' });
+      showNotification(`👤 Chào mừng ${found.fullName} (${found.unit}) đăng nhập thành công!`);
+      return;
+    }
+  }
 
-        setLoginError('❌ Tài khoản hoặc mật khẩu không chính xác!');
-      };
+  setLoginError('❌ Tài khoản hoặc mật khẩu không chính xác!');
+};
 
       const handleRegister = (e) => {
         e.preventDefault();
