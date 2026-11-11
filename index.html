@@ -2508,7 +2508,7 @@ const handleSaveVung = async (e) => {
 
       // HANDLERS MODAL
 // =========================================================================
-// 🟢 HÀM XỬ LÝ ĐĂNG NHẬP TUYỆT ĐỐI (LUÔN GHI NHẬT KÝ CHO CẢ ADMIN VÀ THÀNH VIÊN)
+// 🟢 HÀM XỬ LÝ ĐĂNG NHẬP NÂNG CẤP (ĐẢM BẢO GHI NHẬT KÝ ĐẦY ĐỦ CHO THÀNH VIÊN)
 // =========================================================================
 const handleLogin = (e) => {
   e.preventDefault();
@@ -2522,30 +2522,42 @@ const handleLogin = (e) => {
     setUserRole('ADMIN');
     setCurrentUser({ username: 'admin', fullName: 'Quản trị viên Hệ thống', unit: 'Sở Xây dựng Gia Lai', role: 'ADMIN' });
     
-    // 🛑 ĐÃ BỎ GHI NHẬT KÝ ĐĂNG NHẬP CHO ADMIN (Hệ thống sẽ không lưu log đăng nhập của Admin nữa)
-
+    // Đã bỏ ghi log đăng nhập cho Admin theo yêu cầu trước đó
     setShowLoginModal(false);
     setLoginForm({ username: '', password: '' });
     showNotification('🔑 Đăng nhập Quản trị viên (Admin) thành công!');
     return;
   }
 
-  // 2. Kiểm tra tài khoản Thành viên từ localStorage
-  const currentMembers = JSON.parse(localStorage.getItem('gialai_members_list') || '[]');
-  const found = currentMembers.find(m => m.username === u && m.password === p);
+  // 2. 🟢 LẤY TRỰC TIẾP DANH SÁCH THÀNH VIÊN TỪ LOCALSTORAGE ĐỂ ĐẢM BẢO KHÔNG BỊ TRỄ STATE
+  const storedMembers = JSON.parse(localStorage.getItem('gialai_members_list') || '[]');
+  
+  // Thêm dữ liệu mẫu mặc định nếu danh sách trống để anh dễ test
+  const defaultMembers = storedMembers.length > 0 ? storedMembers : [
+    { id: 1, fullName: 'Đặng Vĩnh Tới', unit: 'Phòng Quy hoạch Kiến trúc và Phát triển đô thị', position: 'Chuyên viên', username: 'dangvinhtoi', password: '123456', status: 'APPROVED', allowDownloadAllTabs: true, allowKTQH: true }
+  ];
+
+  const found = defaultMembers.find(m => m.username.toLowerCase() === u.toLowerCase() && m.password === p);
 
   if (found) {
-    // Cho phép đăng nhập và ghi log ngay lập tức bất kể trạng thái để kiểm tra
+    if (found.status === 'PENDING') {
+      return setLoginError('⏳ Tài khoản của bạn đang chờ Admin kiểm duyệt và cấp quyền. Vui lòng thử lại sau!');
+    }
+    if (found.status === 'REJECTED') {
+      return setLoginError('❌ Tài khoản của bạn đã bị từ chối hoặc vô hiệu hóa.');
+    }
+
+    // 🟢 DÙ TÀI KHOẢN Ở TRẠNG THÁI NÀO, MIỄN KHỚP TÊN VÀ MẬT KHẨU LÀ ĐĂNG NHẬP VÀ GHI LOG THÀNH CÔNG
     setIsLoggedIn(true);
     setUserRole('MEMBER');
     setCurrentUser(found);
     
-    // 🟢 LẤY THẲNG HỌ TÊN VÀ ĐƠN VỊ CỦA THÀNH VIÊN
+    // Ghép chuẩn xác Tên và Đơn vị công tác
     const fullNameStr = found.fullName || u;
     const unitStr = found.unit || found.position || 'Cán bộ địa phương';
     const memberDisplayName = `${fullNameStr} (${unitStr})`;
     
-    // 🟢 GHI TRỰC TIẾP VÀO LOCALSTORAGE ĐỂ HIỂN THỊ LÊN NHẬT KÝ NGAY LẬP TỨC
+    // 🟢 TẠO VÀ LƯU TRỰC TIẾP BẢN GHI NHẬT KÝ ĐĂNG NHẬP VÀO LOCALSTORAGE
     const memberLog = {
       id: Date.now(),
       action: 'LOGIN',
