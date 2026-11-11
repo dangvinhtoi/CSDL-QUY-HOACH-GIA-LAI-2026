@@ -2507,8 +2507,8 @@ const handleSaveVung = async (e) => {
       }, [detailData]);
 
       // HANDLERS MODAL
-      // =========================================================================
-// 🟢 HÀM XỬ LÝ ĐĂNG NHẬP (GHI LOG ĐẢM BẢO HIỂN THỊ TÊN VÀ ĐƠN VỊ THÀNH VIÊN)
+// =========================================================================
+// 🟢 HÀM XỬ LÝ ĐĂNG NHẬP CHUẨN XÁC 100% (GHI NHẬT KÝ ĐẦY ĐỦ CẢ ADMIN & THÀNH VIÊN)
 // =========================================================================
 const handleLogin = (e) => {
   e.preventDefault();
@@ -2520,9 +2520,10 @@ const handleLogin = (e) => {
   if (u === 'admin' && p === adminPassword) {
     setIsLoggedIn(true);
     setUserRole('ADMIN');
-    setCurrentUser({ username: 'admin', fullName: 'Quản trị viên Hệ thống', unit: 'Sở Xây dựng Gia Lai', role: 'ADMIN' });
+    const adminObj = { username: 'admin', fullName: 'Quản trị viên Hệ thống', unit: 'Sở Xây dựng Gia Lai', role: 'ADMIN' };
+    setCurrentUser(adminObj);
     
-    // Ghi log trực tiếp vào localStorage cho Admin
+    // Ghi log trực tiếp cho Admin
     const adminLog = {
       id: Date.now(),
       action: 'LOGIN',
@@ -2539,7 +2540,7 @@ const handleLogin = (e) => {
     return;
   }
 
-  // 2. Lấy danh sách thành viên trực tiếp từ localStorage để tránh lệch state
+  // 2. Lấy danh sách thành viên mới nhất từ localStorage
   const currentMembers = JSON.parse(localStorage.getItem('gialai_members_list') || '[]');
   const found = currentMembers.find(m => m.username === u && m.password === p);
 
@@ -2555,12 +2556,10 @@ const handleLogin = (e) => {
       setUserRole('MEMBER');
       setCurrentUser(found);
       
-      // 🟢 BẮT BUỘC LẤY ĐÚNG HỌ TÊN VÀ ĐƠN VỊ CÔNG TÁC CỦA THÀNH VIÊN ĐỂ HIỂN THỊ LÊN NHẬT KÝ
-      const fullNameStr = found.fullName || u;
-      const unitStr = found.unit || found.position || 'Cán bộ địa phương';
-      const memberDisplayName = `${fullNameStr} (${unitStr})`;
+      // 🟢 TẠO CHUỖI TÊN VÀ ĐƠN VỊ CÔNG TÁC CỦA THÀNH VIÊN
+      const memberDisplayName = `${found.fullName} (${found.unit || found.position || 'Cán bộ địa phương'})`;
       
-      // Ghi log trực tiếp vào localStorage
+      // 🟢 GHI TRỰC TIẾP VÀO LOCALSTORAGE ĐỂ ĐẢM BẢO HIỂN THỊ NGAY LẬP TỨC TRONG NHẬT KÝ
       const memberLog = {
         id: Date.now(),
         action: 'LOGIN',
