@@ -725,12 +725,14 @@ function App() {
       };
   
 // =========================================================================
-// 🟢 HÀM GHI NHẬN NHẬT KÝ ĐĂNG NHẬP VÀ TẢI HỒ SƠ (TỰ ĐỘNG LẤY TÊN CHUẨN XÁC)
+// 🟢 HÀM GHI NHẬN NHẬT KÝ ĐĂNG NHẬP VÀ TẢI HỒ SƠ (NHẬN TRỰC TIẾP THÔNG TIN)
 // =========================================================================
-const recordAuditLog = (actionType, targetName = '', tabName = '') => {
+const recordAuditLog = (actionType, targetName = '', tabName = '', customActorName = '') => {
   let actorName = 'Khách vãng lai';
   
-  if (userRole === 'ADMIN') {
+  if (customActorName) {
+    actorName = customActorName; // Lấy thẳng tên được truyền vào
+  } else if (userRole === 'ADMIN') {
     actorName = 'Quản trị viên (Admin)';
   } else if (currentUser && currentUser.fullName) {
     actorName = `${currentUser.fullName} (${currentUser.unit || 'Cán bộ địa phương'})`;
@@ -2504,9 +2506,12 @@ const handleSaveVung = async (e) => {
 
         if (u === 'admin' && p === adminPassword) {
           setIsLoggedIn(true);
-          recordAuditLog('LOGIN');
           setUserRole('ADMIN');
           setCurrentUser({ username: 'admin', fullName: 'Quản trị viên Hệ thống', unit: 'Sở Xây dựng Gia Lai', role: 'ADMIN' });
+          
+          // 🟢 Ghi log cho Admin
+          recordAuditLog('LOGIN', '', '', 'Quản trị viên (Admin) - Sở Xây dựng Gia Lai');
+
           setShowLoginModal(false);
           setLoginForm({ username: '', password: '' });
           showNotification('🔑 Đăng nhập Quản trị viên (Admin) thành công!');
@@ -2526,8 +2531,9 @@ const handleSaveVung = async (e) => {
             setUserRole('MEMBER');
             setCurrentUser(found);
             
-            // 🟢 ĐẶT LỆNH NÀY NGAY SAU KHI GÁN currentUser
-            recordAuditLog('LOGIN');
+            // 🟢 Ghi log trực tiếp tên & đơn vị của thành viên `found`
+            const memberDisplayName = `${found.fullName} (${found.unit || 'Cán bộ địa phương'})`;
+            recordAuditLog('LOGIN', '', '', memberDisplayName);
 
             setShowLoginModal(false);
             setLoginForm({ username: '', password: '' });
