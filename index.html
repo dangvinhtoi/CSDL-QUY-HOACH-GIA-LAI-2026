@@ -725,22 +725,19 @@ function App() {
       };
   
 // =========================================================================
-// 🟢 HÀM GHI NHẬN NHẬT KÝ ĐĂNG NHẬP & TẢI FILE (TUYỆT ĐỐI CHUẨN TÊN)
+// 🟢 HÀM GHI NHẬN NHẬT KÝ ĐĂNG NHẬP & TẢI FILE (CHUẨN XÁC 100%)
 // =========================================================================
-const recordAuditLog = (actionType, targetName = '', tabName = '', explicitActorName = '') => {
-  let actorName = explicitActorName; // Ưu tiên lấy tên truyền vào trực tiếp
+const recordAuditLog = (actionType, targetName = '', tabName = '', customActorName = '') => {
+  let actorName = 'Khách vãng lai';
 
-  if (!actorName || actorName.trim() === '') {
-    if (userRole === 'ADMIN') {
-      actorName = 'Quản trị viên (Admin) - Sở Xây dựng Gia Lai';
-    } else if (currentUser && currentUser.fullName) {
-      actorName = `${currentUser.fullName} (${currentUser.unit || 'Cán bộ địa phương'})`;
-    } else {
-      // Nếu cố tình không có tên, lấy luôn tên đăng nhập từ form nếu có
-      actorName = 'Cán bộ / Thành viên hệ thống';
-    }
+  if (customActorName && customActorName.trim() !== '') {
+    actorName = customActorName;
+  } else if (userRole === 'ADMIN') {
+    actorName = 'Quản trị viên (Admin) - Sở Xây dựng Gia Lai';
+  } else if (currentUser && currentUser.fullName) {
+    actorName = `${currentUser.fullName} (${currentUser.unit || 'Cán bộ địa phương'})`;
   }
-  
+
   let content = '';
   if (actionType === 'LOGIN') {
     content = `Tài khoản ${actorName} đã đăng nhập hệ thống thành công.`;
@@ -2502,9 +2499,9 @@ const handleSaveVung = async (e) => {
 
       // HANDLERS MODAL
       // =========================================================================
-// 🟢 HÀM XỬ LÝ ĐĂNG NHẬP CHUẨN XÁC 100%
-// =========================================================================
-const handleLogin = (e) => {
+      // 🟢 HÀM XỬ LÝ ĐĂNG NHẬP (GHI NHẬN ĐÚNG TÊN ADMIN VÀ THÀNH VIÊN)
+      // =========================================================================
+  const handleLogin = (e) => {
   e.preventDefault();
   setLoginError('');
   const u = (loginForm.username || '').trim();
@@ -2514,10 +2511,11 @@ const handleLogin = (e) => {
   if (u === 'admin' && p === adminPassword) {
     setIsLoggedIn(true);
     setUserRole('ADMIN');
-    setCurrentUser({ username: 'admin', fullName: 'Quản trị viên Hệ thống', unit: 'Sở Xây dựng Gia Lai', role: 'ADMIN' });
+    const adminInfo = { username: 'admin', fullName: 'Quản trị viên Hệ thống', unit: 'Sở Xây dựng Gia Lai', role: 'ADMIN' };
+    setCurrentUser(adminInfo);
     
-    // 🟢 Ghi log đăng nhập Admin
-    recordAuditLog('LOGIN');
+    // Ghi log chuẩn xác cho Admin
+    recordAuditLog('LOGIN', '', '', 'Quản trị viên (Admin) - Sở Xây dựng Gia Lai');
 
     setShowLoginModal(false);
     setLoginForm({ username: '', password: '' });
@@ -2539,20 +2537,11 @@ const handleLogin = (e) => {
       setUserRole('MEMBER');
       setCurrentUser(found);
       
-      // 🟢 LẤY THẲNG TÊN HỌ VÀ ĐƠN VỊ CỦA THÀNH VIÊN HOẶC TÊN ĐĂNG NHẬP
-      const memberDisplayName = `${found.fullName} (${found.unit || found.username})`;
+      // 🟢 Ghép tên đầy đủ và đơn vị công tác của thành viên
+      const memberDisplayName = `${found.fullName} (${found.unit || found.position || 'Cán bộ địa phương'})`;
       
-      const newAuditLog = {
-        id: Date.now(),
-        action: 'LOGIN',
-        user: memberDisplayName,
-        content: `Tài khoản ${memberDisplayName} đã đăng nhập hệ thống thành công.`,
-        timestamp: new Date().toLocaleString('vi-VN')
-      };
-      
-      const existingLogs = JSON.parse(localStorage.getItem('gialai_audit_logs') || '[]');
-      const nextAuditLogs = [newAuditLog, ...existingLogs].slice(0, 500);
-      localStorage.setItem('gialai_audit_logs', JSON.stringify(nextAuditLogs));
+      // Gọi hàm ghi log chuẩn
+      recordAuditLog('LOGIN', '', '', memberDisplayName);
 
       setShowLoginModal(false);
       setLoginForm({ username: '', password: '' });
@@ -2563,7 +2552,6 @@ const handleLogin = (e) => {
 
   setLoginError('❌ Tài khoản hoặc mật khẩu không chính xác!');
 };
-
       const handleRegister = (e) => {
         e.preventDefault();
         setRegisterError('');
