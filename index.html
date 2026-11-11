@@ -2528,6 +2528,10 @@ const handleSaveVung = async (e) => {
             setIsLoggedIn(true);
             setUserRole('MEMBER');
             setCurrentUser(found);
+            
+            // 🟢 GỌI GHI LOG ĐĂNG NHẬP VÀ TRUYỀN THÔNG TIN THÀNH VIÊN VÀO ĐÂY
+            recordAuditLog('LOGIN', '', '', found);
+
             setShowLoginModal(false);
             setLoginForm({ username: '', password: '' });
             showNotification(`👤 Chào mừng ${found.fullName} (${found.unit}) đăng nhập thành công!`);
