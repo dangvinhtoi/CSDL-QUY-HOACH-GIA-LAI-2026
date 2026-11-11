@@ -2527,19 +2527,19 @@ const handleSaveVung = async (e) => {
             return setLoginError('❌ Tài khoản của bạn đã bị từ chối hoặc vô hiệu hóa.');
           }
           if (found.status === 'APPROVED') {
-            setIsLoggedIn(true);
-            setUserRole('MEMBER');
-            setCurrentUser(found);
-            
-            // 🟢 Ghi log trực tiếp tên & đơn vị của thành viên `found`
-            const memberDisplayName = `${found.fullName} (${found.unit || 'Cán bộ địa phương'})`;
-            recordAuditLog('LOGIN', '', '', memberDisplayName);
+          setIsLoggedIn(true);
+          setUserRole('MEMBER');
+          setCurrentUser(found);
+          
+          // 🟢 BỔ SUNG ĐOẠN NÀY VÀO NGAY SAU setCurrentUser(found);
+          const memberDisplayName = `${found.fullName} (${found.unit || 'Cán bộ địa phương'})`;
+          recordAuditLog('LOGIN', '', '', memberDisplayName);
 
-            setShowLoginModal(false);
-            setLoginForm({ username: '', password: '' });
-            showNotification(`👤 Chào mừng ${found.fullName} (${found.unit}) đăng nhập thành công!`);
-            return;
-          }
+          setShowLoginModal(false);
+          setLoginForm({ username: '', password: '' });
+          showNotification(`👤 Chào mừng ${found.fullName} (${found.unit}) đăng nhập thành công!`);
+          return;
+        }
         }
 
         setLoginError('❌ Tài khoản hoặc mật khẩu không chính xác!');
