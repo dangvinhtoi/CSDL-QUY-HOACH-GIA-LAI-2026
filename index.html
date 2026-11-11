@@ -725,16 +725,13 @@ function App() {
       };
   
 // =========================================================================
-// 🟢 HÀM GHI NHẬN NHẬT KÝ ĐĂNG NHẬP VÀ TẢI HỒ SƠ (CHUẨN XÁC TÊN)
+// 🟢 HÀM GHI NHẬN NHẬT KÝ ĐĂNG NHẬP VÀ TẢI HỒ SƠ (TỰ ĐỘNG LẤY TÊN CHUẨN XÁC)
 // =========================================================================
-const recordAuditLog = (actionType, targetName = '', tabName = '', memberObj = null) => {
+const recordAuditLog = (actionType, targetName = '', tabName = '') => {
   let actorName = 'Khách vãng lai';
   
   if (userRole === 'ADMIN') {
     actorName = 'Quản trị viên (Admin)';
-  } else if (memberObj && memberObj.fullName) {
-    // Lấy trực tiếp từ đối tượng thành viên vừa đăng nhập
-    actorName = `${memberObj.fullName} (${memberObj.unit || 'Cán bộ địa phương'})`;
   } else if (currentUser && currentUser.fullName) {
     actorName = `${currentUser.fullName} (${currentUser.unit || 'Cán bộ địa phương'})`;
   }
@@ -2529,8 +2526,8 @@ const handleSaveVung = async (e) => {
             setUserRole('MEMBER');
             setCurrentUser(found);
             
-            // 🟢 TRUYỀN TRỰC TIẾP `found` VÀO ĐÂY ĐỂ LẤY ĐÚNG TÊN & ĐƠN VỊ THÀNH VIÊN
-            recordAuditLog('LOGIN', '', '', found);
+            // 🟢 ĐẶT LỆNH NÀY NGAY SAU KHI GÁN currentUser
+            recordAuditLog('LOGIN');
 
             setShowLoginModal(false);
             setLoginForm({ username: '', password: '' });
