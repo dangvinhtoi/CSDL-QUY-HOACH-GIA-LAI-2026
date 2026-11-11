@@ -2857,16 +2857,33 @@ const handleSaveVung = async (e) => {
       };
 
   // =========================================================================
-// 🟢 HÀM KIỂM SOÁT QUYỀN TẢI HỒ SƠ THEO TAB
+// 🟢 HÀM KIỂM SOÁT QUYỀN TẢI HỒ SƠ CHẶT CHẼ 100% THEO TÀI KHOẢN
 // =========================================================================
 const handleDownloadFile = (row, tabTitle) => {
-  // Nếu là thành viên, bị khóa tải tab khác, và tab đang bấm không phải 'Quy hoạch Chung' -> Chặn lại
-  if (userRole === 'MEMBER' && currentUser?.allowDownloadAllTabs === false && tabTitle !== 'Quy hoạch Chung') {
-    showNotification('⚠️ Tài khoản của bạn bị giới hạn: Chỉ được phép tải hồ sơ trong Tab Quy hoạch chung!');
+  // 1. Nếu là Admin -> Cho phép tải tất cả các tab không giới hạn
+  if (userRole === 'ADMIN') {
+    recordAuditLog('DOWNLOAD', row.tenQh || row.noiDung || 'Tài liệu đồ án', tabTitle);
+    const fileUrl = row.file;
+    if (fileUrl) {
+      window.open(fileUrl.startsWith('http') ? fileUrl : `https://${fileUrl}`, '_blank');
+    } else {
+      showNotification('⚠️ Hồ sơ này chưa đính kèm tệp tài liệu.');
+    }
     return;
   }
-  
-  // Ghi nhận nhật ký tải file thành công
+
+  // 2. Nếu là Thành viên (MEMBER): Kiểm tra trạng thái phân quyền mới nhất trong membersList
+  if (userRole === 'MEMBER' && currentUser) {
+    const currentMemberInDb = (membersList || []).find(m => m.username === currentUser.username);
+    
+    // Nếu Admin đã bấm khóa (allowDownloadAllTabs === false) và tab đang bấm KHÔNG PHẢI là 'Quy hoạch Chung'
+    if (currentMemberInDb && currentMemberInDb.allowDownloadAllTabs === false && tabTitle !== 'Quy hoạch Chung') {
+      showNotification('⚠️ Tài khoản của bạn bị giới hạn: Chỉ được phép tải hồ sơ trong Tab Quy hoạch chung!');
+      return;
+    }
+  }
+
+  // 3. Nếu hợp lệ -> Ghi nhật ký và tiến hành mở/tải file
   recordAuditLog('DOWNLOAD', row.tenQh || row.noiDung || 'Tài liệu đồ án', tabTitle);
 
   const fileUrl = row.file;
