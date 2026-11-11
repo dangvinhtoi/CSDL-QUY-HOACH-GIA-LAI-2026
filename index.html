@@ -2522,16 +2522,7 @@ const handleLogin = (e) => {
     setUserRole('ADMIN');
     setCurrentUser({ username: 'admin', fullName: 'Quản trị viên Hệ thống', unit: 'Sở Xây dựng Gia Lai', role: 'ADMIN' });
     
-    // Ghi log Admin
-    const adminLog = {
-      id: Date.now(),
-      action: 'LOGIN',
-      user: 'Quản trị viên (Admin) - Sở Xây dựng Gia Lai',
-      content: 'Tài khoản Quản trị viên (Admin) - Sở Xây dựng Gia Lai đã đăng nhập hệ thống thành công.',
-      timestamp: new Date().toLocaleString('vi-VN')
-    };
-    const existingLogs = JSON.parse(localStorage.getItem('gialai_audit_logs') || '[]');
-    localStorage.setItem('gialai_audit_logs', JSON.stringify([adminLog, ...existingLogs].slice(0, 500)));
+    // 🛑 ĐÃ BỎ GHI NHẬT KÝ ĐĂNG NHẬP CHO ADMIN (Hệ thống sẽ không lưu log đăng nhập của Admin nữa)
 
     setShowLoginModal(false);
     setLoginForm({ username: '', password: '' });
