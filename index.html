@@ -2813,49 +2813,60 @@ const handleSaveVung = async (e) => {
 
      const handleSave = (e) => {
         e.preventDefault();
-        const targetType = editingRecord?._targetType || 'CHUNG';
-        const newRecord = { ...formData };
-        delete newRecord._targetType;
-        const recordId = editingRecord?.id ? editingRecord.id : Date.now();
-        newRecord.id = recordId;
+       // 🔴 1. KIỂM TRA QUYỀN CHỈNH SỬA / THÊM MỚI CỦA THÀNH VIÊN
+  if (userRole === 'MEMBER' && currentUser) {
+    const currentMemberInDb = (membersList || []).find(m => m.username === currentUser.username);
+    // Nếu thành viên đang bị bật tính năng kiểm soát/khóa quyền tải file -> Chặn luôn quyền thêm mới/sửa
+    if (currentMemberInDb && currentMemberInDb.allowDownloadAllTabs === false) {
+      showNotification('⚠️ Tài khoản của bạn đang bị hạn chế (Khóa quyền): Không được phép thêm mới hoặc chỉnh sửa dữ liệu!');
+      setIsModalOpen(false);
+      return;
+    }
+  }
 
-        if (userRole === 'MEMBER') {
-          const approvalCategory = targetType === 'CHITIET' ? 'QH_CHITIET' : targetType === 'PHANKHU' ? 'QH_PHANKHU' : 'QH_CHUNG';
-          submitPendingChange(approvalCategory, editingRecord?.id ? 'EDIT' : 'ADD', editingRecord?.id || null, newRecord);
-          setIsModalOpen(false);
-          return;
-        }
+  const targetType = editingRecord?._targetType || 'CHUNG';
+  const newRecord = { ...formData };
+  delete newRecord._targetType;
+  const recordId = editingRecord?.id ? editingRecord.id : Date.now();
+  newRecord.id = recordId;
 
-        let oldRecord = null;
-        let nextLogs = activityLogs;
-        let nextDetail = detailData;
-        let nextPhanKhu = phankhuData;
-        let nextData = data;
+  if (userRole === 'MEMBER') {
+    const approvalCategory = targetType === 'CHITIET' ? 'QH_CHITIET' : targetType === 'PHANKHU' ? 'QH_PHANKHU' : 'QH_CHUNG';
+    submitPendingChange(approvalCategory, editingRecord?.id ? 'EDIT' : 'ADD', editingRecord?.id || null, newRecord);
+    setIsModalOpen(false);
+    return;
+  }
 
-        if (targetType === 'CHITIET') {
-          oldRecord = (detailData || []).find(r => r.id === recordId);
-          nextDetail = oldRecord ? detailData.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(detailData || [])];
-          setDetailData(nextDetail);
-          nextLogs = recordActivityLog(oldRecord ? 'EDIT' : 'ADD', 'CHITIET', recordId, oldRecord, newRecord);
-          syncToCloud({ detailData: nextDetail, activityLogs: nextLogs });
-        } else if (targetType === 'PHANKHU') {
-          oldRecord = (phankhuData || []).find(r => r.id === recordId);
-          nextPhanKhu = oldRecord ? phankhuData.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(phankhuData || [])];
-          setPhankhuData(nextPhanKhu);
-          localStorage.setItem('gialai_qh_phankhu', JSON.stringify(nextPhanKhu));
-          nextLogs = recordActivityLog(oldRecord ? 'EDIT' : 'ADD', 'PHANKHU', recordId, oldRecord, newRecord);
-          syncToCloud({ phankhuData: nextPhanKhu, activityLogs: nextLogs });
-        } else {
-          oldRecord = (data || []).find(r => r.id === recordId);
-          nextData = oldRecord ? data.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(data || [])];
-          setData(nextData);
-          nextLogs = recordActivityLog(oldRecord ? 'EDIT' : 'ADD', 'CHUNG', recordId, oldRecord, newRecord);
-          syncToCloud({ data: nextData, activityLogs: nextLogs });
-        }
-        setIsModalOpen(false);
-        showNotification('Đã lưu hồ sơ thành công & đồng bộ Đám mây!');
-      };
+  let oldRecord = null;
+  let nextLogs = activityLogs;
+  let nextDetail = detailData;
+  let nextPhanKhu = phankhuData;
+  let nextData = data;
 
+  if (targetType === 'CHITIET') {
+    oldRecord = (detailData || []).find(r => r.id === recordId);
+    nextDetail = oldRecord ? detailData.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(detailData || [])];
+    setDetailData(nextDetail);
+    nextLogs = recordActivityLog(oldRecord ? 'EDIT' : 'ADD', 'CHITIET', recordId, oldRecord, newRecord);
+    syncToCloud({ detailData: nextDetail, activityLogs: nextLogs });
+  } else if (targetType === 'PHANKHU') {
+    oldRecord = (phankhuData || []).find(r => r.id === recordId);
+    nextPhanKhu = oldRecord ? phankhuData.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(phankhuData || [])];
+    setPhankhuData(nextPhanKhu);
+    localStorage.setItem('gialai_qh_phankhu', JSON.stringify(nextPhanKhu));
+    nextLogs = recordActivityLog(oldRecord ? 'EDIT' : 'ADD', 'PHANKHU', recordId, oldRecord, newRecord);
+    syncToCloud({ phankhuData: nextPhanKhu, activityLogs: nextLogs });
+  } else {
+    oldRecord = (data || []).find(r => r.id === recordId);
+    nextData = oldRecord ? data.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(data || [])];
+    setData(nextData);
+    nextLogs = recordActivityLog(oldRecord ? 'EDIT' : 'ADD', 'CHUNG', recordId, oldRecord, newRecord);
+    syncToCloud({ data: nextData, activityLogs: nextLogs });
+  }
+  setIsModalOpen(false);
+  showNotification('Đã lưu hồ sơ thành công & đồng bộ Đám mây!');
+};
+      
   // =========================================================================
 // 🟢 HÀM KIỂM SOÁT QUYỀN TẢI HỒ SƠ CHẶT CHẼ 100% THEO TÀI KHOẢN
 // =========================================================================
