@@ -2508,7 +2508,7 @@ const handleSaveVung = async (e) => {
 
       // HANDLERS MODAL
       // =========================================================================
-// 🟢 HÀM XỬ LÝ ĐĂNG NHẬP CHUẨN XÁC 100% (GHI LOG ĐẦY ĐỦ CHO CẢ ADMIN VÀ THÀNH VIÊN)
+// 🟢 HÀM XỬ LÝ ĐĂNG NHẬP (GHI LOG ĐẢM BẢO HIỂN THỊ TÊN VÀ ĐƠN VỊ THÀNH VIÊN)
 // =========================================================================
 const handleLogin = (e) => {
   e.preventDefault();
@@ -2520,11 +2520,18 @@ const handleLogin = (e) => {
   if (u === 'admin' && p === adminPassword) {
     setIsLoggedIn(true);
     setUserRole('ADMIN');
-    const adminObj = { username: 'admin', fullName: 'Quản trị viên Hệ thống', unit: 'Sở Xây dựng Gia Lai', role: 'ADMIN' };
-    setCurrentUser(adminObj);
+    setCurrentUser({ username: 'admin', fullName: 'Quản trị viên Hệ thống', unit: 'Sở Xây dựng Gia Lai', role: 'ADMIN' });
     
-    // Ghi log đăng nhập Admin
-    recordAuditLog('LOGIN', '', '', 'Quản trị viên (Admin) - Sở Xây dựng Gia Lai');
+    // Ghi log trực tiếp vào localStorage cho Admin
+    const adminLog = {
+      id: Date.now(),
+      action: 'LOGIN',
+      user: 'Quản trị viên (Admin) - Sở Xây dựng Gia Lai',
+      content: 'Tài khoản Quản trị viên (Admin) - Sở Xây dựng Gia Lai đã đăng nhập hệ thống thành công.',
+      timestamp: new Date().toLocaleString('vi-VN')
+    };
+    const existingLogs = JSON.parse(localStorage.getItem('gialai_audit_logs') || '[]');
+    localStorage.setItem('gialai_audit_logs', JSON.stringify([adminLog, ...existingLogs].slice(0, 500)));
 
     setShowLoginModal(false);
     setLoginForm({ username: '', password: '' });
@@ -2532,8 +2539,10 @@ const handleLogin = (e) => {
     return;
   }
 
-  // 2. Kiểm tra tài khoản Thành viên
-  const found = (membersList || []).find(m => m.username === u && m.password === p);
+  // 2. Lấy danh sách thành viên trực tiếp từ localStorage để tránh lệch state
+  const currentMembers = JSON.parse(localStorage.getItem('gialai_members_list') || '[]');
+  const found = currentMembers.find(m => m.username === u && m.password === p);
+
   if (found) {
     if (found.status === 'PENDING') {
       return setLoginError('⏳ Tài khoản của bạn đang chờ Admin kiểm duyệt và cấp quyền. Vui lòng thử lại sau!');
@@ -2546,11 +2555,13 @@ const handleLogin = (e) => {
       setUserRole('MEMBER');
       setCurrentUser(found);
       
-      // 🟢 GHÉP CHÍNH XÁC HỌ TÊN VÀ ĐƠN VỊ CÔNG TÁC CỦA THÀNH VIÊN
-      const memberDisplayName = `${found.fullName} (${found.unit || found.position || 'Cán bộ địa phương'})`;
+      // 🟢 BẮT BUỘC LẤY ĐÚNG HỌ TÊN VÀ ĐƠN VỊ CÔNG TÁC CỦA THÀNH VIÊN ĐỂ HIỂN THỊ LÊN NHẬT KÝ
+      const fullNameStr = found.fullName || u;
+      const unitStr = found.unit || found.position || 'Cán bộ địa phương';
+      const memberDisplayName = `${fullNameStr} (${unitStr})`;
       
-      // 🟢 GỌI TRỰC TIẾP HÀM GHI LOG VÀ LƯU VÀO LOCALSTORAGE
-      const newAuditLog = {
+      // Ghi log trực tiếp vào localStorage
+      const memberLog = {
         id: Date.now(),
         action: 'LOGIN',
         user: memberDisplayName,
@@ -2559,8 +2570,7 @@ const handleLogin = (e) => {
       };
       
       const existingLogs = JSON.parse(localStorage.getItem('gialai_audit_logs') || '[]');
-      const nextAuditLogs = [newAuditLog, ...existingLogs].slice(0, 500);
-      localStorage.setItem('gialai_audit_logs', JSON.stringify(nextAuditLogs));
+      localStorage.setItem('gialai_audit_logs', JSON.stringify([memberLog, ...existingLogs].slice(0, 500)));
 
       setShowLoginModal(false);
       setLoginForm({ username: '', password: '' });
