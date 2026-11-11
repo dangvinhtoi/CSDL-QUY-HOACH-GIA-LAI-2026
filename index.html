@@ -727,21 +727,26 @@ function App() {
 // =========================================================================
 // 🟢 HÀM GHI NHẬN NHẬT KÝ ĐĂNG NHẬP VÀ TẢI HỒ SƠ
 // =========================================================================
-const recordAuditLog = (actionType, targetName, tabName) => {
-  const actor = currentUser?.fullName || (userRole === 'ADMIN' ? 'Quản trị viên Admin' : 'Thành viên');
-  const unitInfo = currentUser?.unit ? ` (${currentUser.unit})` : '';
+const recordAuditLog = (actionType, targetName = '', tabName = '') => {
+  // Lấy chính xác tên hiển thị của tài khoản đang đăng nhập
+  let actorName = 'Khách vãng lai';
+  if (userRole === 'ADMIN') {
+    actorName = 'Quản trị viên (Admin)';
+  } else if (currentUser && currentUser.fullName) {
+    actorName = `${currentUser.fullName} (${currentUser.unit || 'Cán bộ địa phương'})`;
+  }
   
   let content = '';
   if (actionType === 'LOGIN') {
-    content = `Thành viên ${actor}${unitInfo} đã đăng nhập hệ thống thành công.`;
+    content = `Tài khoản ${actorName} đã đăng nhập hệ thống thành công.`;
   } else if (actionType === 'DOWNLOAD') {
-    content = `Thành viên ${actor}${unitInfo} đã tải hồ sơ [${targetName}] tại [${tabName}].`;
+    content = `Tài khoản ${actorName} đã tải hồ sơ [${targetName}] tại mục [${tabName}].`;
   }
 
   const newAuditLog = {
     id: Date.now(),
     action: actionType,
-    user: actor + unitInfo,
+    user: actorName,
     content: content,
     timestamp: new Date().toLocaleString('vi-VN')
   };
@@ -4717,18 +4722,18 @@ const handleDownloadFile = (row, tabTitle) => {
 ) : (
   <div className="flex flex-col gap-3">
     
-    {/* 1. HIỂN THỊ NHẬT KÝ ĐĂNG NHẬP & TẢI HỒ SƠ */}
-    {JSON.parse(localStorage.getItem('gialai_audit_logs') || '[]').map(audit => (
-      <div key={audit.id} className="bg-white border border-slate-200 rounded-lg p-3 sm:p-4 flex justify-between items-center shadow-sm">
-        <div className="flex items-center gap-3">
-          <span className={`px-2.5 py-1 text-xs font-bold rounded text-white ${audit.action === 'LOGIN' ? 'bg-emerald-600' : 'bg-cyan-600'}`}>
-            {audit.action === 'LOGIN' ? '🔑 ĐĂNG NHẬP' : '📥 TẢI HỒ SƠ'}
-          </span>
-          <span className="text-sm font-medium text-slate-800">{audit.content}</span>
-        </div>
-        <span className="text-xs text-slate-400 font-medium">{audit.timestamp}</span>
-      </div>
-    ))}
+    {/* HIỂN THỊ NHẬT KÝ ĐĂNG NHẬP & TẢI HỒ SƠ */}
+{JSON.parse(localStorage.getItem('gialai_audit_logs') || '[]').map(audit => (
+  <div key={audit.id} className="bg-white border border-slate-200 rounded-lg p-3 sm:p-4 flex justify-between items-center shadow-sm">
+    <div className="flex items-center gap-3">
+      <span className={`px-2.5 py-1 text-xs font-bold rounded text-white ${audit.action === 'LOGIN' ? 'bg-emerald-600' : 'bg-blue-600'}`}>
+        {audit.action === 'LOGIN' ? '🔑 ĐĂNG NHẬP' : '📥 TẢI HỒ SƠ'}
+      </span>
+      <span className="text-sm font-medium text-slate-800">{audit.content}</span>
+    </div>
+    <span className="text-xs text-slate-400 font-medium">{audit.timestamp}</span>
+  </div>
+))}
 
     {/* 2. HIỂN THỊ NHẬT KÝ THAY ĐỔI CSDL CŨ */}
     {(activityLogs || []).map(log => (
