@@ -2508,9 +2508,9 @@ const handleSaveVung = async (e) => {
 
       // HANDLERS MODAL
       // =========================================================================
-      // 🟢 HÀM XỬ LÝ ĐĂNG NHẬP (GHI NHẬN ĐÚNG TÊN ADMIN VÀ THÀNH VIÊN)
-      // =========================================================================
-  const handleLogin = (e) => {
+// 🟢 HÀM XỬ LÝ ĐĂNG NHẬP CHUẨN XÁC 100% (GHI LOG ĐẦY ĐỦ CHO CẢ ADMIN VÀ THÀNH VIÊN)
+// =========================================================================
+const handleLogin = (e) => {
   e.preventDefault();
   setLoginError('');
   const u = (loginForm.username || '').trim();
@@ -2520,10 +2520,10 @@ const handleSaveVung = async (e) => {
   if (u === 'admin' && p === adminPassword) {
     setIsLoggedIn(true);
     setUserRole('ADMIN');
-    const adminInfo = { username: 'admin', fullName: 'Quản trị viên Hệ thống', unit: 'Sở Xây dựng Gia Lai', role: 'ADMIN' };
-    setCurrentUser(adminInfo);
+    const adminObj = { username: 'admin', fullName: 'Quản trị viên Hệ thống', unit: 'Sở Xây dựng Gia Lai', role: 'ADMIN' };
+    setCurrentUser(adminObj);
     
-    // Ghi log chuẩn xác cho Admin
+    // Ghi log đăng nhập Admin
     recordAuditLog('LOGIN', '', '', 'Quản trị viên (Admin) - Sở Xây dựng Gia Lai');
 
     setShowLoginModal(false);
@@ -2545,11 +2545,22 @@ const handleSaveVung = async (e) => {
       setIsLoggedIn(true);
       setUserRole('MEMBER');
       setCurrentUser(found);
-      window._tempLoginUser = found; // Lưu tạm để chống trễ state
       
-      // 🟢 Truyền trực tiếp họ tên và đơn vị vào đây
-      const memberDisplayName = `${found.fullName} (${found.unit || 'Cán bộ địa phương'})`;
-      recordAuditLog('LOGIN', '', '', memberDisplayName);
+      // 🟢 GHÉP CHÍNH XÁC HỌ TÊN VÀ ĐƠN VỊ CÔNG TÁC CỦA THÀNH VIÊN
+      const memberDisplayName = `${found.fullName} (${found.unit || found.position || 'Cán bộ địa phương'})`;
+      
+      // 🟢 GỌI TRỰC TIẾP HÀM GHI LOG VÀ LƯU VÀO LOCALSTORAGE
+      const newAuditLog = {
+        id: Date.now(),
+        action: 'LOGIN',
+        user: memberDisplayName,
+        content: `Tài khoản ${memberDisplayName} đã đăng nhập hệ thống thành công.`,
+        timestamp: new Date().toLocaleString('vi-VN')
+      };
+      
+      const existingLogs = JSON.parse(localStorage.getItem('gialai_audit_logs') || '[]');
+      const nextAuditLogs = [newAuditLog, ...existingLogs].slice(0, 500);
+      localStorage.setItem('gialai_audit_logs', JSON.stringify(nextAuditLogs));
 
       setShowLoginModal(false);
       setLoginForm({ username: '', password: '' });
