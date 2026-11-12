@@ -463,7 +463,7 @@
     }
 
 function App() {
-      const [showLoginPass, setShowLoginPass] = useState(false);
+
       const [showFbConfigModal, setShowFbConfigModal] = useState(false);
       const [fbConfigInput, setFbConfigInput] = useState(() => {
         const gas = window.getValidCloudUrl();
@@ -4006,7 +4006,7 @@ const handleSaveVung = async (e) => {
                 <form onSubmit={handleLogin} className="p-4 sm:p-6 flex flex-col gap-4 overflow-y-auto flex-1 custom-scrollbar">
                   {loginError && <div className="bg-red-50 text-red-600 p-3 rounded text-sm font-medium">{loginError}</div>}
                   <div><label className="block text-sm font-semibold mb-1">Tài khoản</label><input type="text" value={loginForm.username} onChange={e=>setLoginForm(p=>({...p, username: e.target.value}))} className="w-full border px-3 py-2 rounded" placeholder="admin" /></div>
-                  <div><label className="block text-sm font-semibold mb-1">Mật khẩu</label><div className="relative"><input type={showLoginPass ? "text" : "password"} value={loginForm.password} onChange={e=>setLoginForm(p=>({...p, password: e.target.value}))} className="w-full border px-3 py-2 pr-10 rounded" placeholder="123456" /><button type="button" onClick={() => setShowLoginPass(!showLoginPass)}className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 focus:outline-none">{showLoginPass ? <EyeOff className="w-5 h-5"/> : <Eye className="w-5 h-5"/>}</button></div></div>
+                  <div><label className="block text-sm font-semibold mb-1">Mật khẩu</label><input type="password" value={loginForm.password} onChange={e=>setLoginForm(p=>({...p, password: e.target.value}))} className="w-full border px-3 py-2 rounded" placeholder="123456" /></div>
                   <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded shadow-sm transition-colors">Đăng nhập</button>
                   <div className="text-center text-xs text-slate-600 pt-2 border-t mt-1">
                     Chưa có tài khoản? <button type="button" onClick={() => { setShowLoginModal(false); setShowRegisterModal(true); }} className="text-blue-600 font-bold hover:underline">Đăng ký Thành viên ngay</button>
