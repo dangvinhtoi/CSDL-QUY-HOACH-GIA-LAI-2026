@@ -477,7 +477,7 @@ function App() {
         return '';
       });
       const [cloudStatus, setCloudStatus] = useState(isCloudConnected ? 'connected' : 'local');
-      const [showPassword, setShowPassword] = useState(false);
+
       // CLOUD SYNC HELPERS
       const saveToCloud = (collName, docId, record) => {
         if (db) {
@@ -723,50 +723,7 @@ function App() {
         localStorage.setItem('gialai_activity_logs', JSON.stringify(nextLogs));
         return nextLogs;
       };
-  
-// =========================================================================
-// 🟢 HÀM GHI NHẬN NHẬT KÝ ĐĂNG NHẬP & TẢI FILE (CHUẨN XÁC 100% THÔNG TIN)
-// =========================================================================
-const recordAuditLog = (actionType, targetName = '', tabName = '', customActorName = '') => {
-  let actorName = 'Khách vãng lai';
 
-  // 1. Ưu tiên lấy tên truyền trực tiếp vào hàm
-  if (customActorName && customActorName.trim() !== '') {
-    actorName = customActorName;
-  } 
-  // 2. Nếu đang là Admin
-  else if (userRole === 'ADMIN') {
-    actorName = 'Quản trị viên (Admin) - Sở Xây dựng Gia Lai';
-  } 
-  // 3. Nếu đang là Thành viên đã đăng nhập (lấy trực tiếp từ currentUser)
-  else if (currentUser && currentUser.fullName) {
-    actorName = `${currentUser.fullName} (${currentUser.unit || currentUser.position || 'Cán bộ địa phương'})`;
-  }
-  // 4. Dự phòng: Nếu có đối tượng người dùng lưu tạm
-  else if (window._tempLoginUser && window._tempLoginUser.fullName) {
-    actorName = `${window._tempLoginUser.fullName} (${window._tempLoginUser.unit || 'Cán bộ địa phương'})`;
-  }
-
-  let content = '';
-  if (actionType === 'LOGIN') {
-    content = `Tài khoản ${actorName} đã đăng nhập hệ thống thành công.`;
-  } else if (actionType === 'DOWNLOAD') {
-    content = `Tài khoản ${actorName} đã tải hồ sơ [${targetName}] tại mục [${tabName}].`;
-  }
-
-  const newAuditLog = {
-    id: Date.now(),
-    action: actionType,
-    user: actorName,
-    content: content,
-    timestamp: new Date().toLocaleString('vi-VN')
-  };
-
-  const existingLogs = JSON.parse(localStorage.getItem('gialai_audit_logs') || '[]');
-  const nextAuditLogs = [newAuditLog, ...existingLogs].slice(0, 500);
-  localStorage.setItem('gialai_audit_logs', JSON.stringify(nextAuditLogs));
-};
-  
       const handleRestoreLog = (log) => {
         openConfirm('Khôi phục dữ liệu', `Bạn có chắc muốn khôi phục lại trạng thái trước khi [${log.action === 'ADD' ? 'THÊM MỚI' : log.action === 'EDIT' ? 'CẬP NHẬT' : 'XÓA'}] của hồ sơ này?`, () => {
           closeConfirm();
@@ -2507,76 +2464,44 @@ const handleSaveVung = async (e) => {
       }, [detailData]);
 
       // HANDLERS MODAL
-// =========================================================================
-// 🟢 HÀM XỬ LÝ ĐĂNG NHẬP NÂNG CẤP (ĐẢM BẢO GHI NHẬT KÝ ĐẦY ĐỦ CHO THÀNH VIÊN)
-// =========================================================================
-const handleLogin = (e) => {
-  e.preventDefault();
-  setLoginError('');
-  const u = (loginForm.username || '').trim();
-  const p = (loginForm.password || '').trim();
+      const handleLogin = (e) => {
+        e.preventDefault();
+        setLoginError('');
+        const u = (loginForm.username || '').trim();
+        const p = (loginForm.password || '').trim();
 
-  // 1. Kiểm tra tài khoản Quản trị viên (Admin)
-  if (u === 'admin' && p === adminPassword) {
-    setIsLoggedIn(true);
-    setUserRole('ADMIN');
-    setCurrentUser({ username: 'admin', fullName: 'Quản trị viên Hệ thống', unit: 'Sở Xây dựng Gia Lai', role: 'ADMIN' });
-    
-    // Đã bỏ ghi log đăng nhập cho Admin theo yêu cầu trước đó
-    setShowLoginModal(false);
-    setLoginForm({ username: '', password: '' });
-    showNotification('🔑 Đăng nhập Quản trị viên (Admin) thành công!');
-    return;
-  }
+        if (u === 'admin' && p === adminPassword) {
+          setIsLoggedIn(true);
+          setUserRole('ADMIN');
+          setCurrentUser({ username: 'admin', fullName: 'Quản trị viên Hệ thống', unit: 'Sở Xây dựng Gia Lai', role: 'ADMIN' });
+          setShowLoginModal(false);
+          setLoginForm({ username: '', password: '' });
+          showNotification('🔑 Đăng nhập Quản trị viên (Admin) thành công!');
+          return;
+        }
 
-  // 2. 🟢 LẤY TRỰC TIẾP DANH SÁCH THÀNH VIÊN TỪ LOCALSTORAGE ĐỂ ĐẢM BẢO KHÔNG BỊ TRỄ STATE
-  const storedMembers = JSON.parse(localStorage.getItem('gialai_members_list') || '[]');
-  
-  // Thêm dữ liệu mẫu mặc định nếu danh sách trống để anh dễ test
-  const defaultMembers = storedMembers.length > 0 ? storedMembers : [
-    { id: 1, fullName: 'Đặng Vĩnh Tới', unit: 'Phòng Quy hoạch Kiến trúc và Phát triển đô thị', position: 'Chuyên viên', username: 'dangvinhtoi', password: '123456', status: 'APPROVED', allowDownloadAllTabs: true, allowKTQH: true }
-  ];
+        const found = (membersList || []).find(m => m.username === u && m.password === p);
+        if (found) {
+          if (found.status === 'PENDING') {
+            return setLoginError('⏳ Tài khoản của bạn đang chờ Admin kiểm duyệt và cấp quyền. Vui lòng thử lại sau!');
+          }
+          if (found.status === 'REJECTED') {
+            return setLoginError('❌ Tài khoản của bạn đã bị từ chối hoặc vô hiệu hóa.');
+          }
+          if (found.status === 'APPROVED') {
+            setIsLoggedIn(true);
+            setUserRole('MEMBER');
+            setCurrentUser(found);
+            setShowLoginModal(false);
+            setLoginForm({ username: '', password: '' });
+            showNotification(`👤 Chào mừng ${found.fullName} (${found.unit}) đăng nhập thành công!`);
+            return;
+          }
+        }
 
-  const found = defaultMembers.find(m => m.username.toLowerCase() === u.toLowerCase() && m.password === p);
+        setLoginError('❌ Tài khoản hoặc mật khẩu không chính xác!');
+      };
 
-  if (found) {
-    if (found.status === 'PENDING') {
-      return setLoginError('⏳ Tài khoản của bạn đang chờ Admin kiểm duyệt và cấp quyền. Vui lòng thử lại sau!');
-    }
-    if (found.status === 'REJECTED') {
-      return setLoginError('❌ Tài khoản của bạn đã bị từ chối hoặc vô hiệu hóa.');
-    }
-
-    // 🟢 DÙ TÀI KHOẢN Ở TRẠNG THÁI NÀO, MIỄN KHỚP TÊN VÀ MẬT KHẨU LÀ ĐĂNG NHẬP VÀ GHI LOG THÀNH CÔNG
-    setIsLoggedIn(true);
-    setUserRole('MEMBER');
-    setCurrentUser(found);
-    
-    // Ghép chuẩn xác Tên và Đơn vị công tác
-    const fullNameStr = found.fullName || u;
-    const unitStr = found.unit || found.position || 'Cán bộ địa phương';
-    const memberDisplayName = `${fullNameStr} (${unitStr})`;
-    
-    // 🟢 TẠO VÀ LƯU TRỰC TIẾP BẢN GHI NHẬT KÝ ĐĂNG NHẬP VÀO LOCALSTORAGE
-    const memberLog = {
-      id: Date.now(),
-      action: 'LOGIN',
-      user: memberDisplayName,
-      content: `Tài khoản ${memberDisplayName} đã đăng nhập hệ thống thành công.`,
-      timestamp: new Date().toLocaleString('vi-VN')
-    };
-    
-    const existingLogs = JSON.parse(localStorage.getItem('gialai_audit_logs') || '[]');
-    localStorage.setItem('gialai_audit_logs', JSON.stringify([memberLog, ...existingLogs].slice(0, 500)));
-
-    setShowLoginModal(false);
-    setLoginForm({ username: '', password: '' });
-    showNotification(`👤 Chào mừng ${found.fullName} (${found.unit}) đăng nhập thành công!`);
-    return;
-  }
-
-  setLoginError('❌ Tài khoản hoặc mật khẩu không chính xác!');
-};
       const handleRegister = (e) => {
         e.preventDefault();
         setRegisterError('');
@@ -2860,108 +2785,48 @@ const handleLogin = (e) => {
 
      const handleSave = (e) => {
         e.preventDefault();
-       // 🔴 1. KIỂM TRA QUYỀN CHỈNH SỬA / THÊM MỚI CỦA THÀNH VIÊN
-  if (userRole === 'MEMBER' && currentUser) {
-    const currentMemberInDb = (membersList || []).find(m => m.username === currentUser.username);
-    // Nếu thành viên đang bị bật tính năng kiểm soát/khóa quyền tải file -> Chặn luôn quyền thêm mới/sửa
-    if (currentMemberInDb && currentMemberInDb.allowDownloadAllTabs === false) {
-      showNotification('⚠️ Tài khoản của bạn đang bị hạn chế (Khóa quyền): Không được phép thêm mới hoặc chỉnh sửa dữ liệu!');
-      setIsModalOpen(false);
-      return;
-    }
-  }
+        const targetType = editingRecord?._targetType || 'CHUNG';
+        const newRecord = { ...formData };
+        delete newRecord._targetType;
+        const recordId = editingRecord?.id ? editingRecord.id : Date.now();
+        newRecord.id = recordId;
 
-  const targetType = editingRecord?._targetType || 'CHUNG';
-  const newRecord = { ...formData };
-  delete newRecord._targetType;
-  const recordId = editingRecord?.id ? editingRecord.id : Date.now();
-  newRecord.id = recordId;
+        if (userRole === 'MEMBER') {
+          const approvalCategory = targetType === 'CHITIET' ? 'QH_CHITIET' : targetType === 'PHANKHU' ? 'QH_PHANKHU' : 'QH_CHUNG';
+          submitPendingChange(approvalCategory, editingRecord?.id ? 'EDIT' : 'ADD', editingRecord?.id || null, newRecord);
+          setIsModalOpen(false);
+          return;
+        }
 
-  if (userRole === 'MEMBER') {
-    const approvalCategory = targetType === 'CHITIET' ? 'QH_CHITIET' : targetType === 'PHANKHU' ? 'QH_PHANKHU' : 'QH_CHUNG';
-    submitPendingChange(approvalCategory, editingRecord?.id ? 'EDIT' : 'ADD', editingRecord?.id || null, newRecord);
-    setIsModalOpen(false);
-    return;
-  }
+        let oldRecord = null;
+        let nextLogs = activityLogs;
+        let nextDetail = detailData;
+        let nextPhanKhu = phankhuData;
+        let nextData = data;
 
-  let oldRecord = null;
-  let nextLogs = activityLogs;
-  let nextDetail = detailData;
-  let nextPhanKhu = phankhuData;
-  let nextData = data;
-
-  if (targetType === 'CHITIET') {
-    oldRecord = (detailData || []).find(r => r.id === recordId);
-    nextDetail = oldRecord ? detailData.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(detailData || [])];
-    setDetailData(nextDetail);
-    nextLogs = recordActivityLog(oldRecord ? 'EDIT' : 'ADD', 'CHITIET', recordId, oldRecord, newRecord);
-    syncToCloud({ detailData: nextDetail, activityLogs: nextLogs });
-  } else if (targetType === 'PHANKHU') {
-    oldRecord = (phankhuData || []).find(r => r.id === recordId);
-    nextPhanKhu = oldRecord ? phankhuData.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(phankhuData || [])];
-    setPhankhuData(nextPhanKhu);
-    localStorage.setItem('gialai_qh_phankhu', JSON.stringify(nextPhanKhu));
-    nextLogs = recordActivityLog(oldRecord ? 'EDIT' : 'ADD', 'PHANKHU', recordId, oldRecord, newRecord);
-    syncToCloud({ phankhuData: nextPhanKhu, activityLogs: nextLogs });
-  } else {
-    oldRecord = (data || []).find(r => r.id === recordId);
-    nextData = oldRecord ? data.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(data || [])];
-    setData(nextData);
-    nextLogs = recordActivityLog(oldRecord ? 'EDIT' : 'ADD', 'CHUNG', recordId, oldRecord, newRecord);
-    syncToCloud({ data: nextData, activityLogs: nextLogs });
-  }
-  setIsModalOpen(false);
-  showNotification('Đã lưu hồ sơ thành công & đồng bộ Đám mây!');
-};
-      
-// =========================================================================
-// 🟢 HÀM KIỂM SOÁT QUYỀN VÀ GHI NHẬT KÝ TẢI HỒ SƠ CHUẨN XÁC 100%
-// =========================================================================
-const handleDownloadFile = (row, tabTitle) => {
-  // 1. Xác định tên người thực hiện (Admin hoặc Thành viên)
-  let actorName = 'Khách vãng lai';
-  if (userRole === 'ADMIN') {
-    actorName = 'Quản trị viên (Admin) - Sở Xây dựng Gia Lai';
-  } else if (currentUser && currentUser.fullName) {
-    actorName = `${currentUser.fullName} (${currentUser.unit || currentUser.position || 'Cán bộ địa phương'})`;
-  }
-
-  // 2. Nếu là Thành viên (MEMBER): Kiểm tra trạng thái phân quyền tải file
-  if (userRole === 'MEMBER' && currentUser) {
-    const currentMembers = JSON.parse(localStorage.getItem('gialai_members_list') || '[]');
-    const currentMemberInDb = currentMembers.find(m => m.username === currentUser.username);
-    
-    // Nếu bị bật tính năng khóa tải tab khác (allowDownloadAllTabs === false) và không phải tab 'Quy hoạch Chung'
-    if (currentMemberInDb && currentMemberInDb.allowDownloadAllTabs === false && tabTitle !== 'Quy hoạch Chung') {
-      showNotification('⚠️ Tài khoản của bạn bị giới hạn: Chỉ được phép tải hồ sơ trong Tab Quy hoạch chung!');
-      return;
-    }
-  }
-
-  // 3. 🟢 GHI NHẬN TRỰC TIẾP VÀO LOCALSTORAGE CHO HÀNH ĐỘNG TẢI FILE
-  const docName = row.tenQh || row.noiDung || 'Tài liệu đồ án quy hoạch';
-  const downloadLog = {
-    id: Date.now(),
-    action: 'DOWNLOAD',
-    user: actorName,
-    content: `Tài khoản ${actorName} đã tải hồ sơ [${docName}] tại mục [${tabTitle}].`,
-    timestamp: new Date().toLocaleString('vi-VN')
-  };
-
-  const existingLogs = JSON.parse(localStorage.getItem('gialai_audit_logs') || '[]');
-  localStorage.setItem('gialai_audit_logs', JSON.stringify([downloadLog, ...existingLogs].slice(0, 500)));
-
-  // 4. Tiến hành mở/tải file tài liệu
-  const fileUrl = row.file;
-  if (fileUrl) {
-    const targetUrl = fileUrl.startsWith('http') ? fileUrl : `https://${fileUrl}`;
-    window.open(targetUrl, '_blank');
-    showNotification('📥 Đã ghi nhận lịch sử tải file thành công!');
-  } else {
-    showNotification('⚠️ Hồ sơ này chưa đính kèm tệp tài liệu.');
-  }
-};
-  
+        if (targetType === 'CHITIET') {
+          oldRecord = (detailData || []).find(r => r.id === recordId);
+          nextDetail = oldRecord ? detailData.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(detailData || [])];
+          setDetailData(nextDetail);
+          nextLogs = recordActivityLog(oldRecord ? 'EDIT' : 'ADD', 'CHITIET', recordId, oldRecord, newRecord);
+          syncToCloud({ detailData: nextDetail, activityLogs: nextLogs });
+        } else if (targetType === 'PHANKHU') {
+          oldRecord = (phankhuData || []).find(r => r.id === recordId);
+          nextPhanKhu = oldRecord ? phankhuData.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(phankhuData || [])];
+          setPhankhuData(nextPhanKhu);
+          localStorage.setItem('gialai_qh_phankhu', JSON.stringify(nextPhanKhu));
+          nextLogs = recordActivityLog(oldRecord ? 'EDIT' : 'ADD', 'PHANKHU', recordId, oldRecord, newRecord);
+          syncToCloud({ phankhuData: nextPhanKhu, activityLogs: nextLogs });
+        } else {
+          oldRecord = (data || []).find(r => r.id === recordId);
+          nextData = oldRecord ? data.map(r => r.id === recordId ? newRecord : r) : [newRecord, ...(data || [])];
+          setData(nextData);
+          nextLogs = recordActivityLog(oldRecord ? 'EDIT' : 'ADD', 'CHUNG', recordId, oldRecord, newRecord);
+          syncToCloud({ data: nextData, activityLogs: nextLogs });
+        }
+        setIsModalOpen(false);
+        showNotification('Đã lưu hồ sơ thành công & đồng bộ Đám mây!');
+      };
       const handleDelete = (id, targetType = 'CHUNG') => {
         if (!isLoggedIn) return;
         openConfirm('Xác nhận xóa', 'Bạn có chắc chắn muốn xóa hồ sơ này?', () => {
@@ -3419,7 +3284,7 @@ const handleDownloadFile = (row, tabTitle) => {
                             {COLUMNS.slice(1).map(col => (
                               <td key={`${row.id}-${col.key}`} className={`px-3 py-2 text-sm border-x align-middle whitespace-normal break-words ${col.width}`}>
                                 {col.key === 'tenQh' ? (<div className="font-semibold text-blue-900">{row[col.key]}</div>) 
-                                : col.key === 'file' && row[col.key] ? ( isLoggedIn ? <button onClick={() => handleDownloadFile(row, 'Quy hoạch Chung')} className="inline-flex items-center text-blue-600 bg-blue-50 px-2 py-1 rounded border hover:bg-blue-100 transition-colors font-medium"><Download className="h-3 w-3 mr-1" /> Tải về</button> : <span className="inline-flex items-center text-slate-400 bg-slate-50 px-2 py-1 rounded border text-xs font-medium cursor-not-allowed" title="Vui lòng đăng nhập để tải tài liệu"><Lock className="h-3 w-3 mr-1" /> Khóa</span> )
+                                : col.key === 'file' && row[col.key] ? ( isLoggedIn ? <a href={row[col.key].startsWith('http') ? row[col.key] : `https://${row[col.key]}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-blue-600 bg-blue-50 px-2 py-1 rounded border hover:bg-blue-100 transition-colors font-medium"><Download className="h-3 w-3 mr-1" /> Tải về</a> : <span className="inline-flex items-center text-slate-400 bg-slate-50 px-2 py-1 rounded border text-xs font-medium cursor-not-allowed" title="Vui lòng đăng nhập để tải tài liệu"><Lock className="h-3 w-3 mr-1" /> Khóa</span> )
                                 : col.key === 'mapLink' && row[col.key] ? ( isLoggedIn ? <a href={row[col.key].startsWith('http') ? row[col.key] : `https://${row[col.key]}`} target="_blank" rel="noopener noreferrer" className="inline-flex text-emerald-600 bg-emerald-50 px-2 py-1 rounded border hover:bg-emerald-100 font-medium transition-colors"><MapPin className="h-3 w-3 mr-1 mt-0.5" /> Map</a> : <span className="inline-flex items-center text-slate-400 bg-slate-50 px-2 py-1 rounded border text-xs font-medium cursor-not-allowed" title="Vui lòng đăng nhập để xem bản đồ"><Lock className="h-3 w-3 mr-1" /> Khóa</span> )
                                 : col.key === 'qdPheDuyet' ? (<div className={row[col.key] && row[col.key] !== 'Đang cập nhật' ? 'font-bold text-emerald-600' : 'text-slate-400 italic'}>{row[col.key]}</div>)
                                 : (<div className={!row[col.key] || row[col.key]==='Đang cập nhật' ? 'text-slate-400 italic' : ''}>{row[col.key] || '---'}</div>)}
@@ -3474,7 +3339,7 @@ const handleDownloadFile = (row, tabTitle) => {
                           <tr key={row.id} className="hover:bg-rose-50/50 group">
                             <td className="px-3 py-3 text-center text-sm border-x">{index + 1}</td><td className="px-3 py-3 text-sm font-medium border-x">{row.huyen}<br/><span className="text-xs text-slate-400">({row.tinhCu})</span></td><td className="px-3 py-3 text-sm font-semibold border-x whitespace-pre-wrap break-words">{row.noiDung}</td><td className="px-3 py-3 text-sm border-x">{row.coQuan || '---'}</td>
                             <td className="px-3 py-3 text-center border-x"><span className={`px-2.5 py-1 text-xs font-bold rounded border ${row.trangThai === 'Đã hoàn thành' ? 'bg-emerald-50 text-emerald-700' : row.trangThai === 'Đang rà soát' ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>{row.trangThai}</span></td>
-                            <td className="px-3 py-3 text-center border-x">{row.file ? (isLoggedIn ? (<button onClick={() => handleDownloadFile(row, 'Rà soát Cụm Huyện Cũ')} className="inline-flex items-center text-rose-600 bg-rose-50 px-2 py-1 rounded border text-xs hover:bg-rose-100 transition-colors font-medium cursor-pointer" ><Download className="h-3 w-3 mr-1" /> Tải về </button>) : (<span className="inline-flex items-center text-slate-400 bg-slate-50 px-2 py-1 rounded border text-xs font-medium cursor-not-allowed" title="Vui lòng đăng nhập để tải tài liệu"><Lock className="h-3 w-3 mr-1" /> Khóa </span>)) : (<span className="text-slate-300 italic text-xs">Trống</span>)}</td>
+                            <td className="px-3 py-3 text-center border-x">{row.file ? ( isLoggedIn ? <a href={row.file.startsWith('http') ? row.file : `https://${row.file}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-rose-600 bg-rose-50 px-2 py-1 rounded border text-xs hover:bg-rose-100 transition-colors font-medium"><Download className="h-3 w-3 mr-1" /> Tải về</a> : <span className="inline-flex items-center text-slate-400 bg-slate-50 px-2 py-1 rounded border text-xs font-medium cursor-not-allowed" title="Vui lòng đăng nhập để tải tài liệu"><Lock className="h-3 w-3 mr-1" /> Khóa</span> ) : <span className="text-slate-300 italic text-xs">Trống</span>}</td><td className="px-3 py-3 text-sm italic border-x whitespace-normal break-words">{row.ghiChu || '---'}</td>
                             <td className="px-2 py-2 text-center border-x bg-white group-hover:bg-rose-50/50 sticky right-0 z-10 shadow-[-4px_0_10px_rgba(0,0,0,0.05)]"><div className="flex justify-center gap-1">
   {isLoggedIn && (
     <button onClick={() => openReviewModal(row)} className="p-1.5 text-blue-600 hover:bg-blue-200 rounded"><Edit2 className="h-4 w-4" /></button>
@@ -3530,7 +3395,7 @@ const handleDownloadFile = (row, tabTitle) => {
                             {COLUMNS.slice(1).map(col => (
                               <td key={`${row.id}-${col.key}`} className={`px-3 py-2 text-sm border-x align-middle whitespace-normal break-words ${col.width}`}>
                                 {col.key === 'tenQh' ? (<div className="font-semibold text-orange-900">{row[col.key]}</div>) 
-                                : col.key === 'file' && row[col.key] ? ( isLoggedIn ? <button onClick={() => handleDownloadFile(row, 'Quy hoạch Phân khu')} className="inline-flex items-center text-blue-600 bg-blue-50 px-2 py-1 rounded border hover:bg-blue-100 transition-colors font-medium"><Download className="h-3 w-3 mr-1" /> Tải về</button> : <span className="inline-flex items-center text-slate-400 bg-slate-50 px-2 py-1 rounded border text-xs font-medium cursor-not-allowed" title="Vui lòng đăng nhập để tải tài liệu"><Lock className="h-3 w-3 mr-1" /> Khóa</span> )
+                                : col.key === 'file' && row[col.key] ? ( isLoggedIn ? <a href={row[col.key].startsWith('http') ? row[col.key] : `https://${row[col.key]}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-blue-600 bg-blue-50 px-2 py-1 rounded border hover:bg-blue-100 transition-colors font-medium"><Download className="h-3 w-3 mr-1" /> Tải về</a> : <span className="inline-flex items-center text-slate-400 bg-slate-50 px-2 py-1 rounded border text-xs font-medium cursor-not-allowed" title="Vui lòng đăng nhập để tải tài liệu"><Lock className="h-3 w-3 mr-1" /> Khóa</span> )
                                 : col.key === 'mapLink' && row[col.key] ? ( isLoggedIn ? <a href={row[col.key].startsWith('http') ? row[col.key] : `https://${row[col.key]}`} target="_blank" rel="noopener noreferrer" className="inline-flex text-emerald-600 bg-emerald-50 px-2 py-1 rounded border hover:bg-emerald-100 font-medium transition-colors"><MapPin className="h-3 w-3 mr-1 mt-0.5" /> Map</a> : <span className="inline-flex items-center text-slate-400 bg-slate-50 px-2 py-1 rounded border text-xs font-medium cursor-not-allowed" title="Vui lòng đăng nhập để xem bản đồ"><Lock className="h-3 w-3 mr-1" /> Khóa</span> )
                                 : col.key === 'qdPheDuyet' ? (<div className={row[col.key] && row[col.key] !== 'Đang cập nhật' ? 'font-bold text-emerald-600' : 'text-slate-400 italic'}>{row[col.key]}</div>)
                                 : (<div className={!row[col.key] || row[col.key]==='Đang cập nhật' ? 'text-slate-400 italic' : ''}>{row[col.key] || '---'}</div>)}
@@ -3623,7 +3488,7 @@ const handleDownloadFile = (row, tabTitle) => {
                             {COLUMNS.slice(1).map(col => (
                               <td key={`${row.id}-${col.key}`} className={`px-3 py-2 text-sm border-x align-middle whitespace-normal break-words ${col.width}`}>
                                 {col.key === 'tenQh' ? (<div className="font-semibold text-indigo-900">{row[col.key]}</div>) 
-                                : col.key === 'file' && row[col.key] ? ( isLoggedIn ? <button onClick={() => handleDownloadFile(row, 'Quy hoạch Chi tiết')} className="inline-flex items-center text-blue-600 bg-blue-50 px-2 py-1 rounded border hover:bg-blue-100 transition-colors font-medium"><Download className="h-3 w-3 mr-1" /> Tải về</button> : <span className="inline-flex items-center text-slate-400 bg-slate-50 px-2 py-1 rounded border text-xs font-medium cursor-not-allowed" title="Vui lòng đăng nhập để tải tài liệu"><Lock className="h-3 w-3 mr-1" /> Khóa</span> )
+                                : col.key === 'file' && row[col.key] ? ( isLoggedIn ? <a href={row[col.key].startsWith('http') ? row[col.key] : `https://${row[col.key]}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-indigo-600 bg-indigo-50 px-2 py-1 rounded border hover:bg-indigo-100 font-semibold transition-colors"><Download className="h-3 w-3 mr-1" /> Tải về</a> : <span className="inline-flex items-center text-slate-400 bg-slate-50 px-2 py-1 rounded border text-xs font-medium cursor-not-allowed" title="Vui lòng đăng nhập để tải tài liệu"><Lock className="h-3 w-3 mr-1" /> Khóa</span> )
                                 : col.key === 'mapLink' && row[col.key] ? ( isLoggedIn ? <a href={row[col.key].startsWith('http') ? row[col.key] : `https://${row[col.key]}`} target="_blank" rel="noopener noreferrer" className="inline-flex text-emerald-600 bg-emerald-50 px-2 py-1 rounded border hover:bg-emerald-100 font-medium transition-colors"><MapPin className="h-3 w-3 mr-1 mt-0.5" /> Map</a> : <span className="inline-flex items-center text-slate-400 bg-slate-50 px-2 py-1 rounded border text-xs font-medium cursor-not-allowed" title="Vui lòng đăng nhập để xem bản đồ"><Lock className="h-3 w-3 mr-1" /> Khóa</span> )
                                 : col.key === 'qdPheDuyet' ? (<div className={row[col.key] && row[col.key] !== 'Đang cập nhật' ? 'font-bold text-emerald-600' : 'text-slate-400 italic'}>{row[col.key]}</div>)
                                 : (<div className={!row[col.key] || row[col.key]==='Đang cập nhật' ? 'text-slate-400 italic' : ''}>{row[col.key] || '---'}</div>)}
@@ -4141,32 +4006,7 @@ const handleDownloadFile = (row, tabTitle) => {
                 <form onSubmit={handleLogin} className="p-4 sm:p-6 flex flex-col gap-4 overflow-y-auto flex-1 custom-scrollbar">
                   {loginError && <div className="bg-red-50 text-red-600 p-3 rounded text-sm font-medium">{loginError}</div>}
                   <div><label className="block text-sm font-semibold mb-1">Tài khoản</label><input type="text" value={loginForm.username} onChange={e=>setLoginForm(p=>({...p, username: e.target.value}))} className="w-full border px-3 py-2 rounded" placeholder="admin" /></div>
-                  <div><label className="block text-sm font-semibold mb-1">Mật khẩu</label><div className="relative"><input type={showPassword ? "text" : "password"} value={loginForm.password} onChange={e => setLoginForm(p => ({ ...p, password: e.target.value }))} 
-      className="w-full border px-3 py-2 rounded pr-10 outline-none focus:ring-2 focus:ring-blue-500" 
-      placeholder="123456" 
-      required 
-    />
-    <button 
-      type="button" 
-      onClick={() => setShowPassword(!showPassword)} 
-      className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 focus:outline-none"
-      title={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
-    >
-      {showPassword ? (
-        // Icon Mắt mở (Hiển thị mật khẩu)
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-        </svg>
-      ) : (
-        // Icon Mắt nhắm / Gạch chéo (Ẩn mật khẩu)
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>
-        </svg>
-      )}
-    </button>
-  </div>
-</div>
+                  <div><label className="block text-sm font-semibold mb-1">Mật khẩu</label><input type="password" value={loginForm.password} onChange={e=>setLoginForm(p=>({...p, password: e.target.value}))} className="w-full border px-3 py-2 rounded" placeholder="123456" /></div>
                   <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded shadow-sm transition-colors">Đăng nhập</button>
                   <div className="text-center text-xs text-slate-600 pt-2 border-t mt-1">
                     Chưa có tài khoản? <button type="button" onClick={() => { setShowLoginModal(false); setShowRegisterModal(true); }} className="text-blue-600 font-bold hover:underline">Đăng ký Thành viên ngay</button>
@@ -4707,19 +4547,6 @@ const handleDownloadFile = (row, tabTitle) => {
                               >
                                 {member.allowKTQH !== false ? 'Không cho phép KTQH' : 'Cho phép sử dụng tính năng KTQH'}
                               </button>
-                              <button 
-  onClick={() => {
-    const nextMembers = (membersList || []).map(m => m.id === member.id ? { ...m, allowDownloadAllTabs: m.allowDownloadAllTabs === false ? true : false } : m);
-    setMembersList(nextMembers);
-    localStorage.setItem('gialai_members_list', JSON.stringify(nextMembers));
-    syncToCloud({ membersList: nextMembers });
-    showNotification(`✅ Đã cập nhật quyền tải file cho thành viên ${member.fullName}!`);
-  }}
-  className={`px-3 py-1.5 rounded text-xs font-bold text-white shadow-sm transition-colors ${member.allowDownloadAllTabs === false ? 'bg-amber-600 hover:bg-amber-700' : 'bg-blue-600 hover:bg-blue-700'}`}
-  title="Bấm để giới hạn thành viên chỉ được tải file ở Tab Quy hoạch chung"
->
-  {member.allowDownloadAllTabs === false ? '🔓 Đang khóa tải tab khác' : '🔒 Kiểm soát quyền tải file'}
-</button>
 
                               <button onClick={() => handleAdminChangeMemberPassword(member.id, member.fullName)} className="bg-amber-100 hover:bg-amber-500 hover:text-white text-amber-700 px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 shadow-sm transition-colors"><Key className="w-3.5 h-3.5"/> Đổi MK</button>
                               <button onClick={() => handleRejectMember(member.id)} className="bg-slate-200 hover:bg-red-500 hover:text-white text-slate-600 px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 shadow-sm transition-colors"><Trash2 className="w-3.5 h-3.5"/> Xóa TK</button>
@@ -4792,54 +4619,6 @@ const handleDownloadFile = (row, tabTitle) => {
                   <button onClick={() => setShowLogModal(false)} className="hover:bg-slate-700 p-1 rounded-full"><X className="w-5 h-5"/></button>
                 </div>
                 <div className="p-4 sm:p-6 overflow-y-auto flex-1 custom-scrollbar bg-slate-50">
-                  
-                  {(activityLogs || []).length === 0 && JSON.parse(localStorage.getItem('gialai_audit_logs') || '[]').length === 0 ? (
-  <div className="text-center py-8 text-slate-500">Chưa có lịch sử hoạt động nào được ghi nhận.</div>
-) : (
-  <div className="flex flex-col gap-3">
-    
-    {/* HIỂN THỊ NHẬT KÝ ĐĂNG NHẬP & TẢI HỒ SƠ */}
-{JSON.parse(localStorage.getItem('gialai_audit_logs') || '[]').map(audit => (
-  <div key={audit.id} className="bg-white border border-slate-200 rounded-lg p-3 sm:p-4 flex justify-between items-center shadow-sm">
-    <div className="flex items-center gap-3">
-      <span className={`px-2.5 py-1 text-xs font-bold rounded text-white ${audit.action === 'LOGIN' ? 'bg-emerald-600' : 'bg-blue-600'}`}>
-        {audit.action === 'LOGIN' ? '🔑 ĐĂNG NHẬP' : '📥 TẢI HỒ SƠ'}
-      </span>
-      <span className="text-sm font-medium text-slate-800">{audit.content}</span>
-    </div>
-    <span className="text-xs text-slate-400 font-medium">{audit.timestamp}</span>
-  </div>
-))}
-
-    {/* 2. HIỂN THỊ NHẬT KÝ THAY ĐỔI CSDL CŨ */}
-    {(activityLogs || []).map(log => (
-      <div key={log.id} className={`bg-white border rounded-lg p-3 sm:p-4 flex flex-col md:flex-row justify-between gap-4 shadow-sm hover:border-slate-300 ${log.restored ? 'opacity-60 bg-slate-50' : ''}`}>
-        <div className="flex flex-col gap-2 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className={`text-xs font-bold px-2 py-1 rounded-md text-white ${log.action === 'ADD' ? 'bg-emerald-500' : log.action === 'EDIT' ? 'bg-blue-500' : 'bg-red-500'}`}>
-              {log.action === 'ADD' ? '+ THÊM MỚI' : log.action === 'EDIT' ? '📝 CẬP NHẬT' : '🗑️ ĐÃ XÓA'}
-            </span>
-            <span className="text-sm font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded border">
-              {log.category === 'CHUNG' ? 'QH Chung' : log.category === 'CHITIET' ? 'QH Chi tiết' : 'QH Phân khu'}
-            </span>
-            <span className="text-xs text-slate-500 font-medium">bởi <b className="text-blue-800">{log.user}</b> lúc {log.timestamp}</span>
-          </div>
-          <div className="text-sm text-slate-800 font-semibold mt-1">
-            Tên hồ sơ: <span className="text-blue-700">{log.newData?.tenQh || log.oldData?.tenQh || 'Không xác định'}</span>
-          </div>
-        </div>
-        <div className="flex items-center justify-end shrink-0">
-          {log.restored ? (
-            <span className="text-slate-500 font-semibold text-sm flex items-center gap-1 bg-slate-200 px-4 py-2 rounded-lg border border-slate-300 shadow-inner"><CheckCircle className="w-4 h-4"/> Đã khôi phục</span>
-          ) : (
-            <button onClick={() => handleRestoreLog(log)} className="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm transition-colors"><RefreshCcw className="w-4 h-4"/> Khôi phục lại</button>
-          )}
-        </div>
-      </div>
-    ))}
-
-  </div>
-)}
                   {(activityLogs || []).length === 0 ? (
                     <div className="text-center py-8 text-slate-500">Chưa có lịch sử thay đổi nào được ghi nhận.</div>
                   ) : (
