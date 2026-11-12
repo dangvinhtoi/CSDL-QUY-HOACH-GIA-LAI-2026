@@ -206,8 +206,7 @@
     const ClipboardCheck = (p) => <IconBase {...p}><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><polyline points="9 14 11 16 15 10"/></IconBase>;
     const Smartphone = (p) => <IconBase {...p}><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></IconBase>;
     const ShieldCheck = (p) => <IconBase {...p}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></IconBase>;
-    const Eye = (p) => <IconBase {...p}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></IconBase>;
-    const EyeOff = (p) => <IconBase {...p}><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></IconBase>;
+
     const appId = typeof window.__app_id !== 'undefined' ? window.__app_id : 'gialai-qh-default';
 
     // ==========================================
@@ -478,20 +477,7 @@ function App() {
         return '';
       });
       const [cloudStatus, setCloudStatus] = useState(isCloudConnected ? 'connected' : 'local');
-       // --- STATE QUẢN LÝ ẨN/HIỆN MẬT KHẨU ---
-  const [showPass, setShowPass] = useState({
-    login: false,          // Mật khẩu Đăng nhập
-    register: false,       // Mật khẩu Đăng ký
-    recovery: false,       // Mật khẩu mới trong Quên mật khẩu
-    changeCurrent: false,  // Mật khẩu hiện tại (Đổi MK)
-    changeNew: false,      // Mật khẩu mới (Đổi MK)
-    changeConfirm: false   // Xác nhận mật khẩu mới (Đổi MK)
-  });
 
-  // Hàm chuyển đổi trạng thái ẩn/hiện
-  const togglePassVisibility = (field) => {
-    setShowPass(prev => ({ ...prev, [field]: !prev[field] }));
-  };
       // CLOUD SYNC HELPERS
       const saveToCloud = (collName, docId, record) => {
         if (db) {
@@ -4020,7 +4006,7 @@ const handleSaveVung = async (e) => {
                 <form onSubmit={handleLogin} className="p-4 sm:p-6 flex flex-col gap-4 overflow-y-auto flex-1 custom-scrollbar">
                   {loginError && <div className="bg-red-50 text-red-600 p-3 rounded text-sm font-medium">{loginError}</div>}
                   <div><label className="block text-sm font-semibold mb-1">Tài khoản</label><input type="text" value={loginForm.username} onChange={e=>setLoginForm(p=>({...p, username: e.target.value}))} className="w-full border px-3 py-2 rounded" placeholder="admin" /></div>
-                  <div><label className="block text-sm font-semibold mb-1">Mật khẩu</label><div className="relative"><input type={showPass.login ? "text" : "password"} value={loginForm.password} onChange={e=>setLoginForm(p=>({...p, password: e.target.value}))} className="w-full border px-3 py-2 pr-10 rounded focus:ring-2 focus:ring-blue-500 outline-none" placeholder="123456" required /><button type="button" tabIndex="-1" onClick={()=>togglePassVisibility('login')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1">{showPass.login ? <EyeOff className="w-4 h-4"/> : <Eye className="w-4 h-4"/>}</button></div></div>
+                  <div><label className="block text-sm font-semibold mb-1">Mật khẩu</label><input type="password" value={loginForm.password} onChange={e=>setLoginForm(p=>({...p, password: e.target.value}))} className="w-full border px-3 py-2 rounded" placeholder="123456" /></div>
                   <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded shadow-sm transition-colors">Đăng nhập</button>
                   <div className="text-center text-xs text-slate-600 pt-2 border-t mt-1">
                     Chưa có tài khoản? <button type="button" onClick={() => { setShowLoginModal(false); setShowRegisterModal(true); }} className="text-blue-600 font-bold hover:underline">Đăng ký Thành viên ngay</button>
@@ -4046,7 +4032,7 @@ const handleSaveVung = async (e) => {
                   <div><label className="block text-sm font-semibold mb-1">Chức vụ <span className="text-red-500">*</span></label><input type="text" value={registerForm.position} onChange={e=>setRegisterForm(p=>({...p, position: e.target.value}))} className="w-full border px-3 py-2 rounded" required /></div>
                   <div><label className="block text-sm font-semibold mb-1">Email / Zalo liên hệ <span className="text-red-500">*</span></label><input type="text" value={registerForm.email} onChange={e=>setRegisterForm(p=>({...p, email: e.target.value}))} className="w-full border px-3 py-2 rounded" required /></div>
                   <div><label className="block text-sm font-semibold mb-1">Tên đăng nhập <span className="text-red-500">*</span></label><input type="text" value={registerForm.username} onChange={e=>setRegisterForm(p=>({...p, username: e.target.value}))} className="w-full border px-3 py-2 rounded" required /></div>
-                  <div><label className="block text-sm font-semibold mb-1">Mật khẩu <span className="text-red-500">*</span></label><div className="relative"><input type={showPass.register ? "text" : "password"} value={registerForm.password} onChange={e=>setRegisterForm(p=>({...p, password: e.target.value}))} className="w-full border px-3 py-2 pr-10 rounded focus:ring-2 focus:ring-blue-500 outline-none" minLength={6} required placeholder="Tối thiểu 6 ký tự..." /><button type="button" tabIndex="-1" onClick={()=>togglePassVisibility('register')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1">{showPass.register ? <EyeOff className="w-4 h-4"/> : <Eye className="w-4 h-4"/>}</button></div></div>
+                  <div><label className="block text-sm font-semibold mb-1">Mật khẩu <span className="text-red-500">*</span></label><input type="password" value={registerForm.password} onChange={e=>setRegisterForm(p=>({...p, password: e.target.value}))} className="w-full border px-3 py-2 rounded" minLength={6} required /></div>
                   <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded shadow-sm transition-colors mt-2">Gửi yêu cầu đăng ký</button>
                   <div className="text-center text-xs text-slate-600 pt-2 border-t mt-1">Đã có tài khoản? <button type="button" onClick={() => { setShowRegisterModal(false); setShowLoginModal(true); }} className="text-blue-600 font-bold hover:underline">Đăng nhập ngay</button></div>
                 </form>
@@ -4114,73 +4100,7 @@ const handleSaveVung = async (e) => {
                   <input type="text" value={changePassForm.verifyEmail || ''} onChange={e=>setChangePassForm(p=>({...p, verifyEmail: e.target.value}))} className="w-full border px-3 py-2 rounded focus:ring-2 focus:ring-amber-500 outline-none" placeholder="Nhập đúng Email/Zalo..." required />
                 </div>
               )}
-              <div>
-  <label className="block text-sm font-semibold mb-1">Mật khẩu hiện tại</label>
-  <div className="relative">
-    <input 
-      type={showPass.changeCurrent ? "text" : "password"} 
-      value={changePassForm.current} 
-      onChange={e => setChangePassForm(p => ({ ...p, current: e.target.value }))} 
-      className="w-full border px-3 py-2 pr-10 rounded focus:ring-2 focus:ring-amber-500 outline-none" 
-      placeholder="Nhập mật khẩu cũ..." 
-      required 
-    />
-    <button 
-      type="button" 
-      tabIndex="-1"
-      onClick={() => togglePassVisibility('changeCurrent')} 
-      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
-    >
-      {showPass.changeCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-    </button>
-  </div>
-</div>
-
-{/* 2. Mật khẩu mới */}
-<div>
-  <label className="block text-sm font-semibold mb-1">Mật khẩu mới</label>
-  <div className="relative">
-    <input 
-      type={showPass.changeNew ? "text" : "password"} 
-      value={changePassForm.newPass} 
-      onChange={e => setChangePassForm(p => ({ ...p, newPass: e.target.value }))} 
-      className="w-full border px-3 py-2 pr-10 rounded focus:ring-2 focus:ring-amber-500 outline-none" 
-      placeholder="Nhập mật khẩu mới..." 
-      required 
-    />
-    <button 
-      type="button" 
-      tabIndex="-1"
-      onClick={() => togglePassVisibility('changeNew')} 
-      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
-    >
-      {showPass.changeNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-    </button>
-  </div>
-</div>
-
-{/* 3. Xác nhận mật khẩu mới */}
-<div>
-  <label className="block text-sm font-semibold mb-1">Xác nhận mật khẩu mới</label>
-  <div className="relative">
-    <input 
-      type={showPass.changeConfirm ? "text" : "password"} 
-      value={changePassForm.confirm} 
-      onChange={e => setChangePassForm(p => ({ ...p, confirm: e.target.value }))} 
-      className="w-full border px-3 py-2 pr-10 rounded focus:ring-2 focus:ring-amber-500 outline-none" 
-      placeholder="Nhập lại mật khẩu mới..." 
-      required 
-    />
-    <button 
-      type="button" 
-      tabIndex="-1"
-      onClick={() => togglePassVisibility('changeConfirm')} 
-      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
-    >
-      {showPass.changeConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-    </button>
-  </div>
-</div>
+              <div><label className="block text-sm font-semibold mb-1">Mật khẩu hiện tại</label><input type="password" value={changePassForm.current} onChange={e=>setChangePassForm(p=>({...p, current: e.target.value}))} className="w-full border px-3 py-2 rounded focus:ring-2 focus:ring-amber-500 outline-none" placeholder="Nhập mật khẩu cũ..." required /></div><div><label className="block text-sm font-semibold mb-1">Mật khẩu mới</label><input type="password" value={changePassForm.newPass} onChange={e=>setChangePassForm(p=>({...p, newPass: e.target.value}))} className="w-full border px-3 py-2 rounded focus:ring-2 focus:ring-amber-500 outline-none" placeholder="Nhập mật khẩu mới..." required /></div><div><label className="block text-sm font-semibold mb-1">Xác nhận mật khẩu mới</label><input type="password" value={changePassForm.confirm} onChange={e=>setChangePassForm(p=>({...p, confirm: e.target.value}))} className="w-full border px-3 py-2 rounded focus:ring-2 focus:ring-amber-500 outline-none" placeholder="Nhập lại mật khẩu mới..." required /></div><button type="submit" className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded shadow-sm transition-colors mt-2">Lưu thay đổi</button></form></div></div>
           )}
 
           {showDbModal && (
