@@ -2189,6 +2189,11 @@ const handleSaveVung = async (e) => {
       // XUẤT EXCEL, BACKUP VÀ RESTORE DB
       // ==========================================
       const handleExportExcel = (exportData, sheetName, isDetail = false) => {
+        // 🟢 Chốt chặn kiểm soát quyền tải dữ liệu
+        const activeMem = userRole === 'MEMBER' ? (membersList || []).find(m => m.id === currentUser?.id) : null;
+        if (activeMem?.restrictDownloadAndEdit && sheetName !== 'DS_QuyHoachChung') {
+        return showNotification('⚠️ Tài khoản của bạn bị hạn chế: Chỉ được phép tải dữ liệu trong Tab Quy hoạch chung!');
+        }
         if (!exportData || exportData.length === 0) return showNotification('Không có dữ liệu để xuất!');
         const headers = COLUMNS.map(col => `"${isDetail && col.key === 'danSo' ? 'Dân số' : col.label}"`).join(',');
         const rows = exportData.map((row, index) => {
@@ -2202,6 +2207,11 @@ const handleSaveVung = async (e) => {
         link.click();
       };
       const handleExportMergeExcel = () => {
+        // 🟢 Chốt chặn kiểm soát quyền tải dữ liệu
+        const activeMem = userRole === 'MEMBER' ? (membersList || []).find(m => m.id === currentUser?.id) : null;
+        if (activeMem?.restrictDownloadAndEdit) {
+        return showNotification('⚠️ Tài khoản của bạn bị hạn chế: Không có quyền tải dữ liệu sáp nhập!');
+        }
         if (filteredMergeData.length === 0) return showNotification('Không có dữ liệu để xuất!');
         const headers = '"STT","Tỉnh cũ","Huyện/Thị xã","Xã/Phường MỚI","Các Xã/Phường CŨ","Căn cứ pháp lý"';
         const rows = filteredMergeData.map((row, index) => `"${index + 1}","${row.tinhCu || ''}","${row.huyen || ''}","${row.xaMoi || ''}","${Array.isArray(row.cacXaCu) ? row.cacXaCu.join('; ') : (row.cacXaCu||'') }","${row.canCu || ''}"`);
@@ -2214,6 +2224,11 @@ const handleSaveVung = async (e) => {
       };
 
       const handleExportContactExcel = () => {
+        // 🟢 Chốt chặn kiểm soát quyền tải dữ liệu
+        const activeMem = userRole === 'MEMBER' ? (membersList || []).find(m => m.id === currentUser?.id) : null;
+        if (activeMem?.restrictDownloadAndEdit) {
+        return showNotification('⚠️ Tài khoản của bạn bị hạn chế: Không có quyền tải danh bạ!');
+        }
         if (filteredContactData.length === 0) return showNotification('Không có dữ liệu để xuất!');
         const headers = '"STT","Đơn vị","Họ và tên","Điện thoại","Chức danh","Email"';
         const rows = filteredContactData.map((row, index) => `"${index + 1}","${row.donVi || ''}","${row.hoTen || ''}","${row.dienThoai || ''}","${row.chucDanh || ''}","${row.email || ''}"`);
@@ -2778,16 +2793,21 @@ const handleSaveVung = async (e) => {
       };
 
       const openModal = (record = null, targetType = 'CHUNG') => {
-  if (!isLoggedIn) return setShowLoginModal(true);
-  if (record) {
+      if (!isLoggedIn) return setShowLoginModal(true);
+      // 🟢 Chốt chặn: Kiểm tra nếu thành viên bị hạn chế tải & sửa
+      const activeMem = userRole === 'MEMBER' ? (membersList || []).find(m => m.id === currentUser?.id) : null;
+      if (activeMem?.restrictDownloadAndEdit) {
+    return showNotification('⚠️ Tài khoản của bạn bị hạn chế: Không được phép thêm mới hoặc chỉnh sửa dữ liệu!');
+    }
+    if (record) {
     setEditingRecord({ ...record, _targetType: targetType });
     setFormData({ ...record });
-  } else {
+    } else {
     setEditingRecord({ _targetType: targetType });
     setFormData({ tinhMoi: 'Gia Lai', tinhCu: '', huyen: '', xa: '', tenQh: '', dienTich: '', danSo: '', cqToChuc: '', cqPheDuyet: '', cqThamDinh: '', bcThamDinh: 'Đang cập nhật', yKienSxd: 'Đang cập nhật', qdPheDuyet: 'Đang cập nhật', congBo: 'Chưa công bố', camMoc: 'Chưa cắm mốc', keHoach: 'Đang cập nhật', file: '', mapLink: '', tinhHinhGuiHoSo: 'Chưa gửi', ghiChu: '' });
-  }
-  setIsModalOpen(true);
-};
+    }
+    setIsModalOpen(true);
+    };
 
      const handleSave = (e) => {
         e.preventDefault();
@@ -2868,6 +2888,10 @@ const handleSaveVung = async (e) => {
 
       const openMergeModal = (record = null) => {
         if (!isLoggedIn) return setShowLoginModal(true);
+        const activeMem = userRole === 'MEMBER' ? (membersList || []).find(m => m.id === currentUser?.id) : null;
+        if (activeMem?.restrictDownloadAndEdit) {
+        return showNotification('⚠️ Tài khoản của bạn bị hạn chế: Không được phép thêm mới hoặc chỉnh sửa dữ liệu!');
+        }
         if (record) {
           setEditingMergeRecord(record);
           setMergeFormData({ ...record, cacXaCuStr: Array.isArray(record.cacXaCu) ? record.cacXaCu.join(', ') : record.cacXaCu });
@@ -2913,6 +2937,10 @@ const handleSaveVung = async (e) => {
 
       const openContactModal = (record = null) => {
         if (!isLoggedIn) return setShowLoginModal(true);
+        const activeMem = userRole === 'MEMBER' ? (membersList || []).find(m => m.id === currentUser?.id) : null;
+        if (activeMem?.restrictDownloadAndEdit) {
+        return showNotification('⚠️ Tài khoản của bạn bị hạn chế: Không được phép thêm mới hoặc chỉnh sửa dữ liệu!');
+        }
         if (record) {
           setEditingContactRecord(record);
           setContactFormData({ ...record });
@@ -2957,6 +2985,10 @@ const handleSaveVung = async (e) => {
 
       const openReviewModal = (record = null) => {
         if (!isLoggedIn) return setShowLoginModal(true);
+        const activeMem = userRole === 'MEMBER' ? (membersList || []).find(m => m.id === currentUser?.id) : null;
+        if (activeMem?.restrictDownloadAndEdit) {
+        return showNotification('⚠️ Tài khoản của bạn bị hạn chế: Không được phép thêm mới hoặc chỉnh sửa dữ liệu!');
+        }
         if (record) {
           setEditingReviewRecord(record);
           setReviewFormData({ ...record });
@@ -4676,7 +4708,19 @@ const handleSaveVung = async (e) => {
                               >
                                 {member.allowKTQH !== false ? 'Không cho phép KTQH' : 'Cho phép sử dụng tính năng KTQH'}
                               </button>
-
+                              {/* 🟢 NÚT KIỂM SOÁT QUYỀN TẢI & SỬA DỮ LIỆU (BỔ SUNG MỚI) */}
+                              <button 
+                              onClick={() => {
+                              const nextMembers = (membersList || []).map(m => m.id === member.id ? { ...m, restrictDownloadAndEdit: !m.restrictDownloadAndEdit } : m);
+                              setMembersList(nextMembers);
+                              localStorage.setItem('gialai_members_list', JSON.stringify(nextMembers));
+                              syncToCloud({ membersList: nextMembers });
+                              showNotification('✅ Đã cập nhật quyền kiểm soát tải & sửa dữ liệu thành công!');
+                              }}
+                              className={`px-3 py-1.5 rounded text-xs font-bold text-white shadow-sm transition-colors ${member.restrictDownloadAndEdit ? 'bg-amber-600 hover:bg-amber-700' : 'bg-blue-600 hover:bg-blue-700'}`}
+                              >
+                              {member.restrictDownloadAndEdit ? 'Đang hạn chế tải & sửa' : 'Kiểm soát Tải dữ liệu'}
+                              </button>
                               <button onClick={() => handleAdminChangeMemberPassword(member.id, member.fullName)} className="bg-amber-100 hover:bg-amber-500 hover:text-white text-amber-700 px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 shadow-sm transition-colors"><Key className="w-3.5 h-3.5"/> Đổi MK</button>
                               <button onClick={() => handleRejectMember(member.id)} className="bg-slate-200 hover:bg-red-500 hover:text-white text-slate-600 px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 shadow-sm transition-colors"><Trash2 className="w-3.5 h-3.5"/> Xóa TK</button>
                             </div>
