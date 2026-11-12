@@ -477,7 +477,13 @@ function App() {
         return '';
       });
       const [cloudStatus, setCloudStatus] = useState(isCloudConnected ? 'connected' : 'local');
-
+      // 🟢 Chèn các state ẩn/hiện mật khẩu vào đây:
+      const [showLoginPass, setShowLoginPass] = useState(false);
+      const [showRegisterPass, setShowRegisterPass] = useState(false);
+      const [showCurrentPass, setShowCurrentPass] = useState(false);
+      const [showNewPass, setShowNewPass] = useState(false);
+      const [showConfirmPass, setShowConfirmPass] = useState(false);
+  
       // CLOUD SYNC HELPERS
       const saveToCloud = (collName, docId, record) => {
         if (db) {
@@ -4006,7 +4012,30 @@ const handleSaveVung = async (e) => {
                 <form onSubmit={handleLogin} className="p-4 sm:p-6 flex flex-col gap-4 overflow-y-auto flex-1 custom-scrollbar">
                   {loginError && <div className="bg-red-50 text-red-600 p-3 rounded text-sm font-medium">{loginError}</div>}
                   <div><label className="block text-sm font-semibold mb-1">Tài khoản</label><input type="text" value={loginForm.username} onChange={e=>setLoginForm(p=>({...p, username: e.target.value}))} className="w-full border px-3 py-2 rounded" placeholder="admin" /></div>
-                  <div><label className="block text-sm font-semibold mb-1">Mật khẩu</label><input type="password" value={loginForm.password} onChange={e=>setLoginForm(p=>({...p, password: e.target.value}))} className="w-full border px-3 py-2 rounded" placeholder="123456" /></div>
+                  <div>
+  <label className="block text-sm font-semibold mb-1">Mật khẩu</label>
+  <div className="relative">
+    <input 
+      type={showLoginPass ? "text" : "password"} 
+      value={loginForm.password} 
+      onChange={e=>setLoginForm(p=>({...p, password: e.target.value}))} 
+      className="w-full border px-3 py-2 pr-10 rounded" 
+      placeholder="123456" 
+    />
+    <button 
+      type="button" 
+      onClick={() => setShowLoginPass(!showLoginPass)} 
+      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+      title={showLoginPass ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+    >
+      {showLoginPass ? (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+      ) : (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+      )}
+    </button>
+  </div>
+</div>
                   <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded shadow-sm transition-colors">Đăng nhập</button>
                   <div className="text-center text-xs text-slate-600 pt-2 border-t mt-1">
                     Chưa có tài khoản? <button type="button" onClick={() => { setShowLoginModal(false); setShowRegisterModal(true); }} className="text-blue-600 font-bold hover:underline">Đăng ký Thành viên ngay</button>
@@ -4032,7 +4061,31 @@ const handleSaveVung = async (e) => {
                   <div><label className="block text-sm font-semibold mb-1">Chức vụ <span className="text-red-500">*</span></label><input type="text" value={registerForm.position} onChange={e=>setRegisterForm(p=>({...p, position: e.target.value}))} className="w-full border px-3 py-2 rounded" required /></div>
                   <div><label className="block text-sm font-semibold mb-1">Email / Zalo liên hệ <span className="text-red-500">*</span></label><input type="text" value={registerForm.email} onChange={e=>setRegisterForm(p=>({...p, email: e.target.value}))} className="w-full border px-3 py-2 rounded" required /></div>
                   <div><label className="block text-sm font-semibold mb-1">Tên đăng nhập <span className="text-red-500">*</span></label><input type="text" value={registerForm.username} onChange={e=>setRegisterForm(p=>({...p, username: e.target.value}))} className="w-full border px-3 py-2 rounded" required /></div>
-                  <div><label className="block text-sm font-semibold mb-1">Mật khẩu <span className="text-red-500">*</span></label><input type="password" value={registerForm.password} onChange={e=>setRegisterForm(p=>({...p, password: e.target.value}))} className="w-full border px-3 py-2 rounded" minLength={6} required /></div>
+                  <div>
+  <label className="block text-sm font-semibold mb-1">Mật khẩu <span className="text-red-500">*</span></label>
+  <div className="relative">
+    <input 
+      type={showRegisterPass ? "text" : "password"} 
+      value={registerForm.password} 
+      onChange={e=>setRegisterForm(p=>({...p, password: e.target.value}))} 
+      className="w-full border px-3 py-2 pr-10 rounded" 
+      minLength={6} 
+      required 
+    />
+    <button 
+      type="button" 
+      onClick={() => setShowRegisterPass(!showRegisterPass)} 
+      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+      title={showRegisterPass ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+    >
+      {showRegisterPass ? (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+      ) : (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+      )}
+    </button>
+  </div>
+</div>
                   <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded shadow-sm transition-colors mt-2">Gửi yêu cầu đăng ký</button>
                   <div className="text-center text-xs text-slate-600 pt-2 border-t mt-1">Đã có tài khoản? <button type="button" onClick={() => { setShowRegisterModal(false); setShowLoginModal(true); }} className="text-blue-600 font-bold hover:underline">Đăng nhập ngay</button></div>
                 </form>
@@ -4100,7 +4153,83 @@ const handleSaveVung = async (e) => {
                   <input type="text" value={changePassForm.verifyEmail || ''} onChange={e=>setChangePassForm(p=>({...p, verifyEmail: e.target.value}))} className="w-full border px-3 py-2 rounded focus:ring-2 focus:ring-amber-500 outline-none" placeholder="Nhập đúng Email/Zalo..." required />
                 </div>
               )}
-              <div><label className="block text-sm font-semibold mb-1">Mật khẩu hiện tại</label><input type="password" value={changePassForm.current} onChange={e=>setChangePassForm(p=>({...p, current: e.target.value}))} className="w-full border px-3 py-2 rounded focus:ring-2 focus:ring-amber-500 outline-none" placeholder="Nhập mật khẩu cũ..." required /></div><div><label className="block text-sm font-semibold mb-1">Mật khẩu mới</label><input type="password" value={changePassForm.newPass} onChange={e=>setChangePassForm(p=>({...p, newPass: e.target.value}))} className="w-full border px-3 py-2 rounded focus:ring-2 focus:ring-amber-500 outline-none" placeholder="Nhập mật khẩu mới..." required /></div><div><label className="block text-sm font-semibold mb-1">Xác nhận mật khẩu mới</label><input type="password" value={changePassForm.confirm} onChange={e=>setChangePassForm(p=>({...p, confirm: e.target.value}))} className="w-full border px-3 py-2 rounded focus:ring-2 focus:ring-amber-500 outline-none" placeholder="Nhập lại mật khẩu mới..." required /></div><button type="submit" className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded shadow-sm transition-colors mt-2">Lưu thay đổi</button></form></div></div>
+              {/* 1. Mật khẩu hiện tại */}
+  <div>
+    <label className="block text-sm font-semibold mb-1">Mật khẩu hiện tại</label>
+    <div className="relative">
+      <input 
+        type={showCurrentPass ? "text" : "password"} 
+        value={changePassForm.current} 
+        onChange={e=>setChangePassForm(p=>({...p, current: e.target.value}))} 
+        className="w-full border px-3 py-2 pr-10 rounded focus:ring-2 focus:ring-amber-500 outline-none" 
+        placeholder="Nhập mật khẩu cũ..." 
+        required 
+      />
+      <button 
+        type="button" 
+        onClick={() => setShowCurrentPass(!showCurrentPass)} 
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+      >
+        {showCurrentPass ? (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+        ) : (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+        )}
+      </button>
+    </div>
+  </div>
+
+  {/* 2. Mật khẩu mới */}
+  <div>
+    <label className="block text-sm font-semibold mb-1">Mật khẩu mới</label>
+    <div className="relative">
+      <input 
+        type={showNewPass ? "text" : "password"} 
+        value={changePassForm.newPass} 
+        onChange={e=>setChangePassForm(p=>({...p, newPass: e.target.value}))} 
+        className="w-full border px-3 py-2 pr-10 rounded focus:ring-2 focus:ring-amber-500 outline-none" 
+        placeholder="Nhập mật khẩu mới..." 
+        required 
+      />
+      <button 
+        type="button" 
+        onClick={() => setShowNewPass(!showNewPass)} 
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+      >
+        {showNewPass ? (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+        ) : (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+        )}
+      </button>
+    </div>
+  </div>
+
+  {/* 3. Xác nhận mật khẩu mới */}
+  <div>
+    <label className="block text-sm font-semibold mb-1">Xác nhận mật khẩu mới</label>
+    <div className="relative">
+      <input 
+        type={showConfirmPass ? "text" : "password"} 
+        value={changePassForm.confirm} 
+        onChange={e=>setChangePassForm(p=>({...p, confirm: e.target.value}))} 
+        className="w-full border px-3 py-2 pr-10 rounded focus:ring-2 focus:ring-amber-500 outline-none" 
+        placeholder="Nhập lại mật khẩu mới..." 
+        required 
+      />
+      <button 
+        type="button" 
+        onClick={() => setShowConfirmPass(!showConfirmPass)} 
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+      >
+        {showConfirmPass ? (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+        ) : (
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+        )}
+      </button>
+    </div>
+  </div><button type="submit" className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded shadow-sm transition-colors mt-2">Lưu thay đổi</button></form></div></div>
           )}
 
           {showDbModal && (
